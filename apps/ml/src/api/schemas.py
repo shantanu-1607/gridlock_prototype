@@ -63,3 +63,27 @@ class PredictResponse(BaseModel):
     model_timestamp: str
     similar_events: list[SimilarEvent]
     aggregated: AggregatedFingerprint | None = None
+
+
+class AccuracyRequest(BaseModel):
+    event_id: str
+    predicted_duration_mins: float
+    actual_duration_mins: float
+    predicted_severity_score: float = 0.0
+    actual_severity_score: float | None = None
+    event_cause: str = ""
+    corridor: str = ""
+
+
+class AccuracyMetric(BaseModel):
+    metric: str
+    predicted: float
+    actual: float
+    delta_pct: float
+
+
+class AccuracyResponse(BaseModel):
+    event_id: str
+    accuracy_score: float
+    metrics: list[AccuracyMetric]
+    summary: str

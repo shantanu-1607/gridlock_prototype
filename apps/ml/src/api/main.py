@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException
 
 from ..predict import Predictor, find_latest_artifacts
-from .schemas import PredictRequest, PredictResponse
-from .service import run_prediction
+from .schemas import PredictRequest, PredictResponse, AccuracyRequest, AccuracyResponse
+from .service import run_prediction, compute_accuracy
 
 _predictor: Predictor | None = None
 
@@ -41,3 +41,8 @@ def predict(req: PredictRequest):
         raise HTTPException(503, "Model not loaded. Run training first.")
     result = run_prediction(_predictor, req)
     return result
+
+
+@app.post("/api/ml/accuracy", response_model=AccuracyResponse)
+def accuracy(req: AccuracyRequest):
+    return compute_accuracy(req)
