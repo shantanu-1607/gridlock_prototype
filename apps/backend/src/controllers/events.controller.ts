@@ -88,7 +88,7 @@ export const createEvent = async (req: Request, res: Response) => {
     const activeEvent = updateResult.rows[0];
 
     // 4. Schedule Propagation Job
-    await schedulePropagationJob(eventId, activeEvent.severity_score);
+    await schedulePropagationJob(eventId, activeEvent.severity_score, activeEvent.lat, activeEvent.lon);
 
     res.status(201).json({
       message: 'Event created successfully',

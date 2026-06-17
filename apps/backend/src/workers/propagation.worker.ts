@@ -1,11 +1,8 @@
 import { Worker } from 'bullmq';
-import { redisConnection } from '../services/queue.service';
-
-// We use the existing redis connection for the worker too.
-// Note: BullMQ recommends separate connections for Queue and Worker,
-// but passing the same host/config by duplicating connection config is easy.
 import Redis from 'ioredis';
 import dotenv from 'dotenv';
+import { simulationService, PropagationState, Interventions } from '../services/simulation.service';
+
 dotenv.config();
 
 const workerRedis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
@@ -18,34 +15,50 @@ const pubSubRedis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379')
 export const propagationWorker = new Worker(
   'propagation',
   async (job) => {
-    // This is a stub for Person 3's Congestion Propagation Engine
-    const { eventId, initialSeverity } = job.data;
+    const { eventId, initialSeverity, lat, lon } = job.data;
+    const stateKey = `propagation_state:${eventId}`;
     
-    // BullMQ repeatable jobs use the same base data for every run. 
-    // To track state across runs, we use Redis to increment a counter.
-    const tickKey = `propagation_tick:${eventId}`;
-    const currentTick = await workerRedis.incr(tickKey);
+    // Fetch state from Redis
+    const stateStr = await workerRedis.get(stateKey);
+    let state: PropagationState;
 
-    console.log(`[Worker] Processing propagation tick ${currentTick} for event ${eventId}`);
+    if (!stateStr) {
+      // First run for this event
+      console.log(`[Worker] Initializing propagation state for event ${eventId}`);
+      state = simulationService.initializeState(lat, lon, initialSeverity);
+    } else {
+      state = JSON.parse(stateStr);
+    }
+
+    console.log(`[Worker] Processing propagation tick ${state.currentTick} for event ${eventId}`);
     
-    // Simulate some logic
-    const intensity = Math.max(0, initialSeverity - (currentTick * 0.05));
+    // Fetch interventions (Mocking empty for now, would typically fetch from Redis/DB)
+    // Here we can fetch from a known key like `interventions:${eventId}`
+    const interventionsStr = await workerRedis.get(`interventions:${eventId}`);
+    const interventions: Interventions = interventionsStr 
+      ? JSON.parse(interventionsStr) 
+      : { barricades: [], fleetDeployments: [] };
+
+    // Run the tick algorithm
+    state = simulationService.tick(state, interventions);
+
+    // Save updated state back to Redis
+    await workerRedis.set(stateKey, JSON.stringify(state));
     
     // Publish to Redis channel so WebSocket server can broadcast
     const payload = JSON.stringify({
       event: 'propagation:tick',
       data: {
         eventId,
-        tick: currentTick,
-        simulatedIntensity: intensity,
+        tick: state.currentTick,
+        activeNodes: state.activeNodes,
         timestamp: new Date().toISOString()
       }
     });
 
     await pubSubRedis.publish('gridlock:events', payload);
     
-    // Return data can be inspected if needed
-    return { success: true, tick: currentTick };
+    return { success: true, tick: state.currentTick, activeNodesCount: Object.keys(state.activeNodes).length };
   },
   { connection: workerRedis as any }
 );
