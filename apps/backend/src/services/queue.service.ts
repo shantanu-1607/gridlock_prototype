@@ -18,15 +18,16 @@ export const propagationQueue = new Queue('propagation', {
  * Schedule the propagation job for an event.
  * Runs every 30 seconds to simulate congestion ticks.
  */
-export const schedulePropagationJob = async (eventId: string, initialSeverity: number) => {
-  console.log(`[Queue] Scheduling propagation job for event ${eventId}`);
+export const schedulePropagationJob = async (eventId: string, initialSeverity: number, lat: number, lon: number) => {
+  console.log(`[Queue] Scheduling propagation job for event ${eventId} at ${lat}, ${lon}`);
   
   await propagationQueue.add(
     `propagation-job:${eventId}`,
     {
       eventId,
       initialSeverity,
-      tickCount: 0
+      lat,
+      lon
     },
     {
       jobId: `propagation-${eventId}`, // Ensure unique job per event

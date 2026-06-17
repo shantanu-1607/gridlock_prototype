@@ -17,9 +17,9 @@ services:
       - REDIS_URL=redis://redis:6379
     depends_on:
       - redis
+    working_dir: /app/apps/backend
     volumes:
-      - ./apps/backend:/app
-      - /app/node_modules
+      - .:/app
 
   frontend:
     build:
@@ -30,9 +30,9 @@ services:
       - VITE_API_URL=http://localhost:4000
     depends_on:
       - backend
+    working_dir: /app/apps/frontend
     volumes:
-      - ./apps/frontend:/app
-      - /app/node_modules
+      - .:/app
 
   ml:
     build:
