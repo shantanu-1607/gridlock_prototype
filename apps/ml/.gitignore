@@ -1,0 +1,6 @@
+artifacts/
+logs/
+__pycache__/
+*.pyc
+.env
+catboost_info/
