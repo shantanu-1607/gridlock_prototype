@@ -1,0 +1,11 @@
+{
+  "name": "gridlock-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "dev": "docker-compose up --build"
+  }
+}
