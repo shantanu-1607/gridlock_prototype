@@ -6,6 +6,6 @@
   ],
   "scripts": {
     "install:all": "npm install",
-    "dev": "docker-compose up --build"
+    "dev": "docker compose up --build"
   }
 }
