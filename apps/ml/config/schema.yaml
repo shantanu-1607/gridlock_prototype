@@ -1,0 +1,23 @@
+columns:
+  id: id
+  event_type: event_type
+  latitude: latitude
+  longitude: longitude
+  event_cause: event_cause
+  requires_road_closure: requires_road_closure
+  start_timestamp: start_datetime
+  closed_timestamp: closed_datetime
+  resolved_timestamp: resolved_datetime
+  status: status
+  veh_type: veh_type
+  corridor: corridor
+  priority: priority
+  junction: junction
+  zone: zone
+
+duration:
+  cap_minutes: 1440
+  min_minutes: 2
+
+train_test:
+  test_fraction: 0.20

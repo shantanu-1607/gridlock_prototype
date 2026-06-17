@@ -1,6 +1,11 @@
 fastapi
-uvicorn
-xgboost
+uvicorn[standard]
+lightgbm
+catboost
+optuna
 scikit-learn
 pandas
 numpy
+pyyaml
+pyarrow
+matplotlib
