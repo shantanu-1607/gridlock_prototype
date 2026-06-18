@@ -6,7 +6,11 @@ This document outlines the implementation plan for the Congestion Propagation En
 To make GridLock truly stand out, the propagation engine will simulate actual traffic dynamics rather than just drawing expanding circles.
 
 1. **Directional, Time-Weighted Graph:** Instead of symmetric propagation, we will model inbound vs. outbound flows. A breakdown heading into the CBD at 9:00 AM propagates backwards much faster than the same breakdown at 2:00 PM.
-2. **Intervention-Aware Simulation:** The engine will actively read from the Redis cache for Barricade and Fleet deployments. If a barricade is confirmed by a controller, the cascade probability on that specific edge drops to `0`. If fleet is deployed, the node's recovery rate (decay factor) accelerates by `1.5x`.
+2. **Intervention-Aware Simulation:** The engine will actively read from the Redis cache~/…/gridlock_prototype $ docker compose build ml
+￼
+content_copy
+Waiting for command completion (up to 300 seconds)
+ for Barricade and Fleet deployments. If a barricade is confirmed by a controller, the cascade probability on that specific edge drops to `0`. If fleet is deployed, the node's recovery rate (decay factor) accelerates by `1.5x`.
 3. **Queue Spillback & Bottlenecking:** Instead of a pure probability BFS, we will introduce a `queue_saturation` metric. Once a junction hits 100% saturation, it forces spillback to its upstream neighbors, triggering secondary nodes.
 4. **Multi-Event Merging:** If two active events have propagation zones that touch, they will merge and create a non-linear spike in severity (GridLock condition).
 
