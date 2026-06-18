@@ -1,6 +1,11 @@
 import { Request, Response } from 'express'
 
-import { removePropagationJob, schedulePropagationJob } from '../services/queue.service'
+import { findConflicts } from '../services/conflict.service'
+import {
+  publishWsEvent,
+  removePropagationJob,
+  schedulePropagationJob,
+} from '../services/queue.service'
 import { generateDispatchPlan, getHistoricalPrecedents } from '../services/recommendation.service'
 import { simulationService } from '../services/simulation.service'
 import { query } from '../utils/db'
@@ -116,7 +121,23 @@ export const createEvent = async (req: Request, res: Response) => {
     )
     const availableFleet = fleetResult.rows
 
-    // 7. Generate the dispatch plan (Groq LLM call, with rule-based fallback)
+    // 7. Multi-event conflict check: flag other active events nearby in
+    // space and time, since they'll be competing for the same fleet pool.
+    const activeEventsResult = await query(
+      `SELECT * FROM events WHERE status = 'active' AND id != $1`,
+      [eventId],
+    )
+    const conflicts = findConflicts(activeEvent, activeEventsResult.rows)
+
+    if (conflicts.length > 0) {
+      await publishWsEvent('event:conflict', {
+        eventId,
+        eventName: activeEvent.name,
+        conflicts,
+      })
+    }
+
+    // 8. Generate the dispatch plan (Groq LLM call, with rule-based fallback)
     const plan = await generateDispatchPlan({
       event: activeEvent,
       forecast,
@@ -124,7 +145,7 @@ export const createEvent = async (req: Request, res: Response) => {
       availableFleet,
     })
 
-    // 8. Persist the plan and create pending fleet assignments
+    // 9. Persist the plan and create pending fleet assignments
     const recommendationUpdate = await query(
       `UPDATE events
        SET recommendation_status = 'completed', recommendation_rationale = $1, total_fleet_required = $2
@@ -149,10 +170,29 @@ export const createEvent = async (req: Request, res: Response) => {
             deployment.priority,
           ],
         )
+
+        // 10. Notify the specific fleet member's mobile client of their new task
+        await publishWsEvent('fleet:dispatched', {
+          eventId,
+          user_id: member.user_id,
+          user_name: member.user_name,
+          junction: deployment.junctionName,
+          role: deployment.role,
+          priority: deployment.priority,
+          deploy_by_time: deployByTime.toISOString(),
+        })
       }
     }
 
-    // 9. Schedule Propagation Job
+    // 11. Tell the dashboard the recommendation is ready to display
+    await publishWsEvent('recommendations:ready', {
+      eventId,
+      event: eventWithRecommendation,
+      recommendation: plan,
+      conflicts,
+    })
+
+    // 12. Schedule Propagation Job
     await schedulePropagationJob(
       eventId,
       activeEvent.severity_score,
@@ -164,6 +204,7 @@ export const createEvent = async (req: Request, res: Response) => {
       message: 'Event created successfully',
       event: eventWithRecommendation,
       recommendation: plan,
+      conflicts,
     })
   } catch (error) {
     console.error('Error creating event:', error)
