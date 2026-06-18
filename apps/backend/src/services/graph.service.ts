@@ -1,8 +1,8 @@
 export interface Junction {
-  id: string;
-  name: string;
-  lat: number;
-  lon: number;
+  id: string
+  name: string
+  lat: number
+  lon: number
 }
 
 export interface Edge {
@@ -13,8 +13,8 @@ export interface Edge {
 }
 
 class GraphService {
-  public junctions: Map<string, Junction>;
-  public adjacencyList: Map<string, Edge[]>;
+  public junctions: Map<string, Junction>
+  public adjacencyList: Map<string, Edge[]>
 
   constructor() {
     this.junctions = new Map();
@@ -539,13 +539,15 @@ class GraphService {
       const dist = Math.sqrt(Math.pow(junction.lat - lat, 2) + Math.pow(junction.lon - lon, 2));
       if (dist < minDistance) { minDistance = dist; nearest = junction; }
     }
-    console.log(`[GraphService] getNearestJunction(${lat}, ${lon}) → ${nearest?.id ?? 'null'} (dist=${minDistance.toFixed(6)})`);
-    return nearest;
+    console.log(
+      `[GraphService] getNearestJunction(${lat}, ${lon}) → ${nearest?.id ?? 'null'} (dist=${minDistance.toFixed(6)})`,
+    )
+    return nearest
   }
 
   public getNeighbors(nodeId: string): Edge[] {
-    return this.adjacencyList.get(nodeId) || [];
+    return this.adjacencyList.get(nodeId) || []
   }
 }
 
-export const graphService = new GraphService();
+export const graphService = new GraphService()

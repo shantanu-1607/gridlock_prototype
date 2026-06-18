@@ -1,23 +1,22 @@
-import { Pool } from 'pg';
-import dotenv from 'dotenv';
+import dotenv from 'dotenv'
+import { Pool } from 'pg'
 
-dotenv.config();
+dotenv.config()
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-});
+})
 
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle pg client', err);
-  process.exit(-1);
-});
-
+  console.error('Unexpected error on idle pg client', err)
+  process.exit(-1)
+})
 
 export const query = async (text: string, params?: any[]) => {
-  const start = Date.now();
-  const res = await pool.query(text, params);
-  const duration = Date.now() - start;
-  return res;
-};
+  const start = Date.now()
+  const res = await pool.query(text, params)
+  const duration = Date.now() - start
+  return res
+}
 
-export default pool;
+export default pool
