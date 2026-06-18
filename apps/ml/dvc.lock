@@ -1,0 +1,26 @@
+schema: '2.0'
+stages:
+  prepare_data:
+    cmd: python scripts/prepare_data.py
+    deps:
+    - path: config/schema.yaml
+      hash: md5
+      md5: bc8ac0954d3dcdcaf1e30cd3a632eddc
+      size: 468
+    - path: data/incidents.csv
+      hash: md5
+      md5: 4eaac33791e56e4a3d3cf2284e939ee4
+      size: 4546990
+    outs:
+    - path: data/processed/data_stats.json
+      hash: md5
+      md5: b34d122d42e5a77dcd9ca735d6ca58ca
+      size: 46
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 3c7cbe987fd1d5fed17acf29cd2f2087
+      size: 125382
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 18262a7a0776458556b96508bdfb78ed
+      size: 399863

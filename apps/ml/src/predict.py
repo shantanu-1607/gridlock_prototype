@@ -4,8 +4,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import lightgbm as lgb
-from catboost import CatBoostRegressor
 
 from .constants import SEVERITY_THRESHOLDS, ARTIFACTS_DIR
 from .features import Encoders, engineer_severity
@@ -27,7 +25,10 @@ def find_latest_artifacts() -> Path | None:
         return None
     dirs = sorted(ARTIFACTS_DIR.iterdir(), reverse=True)
     for d in dirs:
-        if d.is_dir() and (d / "lgb_model_0.txt").exists():
+        if not d.is_dir():
+            continue
+        # Support both legacy (lgb+cat) and champion (generic) artifact formats
+        if (d / "lgb_model_0.txt").exists() or (d / "champion_model.pkl").exists():
             return d
     return None
 
@@ -41,6 +42,48 @@ class Predictor:
 
         self.artifacts_dir = artifacts_dir
         self.timestamp = artifacts_dir.name
+        self._champion_model = None  # Generic champion model (any type)
+
+        # Detect artifact format: champion (generic) vs legacy (lgb+cat)
+        if (artifacts_dir / "champion_model.pkl").exists():
+            self._load_champion_artifacts(artifacts_dir)
+        else:
+            self._load_legacy_artifacts(artifacts_dir)
+
+        ref_path = artifacts_dir / "reference.parquet"
+        self.fingerprinter = Fingerprinter(ref_path) if ref_path.exists() else None
+
+        log.info("Predictor loaded from %s", artifacts_dir)
+
+    def _load_champion_artifacts(self, artifacts_dir: Path):
+        """Load generic champion model (any model type from experiments)."""
+        with open(artifacts_dir / "champion_model.pkl", "rb") as f:
+            self._champion_model = pickle.load(f)
+
+        with open(artifacts_dir / "encoders.pkl", "rb") as f:
+            self.encoders: Encoders = pickle.load(f)
+
+        with open(artifacts_dir / "feature_names.json") as f:
+            self.feature_names: list[str] = json.load(f)
+
+        conf_path = artifacts_dir / "confidence.json"
+        if conf_path.exists():
+            with open(conf_path) as f:
+                self._conf = json.load(f)
+        else:
+            self._conf = {"base_confidence": 0.5, "blend_weight": 1.0}
+
+        # No blending needed — single champion model
+        self.blend_weight = 1.0
+        self.lgb_models = []
+        self.cat_model = None
+
+        log.info("Loaded champion model: %s", self._conf.get("champion_model", "unknown"))
+
+    def _load_legacy_artifacts(self, artifacts_dir: Path):
+        """Load legacy LGB + CatBoost ensemble artifacts."""
+        import lightgbm as lgb
+        from catboost import CatBoostRegressor
 
         # Load multi-seed LGB models
         self.lgb_models = []
@@ -68,11 +111,6 @@ class Predictor:
             self._conf = {"base_confidence": 0.7, "blend_weight": 0.5}
         self.blend_weight = self._conf.get("blend_weight", 0.5)
 
-        ref_path = artifacts_dir / "reference.parquet"
-        self.fingerprinter = Fingerprinter(ref_path) if ref_path.exists() else None
-
-        log.info("Predictor loaded from %s", artifacts_dir)
-
     def predict(self, event: dict) -> dict:
         df = pd.DataFrame([event])
 
@@ -82,9 +120,15 @@ class Predictor:
                 X[col] = 0
         X = X[self.feature_names]
 
-        lgb_pred = float(np.mean([m.predict(X)[0] for m in self.lgb_models]))
-        cat_pred = self.cat_model.predict(X)[0]
-        pred_log = self.blend_weight * lgb_pred + (1 - self.blend_weight) * cat_pred
+        if self._champion_model is not None:
+            # Generic champion model path
+            pred_log = float(self._champion_model.predict(X)[0])
+        else:
+            # Legacy LGB + CatBoost ensemble path
+            lgb_pred = float(np.mean([m.predict(X)[0] for m in self.lgb_models]))
+            cat_pred = self.cat_model.predict(X)[0]
+            pred_log = self.blend_weight * lgb_pred + (1 - self.blend_weight) * cat_pred
+
         pred_mins = float(np.expm1(pred_log))
         pred_mins = max(1.0, pred_mins)
 

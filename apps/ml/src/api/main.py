@@ -4,7 +4,18 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException
 
 from ..predict import Predictor, find_latest_artifacts
-from .schemas import PredictRequest, PredictResponse, AccuracyRequest, AccuracyResponse
+from ..queue_model import compute_queue_metrics, recommend_deployment, recommend_gating
+from ..anomaly import compute_anomaly_score, load_corridor_baselines, train_corridor_baselines
+from ..counterfactual import run_counterfactual_analysis
+from .schemas import (
+    PredictRequest, PredictResponse,
+    AccuracyRequest, AccuracyResponse,
+    QueueAnalysisRequest, QueueAnalysisResponse,
+    DeploymentRequest, DeploymentResponse,
+    GatingRequest, GatingResponse,
+    AnomalyRequest, AnomalyResponse,
+    CounterfactualRequest, CounterfactualResponse,
+)
 from .service import run_prediction, compute_accuracy
 
 _predictor: Predictor | None = None
@@ -46,3 +57,124 @@ def predict(req: PredictRequest):
 @app.post("/api/ml/accuracy", response_model=AccuracyResponse)
 def accuracy(req: AccuracyRequest):
     return compute_accuracy(req)
+
+
+@app.post("/api/ml/queue-analysis", response_model=QueueAnalysisResponse)
+def queue_analysis(req: QueueAnalysisRequest):
+    """Compute M/M/c/K queueing metrics for an incident.
+
+    Takes ML-predicted duration and corridor info, returns blocking probability,
+    queue length, spillover time, and gridlock risk level.
+    """
+    result = compute_queue_metrics(
+        predicted_duration_mins=req.predicted_duration_mins,
+        corridor=req.corridor,
+        event_cause=req.event_cause,
+        hour=req.hour,
+        requires_road_closure=req.requires_road_closure,
+    )
+    return result.__dict__
+
+
+@app.post("/api/ml/deployment", response_model=DeploymentResponse)
+def deployment(req: DeploymentRequest):
+    """Optimize officer and barricade placement across junctions.
+
+    Uses greedy knapsack optimization to allocate resources where they
+    reduce congestion most effectively.
+    """
+    junctions = [j.model_dump() for j in req.junctions]
+    recs = recommend_deployment(
+        junctions=junctions,
+        available_officers=req.available_officers,
+        available_barricades=req.available_barricades,
+    )
+    return {
+        "recommendations": [r.__dict__ for r in recs],
+        "total_officers_deployed": sum(r.officers for r in recs),
+        "total_barricades_deployed": sum(r.barricades for r in recs),
+    }
+
+
+@app.post("/api/ml/gating", response_model=GatingResponse)
+def gating(req: GatingRequest):
+    """Generate advisory signal gating recommendations.
+
+    When gridlock risk is elevated, recommends green time reductions
+    at upstream perimeter junctions to restrict inflow.
+    """
+    queue_result = compute_queue_metrics(
+        predicted_duration_mins=req.predicted_duration_mins,
+        corridor=req.corridor,
+        event_cause=req.event_cause,
+        hour=req.hour,
+        requires_road_closure=req.requires_road_closure,
+    )
+    upstream = [j.model_dump() for j in req.upstream_junctions]
+    recs = recommend_gating(queue_result, upstream)
+    return {
+        "risk_level": queue_result.risk_level,
+        "blocking_probability": queue_result.blocking_probability,
+        "recommendations": [r.__dict__ for r in recs],
+    }
+
+
+# --- Prophet anomaly models (loaded once) ---
+_prophet_models: dict | None = None
+
+
+@app.post("/api/ml/anomaly", response_model=AnomalyResponse)
+def anomaly(req: AnomalyRequest):
+    """Detect anomalies using Prophet corridor baselines.
+
+    Compares predicted duration against Prophet's expected baseline
+    for this corridor/time. Returns anomaly score and classification.
+    """
+    global _prophet_models
+    if _prophet_models is None:
+        _prophet_models = load_corridor_baselines()
+        if not _prophet_models:
+            # Auto-train if no baselines exist
+            _prophet_models = train_corridor_baselines()
+
+    result = compute_anomaly_score(
+        corridor=req.corridor,
+        event_cause=req.event_cause,
+        start_datetime=req.start_datetime,
+        predicted_duration_mins=req.predicted_duration_mins,
+        models=_prophet_models,
+    )
+    return result
+
+
+@app.post("/api/ml/train-baselines")
+def train_baselines():
+    """Train/retrain Prophet corridor baseline models."""
+    global _prophet_models
+    _prophet_models = train_corridor_baselines()
+    return {
+        "status": "ok",
+        "corridors_trained": len(_prophet_models),
+        "corridors": [k for k in _prophet_models.keys() if k != "__global__"],
+    }
+
+
+@app.post("/api/ml/counterfactual", response_model=CounterfactualResponse)
+def counterfactual(req: CounterfactualRequest):
+    """Run counterfactual what-if analysis after an incident closes.
+
+    Evaluates alternative deployment strategies and computes
+    policy regret — how much better we could have done.
+    """
+    result = run_counterfactual_analysis(
+        actual_duration_mins=req.actual_duration_mins,
+        predicted_duration_mins=req.predicted_duration_mins,
+        corridor=req.corridor,
+        event_cause=req.event_cause,
+        start_datetime=req.start_datetime,
+        officers_deployed=req.officers_deployed,
+        barricades_deployed=req.barricades_deployed,
+        gating_applied=req.gating_applied,
+    )
+    result["event_id"] = req.event_id
+    return result

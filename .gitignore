@@ -240,3 +240,5 @@ logs
 *.njsproj
 *.sln
 *.sw?
+
+EXPERIMENTATION_PED.md
