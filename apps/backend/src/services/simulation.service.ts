@@ -89,14 +89,15 @@ export class SimulationService {
 
         // Check if neighbor is already active
         if (!newState.activeNodes[neighborId]) {
-          let spreadChance = graphService.getEdgeWeight(nodeId, neighborId, timeOfDay) * nodeData.intensity
+          let spreadChance =
+            graphService.getEdgeWeight(nodeId, neighborId, timeOfDay) * nodeData.intensity
           let childIntensity = nodeData.intensity * 0.8
 
           // Multi-event merging
           if (otherActiveNodes.includes(neighborId)) {
-             spreadChance = 1.0 // guaranteed merge
-             childIntensity = Math.min(1.0, childIntensity + 0.5) // GridLock condition spike
-             console.log(`[Simulation] GRIDLOCK MERGE at ${neighborId}`)
+            spreadChance = 1.0 // guaranteed merge
+            childIntensity = Math.min(1.0, childIntensity + 0.5) // GridLock condition spike
+            console.log(`[Simulation] GRIDLOCK MERGE at ${neighborId}`)
           }
 
           // Queue Spillback

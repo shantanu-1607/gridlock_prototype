@@ -953,10 +953,16 @@ class GraphService {
     const addEdge = (source: string, target: string, corridor: string, prob: number) => {
       if (!this.adjacencyList.has(source)) this.adjacencyList.set(source, [])
       if (!this.adjacencyList.has(target)) this.adjacencyList.set(target, [])
-      this.adjacencyList.get(source)!.push({ source, target, corridor, cascadeProbability: prob, direction: 'inbound' })
       this.adjacencyList
-        .get(target)!
-        .push({ source: target, target: source, corridor, cascadeProbability: prob, direction: 'outbound' })
+        .get(source)!
+        .push({ source, target, corridor, cascadeProbability: prob, direction: 'inbound' })
+      this.adjacencyList.get(target)!.push({
+        source: target,
+        target: source,
+        corridor,
+        cascadeProbability: prob,
+        direction: 'outbound',
+      })
     }
 
     // Corridor edges (data-driven, sorted N→S by latitude)
@@ -1249,7 +1255,7 @@ class GraphService {
     if (hour >= 7 && hour <= 11) {
       if (edge.direction === 'inbound') prob *= 1.5
       else prob *= 0.5
-    } 
+    }
     // Evening peak (4-8 PM) favors outbound
     else if (hour >= 16 && hour <= 20) {
       if (edge.direction === 'outbound') prob *= 1.5

@@ -850,7 +850,9 @@ export const updateAssignmentStatus = async (req: Request, res: Response) => {
 
     const validStatuses = ['pending', 'en_route', 'on_site', 'completed', 'blocked']
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` })
+      return res
+        .status(400)
+        .json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` })
     }
 
     const result = await query(
@@ -901,7 +903,9 @@ export const updateAssignmentStatus = async (req: Request, res: Response) => {
           }),
         )
 
-        console.log(`[Fleet] Registered fleet deployment at junction ${junctionId} for event ${eventId}`)
+        console.log(
+          `[Fleet] Registered fleet deployment at junction ${junctionId} for event ${eventId}`,
+        )
       } else {
         console.warn(`[Fleet] Junction named "${junctionName}" not found in graph service`)
       }

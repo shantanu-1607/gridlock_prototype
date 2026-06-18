@@ -86,8 +86,8 @@ export const propagationWorker = new Worker(
       if (key !== stateKey) {
         const otherStateStr = await workerRedis.get(key)
         if (otherStateStr) {
-           const otherState: PropagationState = JSON.parse(otherStateStr)
-           otherActiveNodes.push(...Object.keys(otherState.activeNodes))
+          const otherState: PropagationState = JSON.parse(otherStateStr)
+          otherActiveNodes.push(...Object.keys(otherState.activeNodes))
         }
       }
     }
