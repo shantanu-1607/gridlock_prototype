@@ -64,8 +64,8 @@ function App() {
       setEventLon(payload.lon)
       setView('results')
       fetchEvents()
-    } catch (err: any) {
-      setError(err.message || 'Failed to plan event')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to plan event')
     } finally {
       setLoading(false)
     }

@@ -16,11 +16,6 @@ jobs:
       run:
         working-directory: apps/frontend
 
-    # Only run when frontend files change
-    if: |
-      github.event_name == 'push' ||
-      contains(toJson(github.event.pull_request.changed_files), 'apps/frontend')
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -50,11 +45,6 @@ jobs:
       run:
         working-directory: apps/backend
 
-    # Only run when backend files change
-    if: |
-      github.event_name == 'push' ||
-      contains(toJson(github.event.pull_request.changed_files), 'apps/backend')
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -83,11 +73,6 @@ jobs:
     defaults:
       run:
         working-directory: apps/ml
-
-    # Only run when ml files change
-    if: |
-      github.event_name == 'push' ||
-      contains(toJson(github.event.pull_request.changed_files), 'apps/ml')
 
     steps:
       - name: Checkout repository

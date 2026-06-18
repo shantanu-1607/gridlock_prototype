@@ -1,5 +1,5 @@
 import { AlertTriangle, Calendar, ChevronDown, MapPin, Send } from 'lucide-react'
-import { useState } from 'react'
+import { FormEvent, useState } from 'react'
 
 import type { PlanEventPayload } from '../types'
 
@@ -63,7 +63,7 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
     type: 'unplanned',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     onSubmit({
       ...form,
@@ -71,7 +71,8 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
     })
   }
 
-  const update = (field: string, value: any) => setForm((prev) => ({ ...prev, [field]: value }))
+  const update = (field: keyof typeof form, value: string | number | boolean) =>
+    setForm((prev) => ({ ...prev, [field]: value }))
 
   return (
     <form className="plan-form" onSubmit={handleSubmit}>

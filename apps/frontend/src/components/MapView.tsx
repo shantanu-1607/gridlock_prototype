@@ -5,7 +5,7 @@ import { Circle, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-le
 import type { PipelineResult, PropagationTick } from '../types'
 
 // Fix Leaflet default icon issue with bundlers
-delete (L.Icon.Default.prototype as any)._getIconUrl
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -130,8 +130,8 @@ export default function MapView({
           <Circle
             key={`deploy-${i}`}
             center={[
-              (eventLat || BANGALORE_CENTER[0]) + ((i * 0.618) % 1 - 0.5) * 0.01,
-              (eventLon || BANGALORE_CENTER[1]) + ((i * 0.382) % 1 - 0.5) * 0.01,
+              (eventLat || BANGALORE_CENTER[0]) + (((i * 0.618) % 1) - 0.5) * 0.01,
+              (eventLon || BANGALORE_CENTER[1]) + (((i * 0.382) % 1) - 0.5) * 0.01,
             ]}
             radius={150}
             pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.5, weight: 2 }}
