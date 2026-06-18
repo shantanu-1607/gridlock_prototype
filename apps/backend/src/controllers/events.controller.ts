@@ -8,8 +8,8 @@ import { schedulePropagationJob, removePropagationJob } from '../services/queue.
  */
 async function callMLPredict(eventData: any) {
   try {
-    // Try hitting the real ML endpoint if it's up
-    const response = await fetch('http://localhost:8000/api/ml/predict', {
+    const mlUrl = `${process.env.ML_SERVICE_URL || 'http://localhost:8000'}/api/ml/predict`;
+    const response = await fetch(mlUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(eventData),
