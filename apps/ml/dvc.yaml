@@ -1,0 +1,12 @@
+stages:
+  prepare_data:
+    cmd: python scripts/prepare_data.py
+    deps:
+      - data/incidents.csv
+      - config/schema.yaml
+    outs:
+      - data/processed/train.parquet
+      - data/processed/test.parquet
+    metrics:
+      - data/processed/data_stats.json:
+          cache: false

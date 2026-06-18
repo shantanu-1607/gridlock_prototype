@@ -1,12 +1,20 @@
 import { Router } from 'express'
 
+import {
+  createEvent,
+  getEventById,
+  getEvents,
+  planEvent,
+  updateEvent,
+} from '../controllers/events.controller'
 import { createEvent, getEventById, getEvents, updateEvent } from '../controllers/events.controller'
 
 const router = Router()
 
-// In a real scenario, we'd add RBAC middleware here
-// e.g. router.post('/', requireRole('controller'), createEvent);
+// Core planning pipeline — primary endpoint for proactive event management
+router.post('/plan', planEvent)
 
+// Legacy CRUD endpoints
 router.post('/', createEvent)
 router.get('/', getEvents)
 router.get('/:id', getEventById)

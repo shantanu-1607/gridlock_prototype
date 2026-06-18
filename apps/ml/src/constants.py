@@ -7,6 +7,11 @@ ARTIFACTS_DIR = BASE_DIR / "artifacts"
 
 SCHEMA_YAML = CONFIG_DIR / "schema.yaml"
 MODEL_YAML = CONFIG_DIR / "model.yaml"
+EXPERIMENT_YAML = CONFIG_DIR / "experiment.yaml"
+
+EXPERIMENTS_DIR = BASE_DIR / "experiments"
+MLFLOW_DB = BASE_DIR / "mlflow.db"
+MLARTIFACTS_DIR = BASE_DIR / "mlartifacts"
 
 MISSING_TOKEN = "__MISSING__"
 

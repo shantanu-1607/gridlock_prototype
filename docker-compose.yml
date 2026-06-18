@@ -43,5 +43,19 @@ services:
     volumes:
       - ./apps/ml:/app
 
+  mlflow:
+    build:
+      context: ./apps/ml
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./apps/ml:/app
+    command: >
+      mlflow ui
+      --backend-store-uri sqlite:///mlflow.db
+      --default-artifact-root ./mlartifacts
+      --host 0.0.0.0
+      --port 5001
+
 volumes:
   redis_data:

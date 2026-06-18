@@ -9,3 +9,11 @@ numpy
 pyyaml
 pyarrow
 matplotlib
+mlflow>=2.12
+dvc>=3.50
+xgboost>=2.0
+category_encoders>=2.6
+shap>=0.45
+torch>=2.2
+pytorch-tabnet>=4.1
+rtdl>=0.0.13

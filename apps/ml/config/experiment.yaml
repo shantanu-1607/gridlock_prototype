@@ -1,0 +1,37 @@
+mlflow:
+  tracking_uri: "sqlite:///mlflow.db"
+  artifact_root: "./mlartifacts"
+  experiment_prefix: "gridlock"
+
+tournament:
+  round1_n_trials: 20
+  round3_n_trials: 100
+  round3_timeout_seconds: 900
+  elimination_threshold_pct: 120
+  tuning_improvement_threshold_pct: 2
+  max_inference_time_ms: 100
+  max_train_test_gap_pct: 15
+  max_cv_std_pct: 20
+
+cv:
+  n_splits: 5
+  test_fraction: 0.20
+
+metrics:
+  primary: "log_rmse"
+  secondary: "mae"
+
+models:
+  # Tournament 3 champion ensemble members (all others eliminated)
+  champion:
+    - catboost
+    - random_forest
+    - extra_trees
+
+feature_sets:
+  - F1_baseline
+  - F2_temporal
+  - F3_geospatial
+  - F4_advanced_enc
+  - F5_interactions
+  - F6_historical
