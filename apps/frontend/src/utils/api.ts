@@ -24,7 +24,7 @@ export async function getEvents(status?: string): Promise<PlannedEvent[]> {
   return data.events
 }
 
-export async function closeEvent(id: string): Promise<any> {
+export async function closeEvent(id: string): Promise<{ message: string; event: PlannedEvent }> {
   const res = await fetch(`${API_BASE}/api/events/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

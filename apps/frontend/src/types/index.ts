@@ -114,7 +114,7 @@ export interface PipelineResult {
   deployment_plan: DeploymentPlan
   gating_plan: GatingPlan
   similar_incidents: SimilarEvent[]
-  propagation_forecast: Record<string, any>
+  propagation_forecast: Record<string, unknown>
   prestaging_timeline: TimelineStep[]
   anomaly_detection: AnomalyResult
 }

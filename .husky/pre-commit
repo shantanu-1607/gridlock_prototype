@@ -1,0 +1,4 @@
+set -e
+
+(cd apps/frontend && npx lint-staged)
+(cd apps/backend && npx lint-staged)
