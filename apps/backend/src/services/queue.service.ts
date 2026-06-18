@@ -14,6 +14,19 @@ export const propagationQueue = new Queue('propagation', {
   connection: redisConnection as any,
 })
 
+// A separate redis connection dedicated to pub/sub publishing (the
+// propagation worker uses its own copy of this same pattern).
+const pubSubRedis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379')
+
+/**
+ * Publishes an event onto the shared `gridlock:events` Redis channel, which
+ * the API server's WebSocket layer (src/index.ts) forwards verbatim to every
+ * connected client.
+ */
+export const publishWsEvent = async (event: string, data: unknown) => {
+  await pubSubRedis.publish('gridlock:events', JSON.stringify({ event, data }))
+}
+
 /**
  * Schedule the propagation job for an event.
  * Runs every 30 seconds to simulate congestion ticks.
