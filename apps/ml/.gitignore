@@ -4,3 +4,11 @@ __pycache__/
 *.pyc
 .env
 catboost_info/
+mlflow.db
+mlruns/
+mlartifacts/
+data/processed/
+
+.dvc/cache/
+.dvc/tmp/
+mlflow_tournament1.db

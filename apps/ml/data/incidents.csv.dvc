@@ -1,0 +1,5 @@
+outs:
+- md5: 4eaac33791e56e4a3d3cf2284e939ee4
+  size: 4546990
+  hash: md5
+  path: incidents.csv
