@@ -1,0 +1,2 @@
+cd apps/backend
+npx lint-staged
