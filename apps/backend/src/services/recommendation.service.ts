@@ -1,3 +1,5 @@
+import Groq from 'groq-sdk'
+
 import { graphService } from './graph.service'
 import { CongestionForecast } from './simulation.service'
 
@@ -15,13 +17,24 @@ export interface HistoricalPrecedent {
 
 export interface DispatchContext {
   event: {
+    type: string
     category: string
+    lat: number
+    lon: number
+    expected_crowd_size: number | null
+    duration_mins: number | null
+    severity_score: number | null
     affected_corridors: string[] | null
     requires_road_closure: boolean
   }
   forecast: CongestionForecast
   precedents: HistoricalPrecedent
   availableFleet: FleetMember[]
+}
+
+export interface AssignedFleetMember {
+  user_id: string
+  user_name: string
 }
 
 export interface Deployment {
@@ -31,14 +44,14 @@ export interface Deployment {
   role: string
   priority: string
   deployByMins: number
-  user_id: string
-  user_name: string
+  assignedFleet: AssignedFleetMember[]
 }
 
 export interface DispatchPlan {
   total_fleet_required: number
   rationale: string
   deployments: Deployment[]
+  source: 'llm' | 'fallback'
 }
 
 const PRECEDENT_TABLE: Record<string, HistoricalPrecedent> = {
@@ -77,6 +90,38 @@ export function getHistoricalPrecedents(category: string): HistoricalPrecedent {
   return PRECEDENT_TABLE[category] ?? DEFAULT_PRECEDENT
 }
 
+const VALID_ROLES = ['traffic_direction', 'incident_clearance', 'diversion_management']
+const VALID_PRIORITIES = ['Critical', 'High', 'Medium', 'Low']
+
+/**
+ * Assigns the `count` nearest members of fleetPool to (lat, lon), removing
+ * them from the pool so they can't be double-booked across deployments.
+ */
+function assignNearestFleet(
+  lat: number,
+  lon: number,
+  count: number,
+  fleetPool: FleetMember[],
+): AssignedFleetMember[] {
+  const assigned: AssignedFleetMember[] = []
+
+  for (let i = 0; i < count && fleetPool.length > 0; i++) {
+    let nearestIdx = 0
+    let minDist = Infinity
+    fleetPool.forEach((member, idx) => {
+      const dist = Math.hypot(member.current_lat - lat, member.current_lon - lon)
+      if (dist < minDist) {
+        minDist = dist
+        nearestIdx = idx
+      }
+    })
+    const [member] = fleetPool.splice(nearestIdx, 1)
+    assigned.push({ user_id: member.id, user_name: member.name })
+  }
+
+  return assigned
+}
+
 const ESCALATION_TIERS = [
   { role: 'traffic_direction', priority: 'Critical', deployByMins: 0 },
   { role: 'incident_clearance', priority: 'High', deployByMins: 10 },
@@ -84,12 +129,11 @@ const ESCALATION_TIERS = [
 ]
 
 /**
- * Deterministic, rule-based stand-in for the LLM dispatch call (Phase 4 of
- * the feature spec, not implemented yet). Ranks forecasted junctions by how
- * soon they're expected to congest, then assigns the nearest available fleet
- * member to each.
+ * Deterministic, rule-based dispatch plan. Used directly when there's no
+ * Groq API key, and as the safety net if the LLM call fails or returns
+ * something we can't trust.
  */
-export function generateDispatchPlan(context: DispatchContext): DispatchPlan {
+export function generateFallbackPlan(context: DispatchContext): DispatchPlan {
   const { event, forecast, precedents, availableFleet } = context
 
   const t15New = forecast.t15_nodes.filter((id) => !forecast.t0_nodes.includes(id))
@@ -108,16 +152,8 @@ export function generateDispatchPlan(context: DispatchContext): DispatchPlan {
     const junction = graphService.junctions.get(target.id)
     if (!junction || fleetPool.length === 0) continue
 
-    let nearestIdx = 0
-    let minDist = Infinity
-    fleetPool.forEach((member, idx) => {
-      const dist = Math.hypot(member.current_lat - junction.lat, member.current_lon - junction.lon)
-      if (dist < minDist) {
-        minDist = dist
-        nearestIdx = idx
-      }
-    })
-    const [assigned] = fleetPool.splice(nearestIdx, 1)
+    const assignedFleet = assignNearestFleet(junction.lat, junction.lon, 1, fleetPool)
+    if (assignedFleet.length === 0) continue
 
     deployments.push({
       junction: target.id,
@@ -126,8 +162,7 @@ export function generateDispatchPlan(context: DispatchContext): DispatchPlan {
       role: target.role,
       priority: target.priority,
       deployByMins: target.deployByMins,
-      user_id: assigned.id,
-      user_name: assigned.name,
+      assignedFleet,
     })
   }
 
@@ -137,8 +172,208 @@ export function generateDispatchPlan(context: DispatchContext): DispatchPlan {
     : `No junctions are forecasted to exceed the spread threshold in the next 30 minutes; holding fleet on standby. ${precedents.summary}`
 
   return {
-    total_fleet_required: deployments.length,
+    total_fleet_required: deployments.reduce((sum, d) => sum + d.assignedFleet.length, 0),
     rationale,
     deployments,
+    source: 'fallback',
+  }
+}
+
+interface RawLlmDeployment {
+  junction: string
+  fleet_count: number
+  role: string
+  deploy_by_mins: number
+  priority: string
+}
+
+interface RawLlmPlan {
+  total_fleet_required: number
+  rationale: string
+  deployments: RawLlmDeployment[]
+}
+
+function buildSystemPrompt(): string {
+  return `You are the AI Command Center for GridLock, a traffic management system in Bengaluru.
+Your objective is to generate an actionable fleet dispatch plan based on real-time traffic data, historical precedents, and available fleet inventory.
+
+You MUST respond ONLY with a valid, perfectly formatted JSON object.
+Do NOT wrap the JSON in markdown blocks (like \`\`\`json). Do NOT add any conversational text before or after the JSON.
+Only use junction names from the "CANDIDATE JUNCTIONS" list provided — do not invent junction names.
+
+The JSON must exactly match this schema:
+{
+  "total_fleet_required": <integer>,
+  "rationale": "<string explaining the deployment strategy based on the forecast and precedents>",
+  "deployments": [
+    {
+      "junction": "<string, exact name from CANDIDATE JUNCTIONS>",
+      "fleet_count": <integer>,
+      "role": "<string, choose from: 'traffic_direction', 'incident_clearance', 'diversion_management'>",
+      "deploy_by_mins": <integer, 0 for immediate, positive for minutes from now>,
+      "priority": "<string, choose from: 'Critical', 'High', 'Medium', 'Low'>"
+    }
+  ]
+}`
+}
+
+function buildUserPrompt(context: DispatchContext, candidateJunctionNames: string[]): string {
+  const { event, forecast, precedents, availableFleet } = context
+
+  const nameOf = (id: string) => graphService.junctions.get(id)?.name ?? id
+
+  return `EVENT DETAILS:
+- Type: ${event.type} / ${event.category}
+- Location: ${event.lat}, ${event.lon}
+- Expected Crowd/Scale: ${event.expected_crowd_size ?? 'N/A'}
+- Requires Road Closure: ${event.requires_road_closure}
+- Affected Corridors: ${event.affected_corridors?.join(', ') || 'N/A'}
+- ML Predicted Duration: ${event.duration_mins ?? 'N/A'} mins
+- ML Severity Score: ${event.severity_score ?? 'N/A'}
+
+ACTIVE CONGESTION FORECAST (Predicted Spread):
+- T+0 mins: ${forecast.t0_nodes.map(nameOf).join(', ') || 'None'}
+- T+15 mins: ${forecast.t15_nodes.map(nameOf).join(', ') || 'None'}
+- T+30 mins: ${forecast.t30_nodes.map(nameOf).join(', ') || 'None'}
+
+CANDIDATE JUNCTIONS (you may only deploy to these):
+${candidateJunctionNames.join(', ') || 'None — recommend holding fleet on standby'}
+
+HISTORICAL PRECEDENTS (similar past events):
+${precedents.summary}
+
+AVAILABLE FLEET INVENTORY:
+Total Available: ${availableFleet.length} personnel
+
+INSTRUCTIONS:
+1. Review the congestion forecast to see where traffic will spread.
+2. Review historical precedents to understand secondary risks.
+3. Assign available fleet to candidate junctions to mitigate the impact. Do not assign more fleet in total than ${availableFleet.length}.
+4. Return the response strictly as JSON.`
+}
+
+function isValidRawPlan(value: unknown): value is RawLlmPlan {
+  if (!value || typeof value !== 'object') return false
+  const plan = value as Record<string, unknown>
+  return (
+    typeof plan.rationale === 'string' &&
+    Array.isArray(plan.deployments) &&
+    plan.deployments.every(
+      (d) =>
+        d &&
+        typeof d === 'object' &&
+        typeof (d as Record<string, unknown>).junction === 'string' &&
+        typeof (d as Record<string, unknown>).fleet_count === 'number',
+    )
+  )
+}
+
+let groqClient: Groq | null = null
+function getGroqClient(): Groq | null {
+  if (!process.env.GROQ_API_KEY) return null
+  if (!groqClient) groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY })
+  return groqClient
+}
+
+async function callGroqDispatch(context: DispatchContext): Promise<RawLlmPlan> {
+  const client = getGroqClient()
+  if (!client) throw new Error('GROQ_API_KEY not configured')
+
+  const candidateIds = Array.from(
+    new Set([
+      ...context.forecast.t0_nodes,
+      ...context.forecast.t15_nodes,
+      ...context.forecast.t30_nodes,
+    ]),
+  )
+  const candidateJunctionNames = candidateIds.map(
+    (id) => graphService.junctions.get(id)?.name ?? id,
+  )
+
+  const completion = await client.chat.completions.create({
+    messages: [
+      { role: 'system', content: buildSystemPrompt() },
+      { role: 'user', content: buildUserPrompt(context, candidateJunctionNames) },
+    ],
+    model: process.env.GROQ_MODEL_ID || 'openai/gpt-oss-120b',
+    temperature: 0.2,
+    max_tokens: 1024,
+    response_format: { type: 'json_object' },
+  })
+
+  const rawContent = completion.choices[0]?.message?.content || '{}'
+  const cleaned = rawContent.replace(/```json|```/g, '').trim()
+  const parsed = JSON.parse(cleaned)
+
+  if (!isValidRawPlan(parsed)) {
+    throw new Error('LLM response did not match the expected dispatch plan schema')
+  }
+
+  return parsed
+}
+
+/**
+ * Resolves the LLM's raw plan (junction names + headcounts) into concrete
+ * fleet assignments, matching junction names back to graph IDs and picking
+ * the nearest available personnel for each deployment.
+ */
+function resolveRawPlan(raw: RawLlmPlan, context: DispatchContext): DispatchPlan {
+  const nameToJunction = new Map(
+    Array.from(graphService.junctions.values()).map((j) => [j.name.toLowerCase(), j]),
+  )
+
+  const fleetPool = [...context.availableFleet]
+  const deployments: Deployment[] = []
+
+  for (const raw_deployment of raw.deployments) {
+    const junction = nameToJunction.get(raw_deployment.junction.toLowerCase())
+    if (!junction || fleetPool.length === 0) continue
+
+    const fleetCount = Math.max(1, Math.floor(raw_deployment.fleet_count) || 1)
+    const assignedFleet = assignNearestFleet(junction.lat, junction.lon, fleetCount, fleetPool)
+    if (assignedFleet.length === 0) continue
+
+    deployments.push({
+      junction: junction.id,
+      junctionName: junction.name,
+      fleet_count: assignedFleet.length,
+      role: VALID_ROLES.includes(raw_deployment.role) ? raw_deployment.role : 'traffic_direction',
+      priority: VALID_PRIORITIES.includes(raw_deployment.priority)
+        ? raw_deployment.priority
+        : 'Medium',
+      deployByMins: Number.isFinite(raw_deployment.deploy_by_mins)
+        ? raw_deployment.deploy_by_mins
+        : 0,
+      assignedFleet,
+    })
+  }
+
+  return {
+    total_fleet_required: deployments.reduce((sum, d) => sum + d.assignedFleet.length, 0),
+    rationale: raw.rationale,
+    deployments,
+    source: 'llm',
+  }
+}
+
+/**
+ * Generates the fleet dispatch plan via the Groq-hosted OSS LLM, falling
+ * back to the deterministic rule-based plan if no API key is configured or
+ * the call/response fails validation.
+ */
+export async function generateDispatchPlan(context: DispatchContext): Promise<DispatchPlan> {
+  try {
+    const raw = await callGroqDispatch(context)
+    const resolved = resolveRawPlan(raw, context)
+    if (resolved.deployments.length === 0 && raw.deployments.length > 0) {
+      throw new Error('LLM plan referenced no valid candidate junctions')
+    }
+    return resolved
+  } catch (error) {
+    console.warn(
+      '[RecommendationService] Falling back to rule-based plan:',
+      (error as Error).message,
+    )
+    return generateFallbackPlan(context)
   }
 }

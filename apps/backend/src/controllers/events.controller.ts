@@ -116,8 +116,8 @@ export const createEvent = async (req: Request, res: Response) => {
     )
     const availableFleet = fleetResult.rows
 
-    // 7. Generate the dispatch plan (rule-based stand-in for the LLM call)
-    const plan = generateDispatchPlan({
+    // 7. Generate the dispatch plan (Groq LLM call, with rule-based fallback)
+    const plan = await generateDispatchPlan({
       event: activeEvent,
       forecast,
       precedents,
@@ -136,18 +136,20 @@ export const createEvent = async (req: Request, res: Response) => {
 
     for (const deployment of plan.deployments) {
       const deployByTime = new Date(Date.now() + deployment.deployByMins * 60000)
-      await query(
-        `INSERT INTO fleet_assignments (event_id, user_id, junction_name, role, deploy_by_time, priority, status)
-         VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
-        [
-          eventId,
-          deployment.user_id,
-          deployment.junctionName,
-          deployment.role,
-          deployByTime,
-          deployment.priority,
-        ],
-      )
+      for (const member of deployment.assignedFleet) {
+        await query(
+          `INSERT INTO fleet_assignments (event_id, user_id, junction_name, role, deploy_by_time, priority, status)
+           VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
+          [
+            eventId,
+            member.user_id,
+            deployment.junctionName,
+            deployment.role,
+            deployByTime,
+            deployment.priority,
+          ],
+        )
+      }
     }
 
     // 9. Schedule Propagation Job
