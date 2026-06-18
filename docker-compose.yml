@@ -16,6 +16,8 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=redis://redis:6379
       - ML_SERVICE_URL=http://ml:8000
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL_ID=${GROQ_MODEL_ID}
     depends_on:
       - redis
     working_dir: /app/apps/backend
