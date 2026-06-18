@@ -74,3 +74,36 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # ─── ML ──────────────────────────────────────────────────────────────────────
+  ml-ci:
+    name: ML (install)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/ml
+
+    # Only run when ml files change
+    if: |
+      github.event_name == 'push' ||
+      contains(toJson(github.event.pull_request.changed_files), 'apps/ml')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: apps/ml/requirements.txt
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgomp1
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
