@@ -9,7 +9,7 @@ import { query } from '../utils/db'
  */
 async function callMLPredict(eventData: any) {
   try {
-    const mlUrl = `${process.env.ML_SERVICE_URL || 'http://localhost:8000'}/api/ml/predict`;
+    const mlUrl = `${process.env.ML_SERVICE_URL || 'http://localhost:8000'}/api/ml/predict`
     const response = await fetch(mlUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
