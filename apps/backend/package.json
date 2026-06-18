@@ -9,8 +9,7 @@
     "build": "tsc",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "prepare": "cd ../.. && husky apps/backend/.husky"
+    "format": "prettier --write ."
   },
   "dependencies": {
     "bullmq": "^5.7.8",

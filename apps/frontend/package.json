@@ -9,8 +9,7 @@
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "preview": "vite preview",
-    "prepare": "cd ../.. && husky apps/frontend/.husky"
+    "preview": "vite preview"
   },
   "dependencies": {
     "framer-motion": "^12.40.0",
