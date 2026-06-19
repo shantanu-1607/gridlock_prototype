@@ -26,6 +26,23 @@ class Fingerprinter:
         df = self.ref.copy()
 
         cause_clean = str(event_cause).strip().lower()
+        
+        # Check if the event cause is supported in reference dataset. If not, map to a fallback.
+        valid_causes = df["event_cause"].str.strip().str.lower().unique()
+        if cause_clean not in valid_causes:
+            mapping = {
+                "concert": "others",
+                "public_event": "others",
+                "vip_movement": "procession",
+                "debris": "others",
+                "fog / low visibility": "others",
+                "weather": "water_logging",
+                "rain": "water_logging",
+            }
+            mapped = mapping.get(cause_clean, "others")
+            log.info("Event cause '%s' not found in reference data. Mapping to '%s'.", event_cause, mapped)
+            cause_clean = mapped
+
         df = df[df["event_cause"].str.strip().str.lower() == cause_clean]
         if len(df) == 0:
             return []
@@ -33,9 +50,11 @@ class Fingerprinter:
         if hour is not None and "hour" in df.columns:
             h_delta = (df["hour"] - hour).abs()
             h_delta = h_delta.where(h_delta <= 12, 24 - h_delta)
-            df = df[h_delta <= 2]
-            if len(df) == 0:
-                return []
+            df_hour = df[h_delta <= 2]
+            if len(df_hour) > 0:
+                df = df_hour
+            else:
+                log.info("No similar events found within 2-hour window of hour=%s. Relaxing hour filter.", hour)
 
         dist = _haversine_km(lat, lon, df["latitude"].values, df["longitude"].values)
 
