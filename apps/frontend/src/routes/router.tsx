@@ -4,8 +4,13 @@ import { Navigate, type RouteObject } from 'react-router-dom'
 
 import ControllerLogin from '../components/auth/ControllerLogin'
 import FleetLogin from '../components/auth/FleetLogin'
-import DashboardLayout from '../components/dashboard/DashboardLayout'
+import AppLayout from '../components/dashboard/AppLayout'
 import FleetDashboard from '../components/dashboard/FleetDashboard'
+import DetailedReportsPage from '../components/dashboard/pages/DetailedReportsPage'
+import LiveMapPage from '../components/dashboard/pages/LiveMapPage'
+import OverviewPage from '../components/dashboard/pages/OverviewPage'
+import PerformancePage from '../components/dashboard/pages/PerformancePage'
+import SettingsPage from '../components/dashboard/pages/SettingsPage'
 import LandingPage from '../components/LandingPage'
 import { useAuth } from '../hooks/useAuth'
 
@@ -75,9 +80,17 @@ export const routes: RouteObject[] = [
     path: '/dashboard',
     element: (
       <ProtectedRoute requiredRole="controller">
-        <DashboardLayout />
+        <AppLayout />
       </ProtectedRoute>
     ),
+    children: [
+      { index: true, element: <Navigate to="/dashboard/map" replace /> },
+      { path: 'map', element: <LiveMapPage /> },
+      { path: 'overview', element: <OverviewPage /> },
+      { path: 'performance', element: <PerformancePage /> },
+      { path: 'reports', element: <DetailedReportsPage /> },
+      { path: 'settings', element: <SettingsPage /> },
+    ],
   },
   {
     path: '/fleet',

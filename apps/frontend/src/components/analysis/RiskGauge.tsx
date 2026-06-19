@@ -68,7 +68,8 @@ export default function RiskGauge({
 
       <div
         className={`rounded border px-4 py-1 font-mono text-xs font-bold tracking-[2px] ${
-          RISK_BADGE_CLASSES[riskLevel] || 'border-text-dim/30 bg-text-dim/10 text-text-muted'
+          RISK_BADGE_CLASSES[riskLevel] ||
+          'border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground'
         }`}
       >
         {riskLevel.toUpperCase()} RISK
@@ -76,16 +77,20 @@ export default function RiskGauge({
 
       <div className="flex gap-6">
         <div className="flex flex-col items-center">
-          <span className="font-mono text-lg font-bold text-text-primary">
+          <span className="font-mono text-lg font-bold text-foreground">
             {Math.round(queueLength)}
           </span>
-          <span className="text-[10px] tracking-wider text-text-muted uppercase">Queue Length</span>
+          <span className="text-[10px] tracking-wider text-muted-foreground uppercase">
+            Queue Length
+          </span>
         </div>
         <div className="flex flex-col items-center">
-          <span className="font-mono text-lg font-bold text-text-primary">
+          <span className="font-mono text-lg font-bold text-foreground">
             {spilloverTime > 0 ? `${spilloverTime.toFixed(1)}m` : 'N/A'}
           </span>
-          <span className="text-[10px] tracking-wider text-text-muted uppercase">Spillover</span>
+          <span className="text-[10px] tracking-wider text-muted-foreground uppercase">
+            Spillover
+          </span>
         </div>
       </div>
     </div>

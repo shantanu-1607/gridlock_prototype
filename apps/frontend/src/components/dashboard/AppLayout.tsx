@@ -1,17 +1,25 @@
 /* eslint-disable no-console */
 import { useCallback, useEffect, useState } from 'react'
+import { Outlet } from 'react-router-dom'
 
 import { useWebSocket } from '../../hooks/useWebSocket'
 import type { PipelineResult, PlanEventPayload, PlannedEvent } from '../../types'
-import { getEvents, planEvent } from '../../utils/api'
-import MapplsMap from '../map/MapplsMap'
+import { closeEvent, getEvents, planEvent } from '../../utils/api'
+import AppSidebar from './AppSidebar'
+import ControlPanel from './ControlPanel'
 import Header from './Header'
-import Sidebar from './Sidebar'
 
-type View = 'form' | 'results'
+export interface DashboardOutletContext {
+  pipelineResult: PipelineResult | null
+  selectedEvent: PlannedEvent | null
+  eventLat: number | undefined
+  eventLon: number | undefined
+  events: PlannedEvent[]
+  wsConnected: boolean
+  lastTick: ReturnType<typeof useWebSocket>['lastTick']
+}
 
-export default function DashboardLayout() {
-  const [view, setView] = useState<View>('form')
+export default function AppLayout() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(null)
@@ -19,17 +27,9 @@ export default function DashboardLayout() {
   const [selectedEvent, setSelectedEvent] = useState<PlannedEvent | null>(null)
   const [eventLat, setEventLat] = useState<number | undefined>()
   const [eventLon, setEventLon] = useState<number | undefined>()
-  const [clock, setClock] = useState(new Date())
 
   const { connected, lastTick } = useWebSocket()
 
-  // Clock tick
-  useEffect(() => {
-    const interval = setInterval(() => setClock(new Date()), 1000)
-    return () => clearInterval(interval)
-  }, [])
-
-  // Load events on mount + poll
   const fetchEvents = useCallback(async () => {
     try {
       const evts = await getEvents()
@@ -46,7 +46,7 @@ export default function DashboardLayout() {
     return () => clearInterval(interval)
   }, [fetchEvents])
 
-  const handlePlanSubmit = async (payload: PlanEventPayload) => {
+  const handlePlanSubmit = async (payload: PlanEventPayload): Promise<boolean> => {
     setLoading(true)
     setError(null)
     try {
@@ -54,10 +54,11 @@ export default function DashboardLayout() {
       setPipelineResult(pipeline)
       setEventLat(payload.lat)
       setEventLon(payload.lon)
-      setView('results')
       fetchEvents()
+      return true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to plan event')
+      return false
     } finally {
       setLoading(false)
     }
@@ -65,8 +66,7 @@ export default function DashboardLayout() {
 
   const handleCloseEvent = async (id: string) => {
     try {
-      // Use closeEvent from api.ts (already imported? Let's verify, if not we will import)
-      await import('../../utils/api').then((api) => api.closeEvent(id))
+      await closeEvent(id)
       fetchEvents()
     } catch (err) {
       console.error('Failed to close event', err)
@@ -123,52 +123,41 @@ export default function DashboardLayout() {
           context: '',
         },
       })
-      setView('results')
     }
   }
 
-  const handleBackToForm = () => {
-    setView('form')
-    setPipelineResult(null)
-    setSelectedEvent(null)
-  }
-
   const activeEvents = events.filter((e) => e.status === 'planned' || e.status === 'active')
+
+  const outletContext: DashboardOutletContext = {
+    pipelineResult,
+    selectedEvent,
+    eventLat,
+    eventLon,
+    events,
+    wsConnected: connected,
+    lastTick,
+  }
 
   return (
     <div className="flex h-screen flex-col bg-background">
       <Header wsConnected={connected} activeEvents={activeEvents.length} />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left — Sidebar */}
-        <Sidebar
-          view={view}
-          setView={setView}
+        <AppSidebar />
+
+        <main className="relative flex-1 overflow-hidden">
+          <Outlet context={outletContext} />
+        </main>
+
+        <ControlPanel
           loading={loading}
           error={error}
-          pipelineResult={pipelineResult}
           events={events}
           selectedEvent={selectedEvent}
           onPlanSubmit={handlePlanSubmit}
           onEventSelect={handleEventSelect}
-          onBackToForm={handleBackToForm}
           onCloseEvent={handleCloseEvent}
         />
-
-        {/* Right — Map (exclusively) */}
-        <main className="relative flex-1 overflow-hidden">
-          <MapplsMap
-            eventLat={eventLat}
-            eventLon={eventLon}
-            riskLevel={pipelineResult?.queue_analysis.risk_level}
-            propagationTick={lastTick}
-            pipeline={pipelineResult}
-          />
-
-          <div className="absolute right-4 bottom-4 z-[1000] font-mono text-[28px] font-light tracking-wider text-muted-foreground opacity-60">
-            {clock.toLocaleTimeString('en-IN', { hour12: false })}
-          </div>
-        </main>
       </div>
     </div>
   )
