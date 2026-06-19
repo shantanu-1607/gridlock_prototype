@@ -1,6 +1,7 @@
 import Groq from 'groq-sdk'
 
 import { graphService } from './graph.service'
+import { DistanceMatrixResult, getDistanceMatrix } from './mappls.service'
 import { CongestionForecast } from './simulation.service'
 
 export interface FleetMember {
@@ -102,6 +103,7 @@ function assignNearestFleet(
   lon: number,
   count: number,
   fleetPool: FleetMember[],
+  getDistance?: (member: FleetMember) => number,
 ): AssignedFleetMember[] {
   const assigned: AssignedFleetMember[] = []
 
@@ -109,7 +111,9 @@ function assignNearestFleet(
     let nearestIdx = 0
     let minDist = Infinity
     fleetPool.forEach((member, idx) => {
-      const dist = Math.hypot(member.current_lat - lat, member.current_lon - lon)
+      const dist = getDistance
+        ? getDistance(member)
+        : Math.hypot(member.current_lat - lat, member.current_lon - lon)
       if (dist < minDist) {
         minDist = dist
         nearestIdx = idx
@@ -133,7 +137,11 @@ const ESCALATION_TIERS = [
  * Groq API key, and as the safety net if the LLM call fails or returns
  * something we can't trust.
  */
-export function generateFallbackPlan(context: DispatchContext): DispatchPlan {
+export function generateFallbackPlan(
+  context: DispatchContext,
+  travelTimes?: DistanceMatrixResult | null,
+  candidateJunctions?: { id: string }[],
+): DispatchPlan {
   const { event, forecast, precedents, availableFleet } = context
 
   const t15New = forecast.t15_nodes.filter((id) => !forecast.t0_nodes.includes(id))
@@ -152,7 +160,21 @@ export function generateFallbackPlan(context: DispatchContext): DispatchPlan {
     const junction = graphService.junctions.get(target.id)
     if (!junction || fleetPool.length === 0) continue
 
-    const assignedFleet = assignNearestFleet(junction.lat, junction.lon, 1, fleetPool)
+    let getDistance: ((member: FleetMember) => number) | undefined
+    if (travelTimes && candidateJunctions) {
+      const junctionIdx = candidateJunctions.findIndex((j) => j.id === target.id)
+      if (junctionIdx !== -1) {
+        getDistance = (member) => {
+          const fleetIdx = context.availableFleet.findIndex((f) => f.id === member.id)
+          return (
+            travelTimes.durations[fleetIdx]?.[junctionIdx] ??
+            Math.hypot(member.current_lat - junction.lat, member.current_lon - junction.lon)
+          )
+        }
+      }
+    }
+
+    const assignedFleet = assignNearestFleet(junction.lat, junction.lon, 1, fleetPool, getDistance)
     if (assignedFleet.length === 0) continue
 
     deployments.push({
@@ -217,7 +239,11 @@ The JSON must exactly match this schema:
 }`
 }
 
-function buildUserPrompt(context: DispatchContext, candidateJunctionNames: string[]): string {
+function buildUserPrompt(
+  context: DispatchContext,
+  candidateJunctionNames: string[],
+  travelTimes: DistanceMatrixResult | null,
+): string {
   const { event, forecast, precedents, availableFleet } = context
 
   const nameOf = (id: string) => graphService.junctions.get(id)?.name ?? id
@@ -242,8 +268,22 @@ ${candidateJunctionNames.join(', ') || 'None — recommend holding fleet on stan
 HISTORICAL PRECEDENTS (similar past events):
 ${precedents.summary}
 
-AVAILABLE FLEET INVENTORY:
-Total Available: ${availableFleet.length} personnel
+AVAILABLE FLEET WITH TRAVEL TIMES:
+${availableFleet
+  .map((f, i) => {
+    if (candidateJunctionNames.length === 0) return `- ${f.name} (Standby)`
+    const etas = candidateJunctionNames
+      .map((name, j) => {
+        const mins =
+          travelTimes?.durations[i]?.[j] !== undefined
+            ? Math.round(travelTimes.durations[i][j] / 60)
+            : '?'
+        return `${mins} min to ${name}`
+      })
+      .join(', ')
+    return `- ${f.name} (${etas})`
+  })
+  .join('\\n')}
 
 INSTRUCTIONS:
 1. Review the congestion forecast to see where traffic will spread.
@@ -275,25 +315,23 @@ function getGroqClient(): Groq | null {
   return groqClient
 }
 
-async function callGroqDispatch(context: DispatchContext): Promise<RawLlmPlan> {
+async function callGroqDispatch(
+  context: DispatchContext,
+  travelTimes: DistanceMatrixResult | null,
+  candidateJunctions: { name: string }[],
+): Promise<RawLlmPlan> {
   const client = getGroqClient()
   if (!client) throw new Error('GROQ_API_KEY not configured')
 
-  const candidateIds = Array.from(
-    new Set([
-      ...context.forecast.t0_nodes,
-      ...context.forecast.t15_nodes,
-      ...context.forecast.t30_nodes,
-    ]),
-  )
-  const candidateJunctionNames = candidateIds.map(
-    (id) => graphService.junctions.get(id)?.name ?? id,
-  )
+  const candidateJunctionNames = candidateJunctions.map((j) => j.name)
+
+  const promptContent = buildUserPrompt(context, candidateJunctionNames, travelTimes)
+  console.log('[RecommendationService] Generated LLM Prompt:\\n', promptContent)
 
   const completion = await client.chat.completions.create({
     messages: [
       { role: 'system', content: buildSystemPrompt() },
-      { role: 'user', content: buildUserPrompt(context, candidateJunctionNames) },
+      { role: 'user', content: promptContent },
     ],
     model: process.env.GROQ_MODEL_ID || 'openai/gpt-oss-120b',
     temperature: 0.2,
@@ -317,7 +355,12 @@ async function callGroqDispatch(context: DispatchContext): Promise<RawLlmPlan> {
  * fleet assignments, matching junction names back to graph IDs and picking
  * the nearest available personnel for each deployment.
  */
-function resolveRawPlan(raw: RawLlmPlan, context: DispatchContext): DispatchPlan {
+function resolveRawPlan(
+  raw: RawLlmPlan,
+  context: DispatchContext,
+  travelTimes: DistanceMatrixResult | null,
+  candidateJunctions: { id: string }[],
+): DispatchPlan {
   const nameToJunction = new Map(
     Array.from(graphService.junctions.values()).map((j) => [j.name.toLowerCase(), j]),
   )
@@ -329,8 +372,28 @@ function resolveRawPlan(raw: RawLlmPlan, context: DispatchContext): DispatchPlan
     const junction = nameToJunction.get(raw_deployment.junction.toLowerCase())
     if (!junction || fleetPool.length === 0) continue
 
+    let getDistance: ((member: FleetMember) => number) | undefined
+    if (travelTimes) {
+      const junctionIdx = candidateJunctions.findIndex((j) => j.id === junction.id)
+      if (junctionIdx !== -1) {
+        getDistance = (member) => {
+          const fleetIdx = context.availableFleet.findIndex((f) => f.id === member.id)
+          return (
+            travelTimes.durations[fleetIdx]?.[junctionIdx] ??
+            Math.hypot(member.current_lat - junction.lat, member.current_lon - junction.lon)
+          )
+        }
+      }
+    }
+
     const fleetCount = Math.max(1, Math.floor(raw_deployment.fleet_count) || 1)
-    const assignedFleet = assignNearestFleet(junction.lat, junction.lon, fleetCount, fleetPool)
+    const assignedFleet = assignNearestFleet(
+      junction.lat,
+      junction.lon,
+      fleetCount,
+      fleetPool,
+      getDistance,
+    )
     if (assignedFleet.length === 0) continue
 
     deployments.push({
@@ -362,9 +425,25 @@ function resolveRawPlan(raw: RawLlmPlan, context: DispatchContext): DispatchPlan
  * the call/response fails validation.
  */
 export async function generateDispatchPlan(context: DispatchContext): Promise<DispatchPlan> {
+  const candidateIds = Array.from(
+    new Set([
+      ...context.forecast.t0_nodes,
+      ...context.forecast.t15_nodes,
+      ...context.forecast.t30_nodes,
+    ]),
+  )
+  const candidateJunctions = candidateIds
+    .map((id) => graphService.junctions.get(id))
+    .filter((j): j is NonNullable<typeof j> => j !== undefined)
+
+  const travelTimes = await getDistanceMatrix(
+    context.availableFleet.map((f) => ({ lat: f.current_lat, lon: f.current_lon })),
+    candidateJunctions.map((j) => ({ lat: j.lat, lon: j.lon })),
+  )
+
   try {
-    const raw = await callGroqDispatch(context)
-    const resolved = resolveRawPlan(raw, context)
+    const raw = await callGroqDispatch(context, travelTimes, candidateJunctions)
+    const resolved = resolveRawPlan(raw, context, travelTimes, candidateJunctions)
     if (resolved.deployments.length === 0 && raw.deployments.length > 0) {
       throw new Error('LLM plan referenced no valid candidate junctions')
     }
@@ -374,6 +453,6 @@ export async function generateDispatchPlan(context: DispatchContext): Promise<Di
       '[RecommendationService] Falling back to rule-based plan:',
       (error as Error).message,
     )
-    return generateFallbackPlan(context)
+    return generateFallbackPlan(context, travelTimes, candidateJunctions)
   }
 }
