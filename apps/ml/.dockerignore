@@ -1,0 +1,26 @@
+# Large artifacts — not needed at build time (mounted via volume)
+mlartifacts/
+mlflow.db
+mlflow_tournament1.db
+catboost_info/
+logs/
+.dvc/cache/
+.dvc/tmp/
+
+# Data files (mounted via volume)
+data/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Git
+.git/
+.gitignore

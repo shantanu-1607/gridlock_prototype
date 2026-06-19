@@ -30,6 +30,7 @@ function PropagationOverlay({ tick }: { tick: PropagationTick | null }) {
     const circles: L.Circle[] = []
 
     Object.entries(tick.activeNodes).forEach(([_nodeId, node]) => {
+      if (!node.lat || !node.lon) return
       const circle = L.circle([node.lat, node.lon], {
         radius: 200 + node.intensity * 800,
         fillColor: node.intensity > 0.7 ? '#ef4444' : node.intensity > 0.4 ? '#f59e0b' : '#10b981',

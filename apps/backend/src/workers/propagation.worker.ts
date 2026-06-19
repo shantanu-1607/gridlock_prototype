@@ -2,6 +2,7 @@ import { Worker } from 'bullmq'
 import dotenv from 'dotenv'
 import Redis from 'ioredis'
 
+import { graphService } from '../services/graph.service'
 import { Interventions, PropagationState, simulationService } from '../services/simulation.service'
 
 dotenv.config()
@@ -98,13 +99,26 @@ export const propagationWorker = new Worker(
     // Save updated state back to Redis
     await workerRedis.set(stateKey, JSON.stringify(state))
 
+    // Enrich activeNodes with lat/lon from graph for frontend rendering
+    const enrichedNodes: Record<string, { intensity: number; lat: number; lon: number }> = {}
+    for (const [nodeId, nodeData] of Object.entries(state.activeNodes)) {
+      const junction = graphService.junctions.get(nodeId)
+      if (junction) {
+        enrichedNodes[nodeId] = {
+          intensity: nodeData.intensity,
+          lat: junction.lat,
+          lon: junction.lon,
+        }
+      }
+    }
+
     // Publish to Redis channel so WebSocket server can broadcast
     const payload = JSON.stringify({
       event: 'propagation:tick',
       data: {
         eventId,
         tick: state.currentTick,
-        activeNodes: state.activeNodes,
+        activeNodes: enrichedNodes,
         timestamp: new Date().toISOString(),
       },
     })

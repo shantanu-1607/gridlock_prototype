@@ -149,7 +149,7 @@ export default function PipelinePanel({ result, counterfactual }: Props) {
       </div>
 
       {/* Post-Event Accuracy / Counterfactual Analysis */}
-      {counterfactual && (
+      {counterfactual && counterfactual.prediction_accuracy_pct !== undefined && (
         <div className="panel-section">
           <h3>
             <Target size={16} /> Post-Event Analysis

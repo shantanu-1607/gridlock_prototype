@@ -14,7 +14,10 @@ from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
-from prophet import Prophet
+try:
+    from prophet import Prophet
+except ImportError:
+    Prophet = None
 
 from .constants import DATA_PATH, ARTIFACTS_DIR, DURATION_COL
 from .data import load_and_prepare, load_config
@@ -31,6 +34,10 @@ def train_corridor_baselines(min_events: int = 15) -> dict:
     Returns dict of corridor -> Prophet model.
     Saves models to disk for reuse.
     """
+    if Prophet is None:
+        log.warning("Prophet not installed — cannot train corridor baselines")
+        return {}
+
     cfg = load_config()
     df = load_and_prepare(cfg)
 
@@ -117,10 +124,21 @@ def load_corridor_baselines() -> dict:
     if not PROPHET_DIR.exists():
         return models
 
+    if Prophet is None:
+        log.warning("Prophet not installed — skipping pickle load, will use statistical fallback")
+        return models
+
     for pkl_file in PROPHET_DIR.glob("*.pkl"):
-        corridor = pkl_file.stem.replace("_", " ")
-        with open(pkl_file, "rb") as f:
-            models[corridor] = pickle.load(f)
+        corridor = pkl_file.stem
+        if corridor == "__global__":
+            key = "__global__"
+        else:
+            key = corridor.replace("_", " ")
+        try:
+            with open(pkl_file, "rb") as f:
+                models[key] = pickle.load(f)
+        except Exception as e:
+            log.warning("Failed to load Prophet model for %s: %s", key, e)
 
     return models
 
