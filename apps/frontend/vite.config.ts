@@ -1,6 +1,4 @@
 import tailwindcss from '@tailwindcss/vite'
-import { fileURLToPath, URL } from 'node:url'
-
 import react from '@vitejs/plugin-react'
 /* eslint-disable no-undef */
 import path from 'path'
@@ -20,9 +18,7 @@ export default defineConfig(({ mode }) => {
     },
 
     define: {
-      'import.meta.env.VITE_MAPMYINDIA_API': JSON.stringify(
-        env.MAPMYINDIA_API
-      ),
+      'import.meta.env.VITE_MAPMYINDIA_API': JSON.stringify(env.MAPMYINDIA_API),
     },
 
     server: {

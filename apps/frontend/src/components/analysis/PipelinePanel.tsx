@@ -59,7 +59,12 @@ export default function PipelinePanel({ result, counterfactual }: Props) {
               {Math.round(prediction.duration_mins)}
             </span>
             <span className="text-[10px] tracking-wider text-muted-foreground uppercase">
-              Predicted Minutes
+              {prediction.prediction_interval?.lower_mins !== null &&
+              prediction.prediction_interval?.lower_mins !== undefined &&
+              prediction.prediction_interval?.upper_mins !== null &&
+              prediction.prediction_interval?.upper_mins !== undefined
+                ? `${Math.round(prediction.prediction_interval.lower_mins)}–${Math.round(prediction.prediction_interval.upper_mins)} min (${Math.round((prediction.prediction_interval.coverage ?? 0.9) * 100)}% CI)`
+                : 'Predicted Minutes'}
             </span>
           </div>
         </div>

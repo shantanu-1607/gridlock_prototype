@@ -244,3 +244,9 @@ logs
 *.sw?
 
 EXPERIMENTATION_PED.md
+
+# CatBoost training logs
+catboost_info/
+
+# Research paper
+GridLock_Research_Paper.pdf

@@ -91,6 +91,8 @@ export default function DashboardLayout() {
                   ? 'Medium'
                   : 'Low',
           confidence: 0.7,
+          prediction_interval: null,
+          confidence_factors: null,
         },
         queue_analysis: {
           blocking_probability: ev.blocking_probability,

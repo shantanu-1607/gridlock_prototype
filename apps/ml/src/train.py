@@ -158,7 +158,9 @@ def run_training():
     cat_best = _suggest_cat_from_best(cat_study.best_params, model_cfg)
     log.info("CAT best RMSE(log): %.4f", cat_study.best_value)
 
-    # --- Feature pruning ---
+    # --- Feature pruning (permutation importance) ---
+    from sklearn.inspection import permutation_importance as sklearn_perm_imp
+
     prune_cfg = model_cfg["pruning"]
     oof_lgb = oof_predictions("lgb", lgb_best, train_df, y_train_raw, n_splits, full_enc)
     valid = ~np.isnan(oof_lgb)
@@ -170,26 +172,47 @@ def run_training():
     n_est = lgb_params_train.pop("n_estimators", 2000)
     es = lgb_params_train.pop("early_stopping_rounds", 50)
     tmp_model = lgb.train(lgb_params_train, ds_full, num_boost_round=500)
-    importances = tmp_model.feature_importance(importance_type="gain")
-    total_imp = importances.sum()
-    if total_imp > 0:
-        rel_imp = importances / total_imp
-        pruned = [f for f, imp in zip(feature_names, rel_imp) if imp < prune_cfg["importance_threshold"]]
-        if pruned:
-            log.info("Candidates for pruning (%d): %s", len(pruned), pruned)
-            keep_cols = [f for f in feature_names if f not in pruned]
-            oof_p = oof_predictions("lgb", lgb_best, train_df, y_train_raw, n_splits, full_enc, keep_cols=keep_cols)
-            valid_p = ~np.isnan(oof_p)
 
-            X_train_pruned = X_train[keep_cols]
-            pruned_rmse = np.sqrt(np.mean((oof_p[valid_p] - np.log1p(y_train_raw[valid_p])) ** 2))
-            if pruned_rmse <= base_rmse * (1 + prune_cfg["rmse_tolerance"]):
-                feature_names = keep_cols
-                X_train = X_train_pruned
-                X_test = X_test[keep_cols]
-                log.info("Pruned %d features (RMSE %.4f -> %.4f)", len(pruned), base_rmse, pruned_rmse)
-            else:
-                log.info("Pruning rejected (RMSE %.4f -> %.4f)", base_rmse, pruned_rmse)
+    # Use permutation importance on held-out test set for robust feature ranking
+    log.info("--- Computing permutation importance (10 repeats) ---")
+
+    class _LGBWrapper:
+        """Minimal wrapper so sklearn permutation_importance can call .predict()."""
+        def __init__(self, booster):
+            self._booster = booster
+        def predict(self, X):
+            return self._booster.predict(X)
+
+    perm_result = sklearn_perm_imp(
+        _LGBWrapper(tmp_model), X_test, np.log1p(y_test_raw),
+        n_repeats=10, scoring="neg_root_mean_squared_error", random_state=42,
+    )
+    perm_means = perm_result.importances_mean
+    total_imp = perm_means.sum() if perm_means.sum() > 0 else 1.0
+    rel_imp = perm_means / total_imp
+
+    # Prune features with negligible permutation importance AND negative/zero mean
+    pruned = [
+        f for f, imp, raw in zip(feature_names, rel_imp, perm_means)
+        if imp < prune_cfg["importance_threshold"] and raw <= 0.0
+    ]
+    if pruned:
+        log.info("Candidates for pruning (%d): %s", len(pruned), pruned)
+        keep_cols = [f for f in feature_names if f not in pruned]
+        oof_p = oof_predictions("lgb", lgb_best, train_df, y_train_raw, n_splits, full_enc, keep_cols=keep_cols)
+        valid_p = ~np.isnan(oof_p)
+
+        X_train_pruned = X_train[keep_cols]
+        pruned_rmse = np.sqrt(np.mean((oof_p[valid_p] - np.log1p(y_train_raw[valid_p])) ** 2))
+        if pruned_rmse <= base_rmse * (1 + prune_cfg["rmse_tolerance"]):
+            feature_names = keep_cols
+            X_train = X_train_pruned
+            X_test = X_test[keep_cols]
+            log.info("Pruned %d features (RMSE %.4f -> %.4f)", len(pruned), base_rmse, pruned_rmse)
+        else:
+            log.info("Pruning rejected (RMSE %.4f -> %.4f)", base_rmse, pruned_rmse)
+    else:
+        log.info("No features eligible for pruning")
 
     # --- Blend weight tuning on OOF predictions ---
     log.info("--- Blend weight tuning ---")
@@ -259,6 +282,33 @@ def run_training():
     confidence_base = max(0.3, min(0.95, 1.0 - oof_rmse_log / y_std_log)) if y_std_log > 0 else 0.5
     residual_std = float(np.std(np.abs(np.expm1(oof_final[valid_oof]) - y_train_raw[valid_oof])))
 
+    # --- Conformal calibration: compute residual quantiles per corridor ---
+    log.info("--- Computing conformal calibration residuals ---")
+    oof_residuals_log = np.abs(oof_final[valid_oof] - np.log1p(y_train_raw[valid_oof]))
+    conformal_cal = {
+        "__global__": {
+            "q90": float(np.quantile(oof_residuals_log, 0.90)),
+            "q80": float(np.quantile(oof_residuals_log, 0.80)),
+            "q95": float(np.quantile(oof_residuals_log, 0.95)),
+            "median": float(np.median(oof_residuals_log)),
+            "n_samples": int(valid_oof.sum()),
+        }
+    }
+    # Per-corridor calibration
+    corridors_valid = train_df.loc[train_df.index[valid_oof], "corridor"].values
+    for corridor_name in np.unique(corridors_valid):
+        mask = corridors_valid == corridor_name
+        if mask.sum() >= 20:  # need enough samples for reliable quantiles
+            corridor_resid = oof_residuals_log[mask]
+            conformal_cal[str(corridor_name)] = {
+                "q90": float(np.quantile(corridor_resid, 0.90)),
+                "q80": float(np.quantile(corridor_resid, 0.80)),
+                "q95": float(np.quantile(corridor_resid, 0.95)),
+                "median": float(np.median(corridor_resid)),
+                "n_samples": int(mask.sum()),
+            }
+    log.info("Conformal calibration: %d corridors + global", len(conformal_cal) - 1)
+
     # --- Save artifacts ---
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     out_dir = ARTIFACTS_DIR / ts
@@ -282,6 +332,9 @@ def run_training():
             "blend_weight": round(best_w, 4),
             "n_lgb_seeds": len(seeds),
         }, f)
+
+    with open(out_dir / "conformal_calibration.json", "w") as f:
+        json.dump(conformal_cal, f, indent=2)
 
     # --- Write reference table for fingerprinting ---
     from .evaluate import write_reference_table, compute_metrics, check_overfit, severity_sanity, learning_curve
