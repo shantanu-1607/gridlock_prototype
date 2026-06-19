@@ -58,6 +58,19 @@ class AggregatedFingerprint(BaseModel):
     count: int
 
 
+class PredictionInterval(BaseModel):
+    lower_mins: float | None = None
+    upper_mins: float | None = None
+    coverage: float | None = None
+    source: str = "none"
+
+
+class ConfidenceFactors(BaseModel):
+    base_confidence: float = 0.0
+    ensemble_std: float = 0.0
+    n_models: int = 1
+
+
 class PredictResponse(BaseModel):
     predicted_duration_mins: float
     severity_score: float
@@ -66,6 +79,8 @@ class PredictResponse(BaseModel):
     model_timestamp: str
     similar_events: list[SimilarEvent]
     aggregated: AggregatedFingerprint | None = None
+    prediction_interval: PredictionInterval | None = None
+    confidence_factors: ConfidenceFactors | None = None
 
 
 # --- Queueing Model schemas ---

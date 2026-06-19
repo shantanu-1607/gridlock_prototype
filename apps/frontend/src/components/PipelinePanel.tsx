@@ -39,7 +39,14 @@ export default function PipelinePanel({ result, counterfactual }: Props) {
           <Clock size={20} className="kpi-icon" />
           <div>
             <span className="kpi-value">{Math.round(prediction.duration_mins)}</span>
-            <span className="kpi-label">Predicted Minutes</span>
+            <span className="kpi-label">
+              {prediction.prediction_interval?.lower_mins !== null &&
+              prediction.prediction_interval?.lower_mins !== undefined &&
+              prediction.prediction_interval?.upper_mins !== null &&
+              prediction.prediction_interval?.upper_mins !== undefined
+                ? `${Math.round(prediction.prediction_interval.lower_mins)}–${Math.round(prediction.prediction_interval.upper_mins)} min (${Math.round((prediction.prediction_interval.coverage ?? 0.9) * 100)}% CI)`
+                : 'Predicted Minutes'}
+            </span>
           </div>
         </div>
         <div className={`kpi-card severity-${prediction.severity_label.toLowerCase()}`}>
