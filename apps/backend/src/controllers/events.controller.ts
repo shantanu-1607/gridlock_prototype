@@ -12,7 +12,7 @@ import { generateDispatchPlan, getHistoricalPrecedents } from '../services/recom
 import { simulationService } from '../services/simulation.service'
 import { query } from '../utils/db'
 
-const ML_BASE = process.env.ML_URL || 'http://localhost:8000'
+const ML_BASE = process.env.ML_SERVICE_URL || 'http://localhost:8000'
 
 /**
  * Call ML prediction endpoint.
