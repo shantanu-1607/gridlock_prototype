@@ -11,13 +11,18 @@ services:
       context: ./apps/backend
     ports:
       - "4000:4000"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       - PORT=4000
       - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
       - REDIS_URL=redis://redis:6379
       - ML_SERVICE_URL=http://ml:8000
       - GROQ_API_KEY=${GROQ_API_KEY}
       - GROQ_MODEL_ID=${GROQ_MODEL_ID}
+      - MAPMYINDIA_API=${MAPMYINDIA_API}
       - MAPPLS_API_KEY=${MAPPLS_API_KEY}
       - MAPPLS_CLIENT_ID=${MAPPLS_CLIENT_ID}
       - MAPPLS_CLIENT_SECRET=${MAPPLS_CLIENT_SECRET}

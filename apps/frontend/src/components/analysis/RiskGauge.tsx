@@ -13,6 +13,14 @@ const RISK_COLORS: Record<string, string> = {
   critical: '#dc2626',
 }
 
+const RISK_BADGE_CLASSES: Record<string, string> = {
+  low: 'border-green/30 bg-green/15 text-green',
+  yellow: 'border-yellow/30 bg-yellow/15 text-yellow',
+  orange: 'border-orange/30 bg-orange/15 text-orange',
+  red: 'border-red/30 bg-red/15 text-red',
+  critical: 'border-critical/30 bg-critical/15 text-critical animate-pulse',
+}
+
 export default function RiskGauge({
   riskLevel,
   blockingProbability,
@@ -23,9 +31,9 @@ export default function RiskGauge({
   const angle = Math.min(blockingProbability, 1) * 180
 
   return (
-    <div className="risk-gauge-card">
-      <div className="gauge-container">
-        <svg viewBox="0 0 200 120" className="gauge-svg">
+    <div className="flex flex-col items-center gap-2.5">
+      <div className="w-[180px]">
+        <svg viewBox="0 0 200 120" className="w-full">
           {/* Background arc */}
           <path
             d="M 20 100 A 80 80 0 0 1 180 100"
@@ -42,7 +50,7 @@ export default function RiskGauge({
             strokeWidth="16"
             strokeLinecap="round"
             strokeDasharray={`${(angle / 180) * 251.3} 251.3`}
-            className="gauge-fill"
+            className="transition-all duration-1000 ease-out"
           />
           {/* Needle */}
           <line
@@ -55,27 +63,29 @@ export default function RiskGauge({
             strokeLinecap="round"
           />
           <circle cx="100" cy="100" r="6" fill={color} />
-          <text x="100" y="88" textAnchor="middle" fill={color} fontSize="22" fontWeight="bold">
-            {Math.round(blockingProbability * 100)}%
-          </text>
-          <text x="100" y="75" textAnchor="middle" fill="#94a3b8" fontSize="9">
-            BLOCKING PROB
-          </text>
         </svg>
       </div>
 
-      <div className={`risk-badge risk-${riskLevel}`}>{riskLevel.toUpperCase()} RISK</div>
+      <div
+        className={`rounded border px-4 py-1 font-mono text-xs font-bold tracking-[2px] ${
+          RISK_BADGE_CLASSES[riskLevel] || 'border-text-dim/30 bg-text-dim/10 text-text-muted'
+        }`}
+      >
+        {riskLevel.toUpperCase()} RISK
+      </div>
 
-      <div className="gauge-stats">
-        <div className="gauge-stat">
-          <span className="stat-value">{Math.round(queueLength)}</span>
-          <span className="stat-label">Queue Length</span>
+      <div className="flex gap-6">
+        <div className="flex flex-col items-center">
+          <span className="font-mono text-lg font-bold text-text-primary">
+            {Math.round(queueLength)}
+          </span>
+          <span className="text-[10px] tracking-wider text-text-muted uppercase">Queue Length</span>
         </div>
-        <div className="gauge-stat">
-          <span className="stat-value">
+        <div className="flex flex-col items-center">
+          <span className="font-mono text-lg font-bold text-text-primary">
             {spilloverTime > 0 ? `${spilloverTime.toFixed(1)}m` : 'N/A'}
           </span>
-          <span className="stat-label">Spillover</span>
+          <span className="text-[10px] tracking-wider text-text-muted uppercase">Spillover</span>
         </div>
       </div>
     </div>
