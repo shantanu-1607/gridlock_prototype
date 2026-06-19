@@ -14,11 +14,26 @@ export interface PlanEventPayload {
   priority: string
 }
 
+export interface PredictionInterval {
+  lower_mins: number | null
+  upper_mins: number | null
+  coverage: number | null
+  source: string
+}
+
+export interface ConfidenceFactors {
+  base_confidence: number
+  ensemble_std: number
+  n_models: number
+}
+
 export interface PipelinePrediction {
   duration_mins: number
   severity_score: number
   severity_label: string
   confidence: number
+  prediction_interval?: PredictionInterval | null
+  confidence_factors?: ConfidenceFactors | null
 }
 
 export interface QueueAnalysis {

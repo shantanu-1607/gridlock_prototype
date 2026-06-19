@@ -38,6 +38,8 @@ async function callMLPredict(eventData: any) {
         confidence: data.confidence,
         similar_events: data.similar_events || [],
         aggregated: data.aggregated || null,
+        prediction_interval: data.prediction_interval || null,
+        confidence_factors: data.confidence_factors || null,
       }
     }
   } catch (error) {
@@ -50,6 +52,8 @@ async function callMLPredict(eventData: any) {
     confidence: 0.5,
     similar_events: [],
     aggregated: null,
+    prediction_interval: null,
+    confidence_factors: null,
   }
 }
 
@@ -512,6 +516,8 @@ export const planEvent = async (req: Request, res: Response) => {
           severity_score: mlResult.severity_score,
           severity_label: mlResult.severity_label,
           confidence: mlResult.confidence,
+          prediction_interval: mlResult.prediction_interval,
+          confidence_factors: mlResult.confidence_factors,
         },
         queue_analysis: queueResult,
         deployment_plan: deploymentPlan,

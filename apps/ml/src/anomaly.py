@@ -114,6 +114,48 @@ def train_corridor_baselines(min_events: int = 15) -> dict:
         with open(PROPHET_DIR / "__global__.pkl", "wb") as f:
             pickle.dump(global_model, f)
 
+    # --- Compute adaptive anomaly thresholds per corridor ---
+    log.info("Computing corridor-specific anomaly thresholds from training residuals")
+    anomaly_thresholds = {}
+
+    for corridor_name, model in models.items():
+        if corridor_name == "__global__":
+            cdf_resid = df.copy()
+        else:
+            cdf_resid = df[df["corridor"] == corridor_name].copy()
+
+        if len(cdf_resid) < 10:
+            continue
+
+        cdf_resid["hour_bucket"] = cdf_resid["start_dt"].dt.floor("h")
+        hourly_resid = cdf_resid.groupby("hour_bucket").agg(
+            mean_duration=(DURATION_COL, "mean"),
+        ).reset_index()
+
+        prophet_df_resid = pd.DataFrame({
+            "ds": hourly_resid["hour_bucket"].dt.tz_localize(None),
+        })
+
+        if len(prophet_df_resid) < 5:
+            continue
+
+        forecast_resid = model.predict(prophet_df_resid)
+        residuals = hourly_resid["mean_duration"].values - forecast_resid["yhat"].values
+        abs_residuals = np.abs(residuals)
+
+        anomaly_thresholds[corridor_name] = {
+            "elevated_threshold": float(np.quantile(abs_residuals, 0.75)),
+            "anomaly_threshold": float(np.quantile(abs_residuals, 0.90)),
+            "severe_threshold": float(np.quantile(abs_residuals, 0.97)),
+            "n_samples": int(len(abs_residuals)),
+        }
+
+    # Save thresholds
+    thresholds_path = PROPHET_DIR / "anomaly_thresholds.json"
+    with open(thresholds_path, "w") as f:
+        json.dump(anomaly_thresholds, f, indent=2)
+    log.info("Saved anomaly thresholds for %d corridors", len(anomaly_thresholds))
+
     log.info("Trained %d Prophet models (including global)", len(models))
     return models
 
@@ -141,6 +183,18 @@ def load_corridor_baselines() -> dict:
             log.warning("Failed to load Prophet model for %s: %s", key, e)
 
     return models
+
+
+def _load_anomaly_thresholds() -> dict:
+    """Load corridor-specific anomaly thresholds from disk."""
+    thresholds_path = PROPHET_DIR / "anomaly_thresholds.json"
+    if thresholds_path.exists():
+        with open(thresholds_path) as f:
+            return json.load(f)
+    return {}
+
+
+_cached_thresholds: dict | None = None
 
 
 def compute_anomaly_score(
@@ -218,14 +272,39 @@ def compute_anomaly_score(
     deviation = predicted_duration_mins - expected_duration
     deviation_pct = (deviation / expected_duration) * 100 if expected_duration > 0 else 0
 
-    # Classify anomaly
-    if predicted_duration_mins > expected_upper * 1.5:
+    # Classify anomaly using adaptive corridor-specific thresholds
+    global _cached_thresholds
+    if _cached_thresholds is None:
+        _cached_thresholds = _load_anomaly_thresholds()
+
+    abs_deviation = abs(deviation)
+
+    # Find corridor-specific thresholds, fallback to global, then fixed defaults
+    corridor_key = None
+    for key in _cached_thresholds:
+        if key == "__global__":
+            continue
+        if key.lower().replace("_", " ") == corridor.lower().replace("_", " "):
+            corridor_key = key
+            break
+        if key.lower() in corridor.lower() or corridor.lower() in key.lower():
+            corridor_key = key
+            break
+
+    thresholds = _cached_thresholds.get(
+        corridor_key or "__global__",
+        {"elevated_threshold": expected_duration * 0.2,
+         "anomaly_threshold": expected_duration * 0.5,
+         "severe_threshold": expected_duration * 1.0},
+    )
+
+    if deviation > 0 and abs_deviation > thresholds["severe_threshold"]:
         label = "severe_anomaly"
-    elif predicted_duration_mins > expected_upper:
+    elif deviation > 0 and abs_deviation > thresholds["anomaly_threshold"]:
         label = "anomaly"
-    elif predicted_duration_mins > expected_duration * 1.2:
+    elif deviation > 0 and abs_deviation > thresholds["elevated_threshold"]:
         label = "elevated"
-    elif predicted_duration_mins < expected_lower * 0.5:
+    elif deviation < 0 and abs_deviation > thresholds["severe_threshold"]:
         label = "unusually_low"
     else:
         label = "normal"
