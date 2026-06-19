@@ -11,8 +11,12 @@ import {
   updateAssignmentStatus,
   updateEvent,
 } from '../controllers/events.controller'
+import { authenticateToken } from '../middleware/auth.middleware'
 
 const router = Router()
+
+// Apply authentication middleware to all routes below
+router.use(authenticateToken)
 
 // Core planning pipeline — primary endpoint for proactive event management
 router.post('/plan', planEvent)

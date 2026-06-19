@@ -7,9 +7,11 @@ import http from 'http'
 import Redis from 'ioredis'
 import { WebSocket, WebSocketServer } from 'ws'
 
+import authRoutes from './routes/auth.routes'
 import eventsRoutes from './routes/events.routes'
 import graphRoutes from './routes/graph.routes'
 import healthRoutes from './routes/health'
+import mapRoutes from './routes/map.routes'
 
 dotenv.config()
 
@@ -21,8 +23,10 @@ app.use(cors())
 app.use(express.json())
 
 app.use('/api/health', healthRoutes)
+app.use('/api/auth', authRoutes)
 app.use('/api/events', eventsRoutes)
 app.use('/api/graph', graphRoutes)
+app.use('/api/map', mapRoutes)
 
 const subscriberRedis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379')
 subscriberRedis.subscribe('gridlock:events', (err, count) => {
