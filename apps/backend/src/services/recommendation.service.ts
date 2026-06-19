@@ -97,7 +97,7 @@ const VALID_PRIORITIES = ['Critical', 'High', 'Medium', 'Low']
  * Assigns the `count` nearest members of fleetPool to (lat, lon), removing
  * them from the pool so they can't be double-booked across deployments.
  */
-function assignNearestFleet(
+export function assignNearestFleet(
   lat: number,
   lon: number,
   count: number,

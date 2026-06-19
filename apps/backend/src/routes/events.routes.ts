@@ -1,8 +1,10 @@
 import { Router } from 'express'
 
 import {
+  confirmBarricade,
   createEvent,
   getEventAssignments,
+  getEventBarricades,
   getEventById,
   getEvents,
   planEvent,
@@ -24,5 +26,9 @@ router.put('/:id', updateEvent)
 // Fleet dispatch and intervention endpoints
 router.get('/:id/assignments', getEventAssignments)
 router.put('/:id/assignments/:assignmentId', updateAssignmentStatus)
+
+// Barricade recommendation endpoints
+router.get('/:id/barricades', getEventBarricades)
+router.put('/:id/barricades/:barricadeId', confirmBarricade)
 
 export default router

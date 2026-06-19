@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 
+import { generateBarricadePlan } from '../services/barricade.service'
 import { findConflicts } from '../services/conflict.service'
 import { graphService } from '../services/graph.service'
 import {
@@ -8,7 +9,11 @@ import {
   removePropagationJob,
   schedulePropagationJob,
 } from '../services/queue.service'
-import { generateDispatchPlan, getHistoricalPrecedents } from '../services/recommendation.service'
+import {
+  assignNearestFleet,
+  generateDispatchPlan,
+  getHistoricalPrecedents,
+} from '../services/recommendation.service'
 import { simulationService } from '../services/simulation.service'
 import { query } from '../utils/db'
 
@@ -675,7 +680,40 @@ export const createEvent = async (req: Request, res: Response) => {
       conflicts,
     })
 
-    // 12. Schedule Propagation Job
+    // 12. Generate the barricade plan (rule-based placements + Groq explanation)
+    const barricadePlan = await generateBarricadePlan({ event: activeEvent, forecast })
+
+    for (const barricade of barricadePlan.barricades) {
+      await query(
+        `INSERT INTO barricades
+           (event_id, junction_id, location_name, lat, lon, type, activate_at, purpose, rule_source, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'recommended')`,
+        [
+          eventId,
+          barricade.junction_id,
+          barricade.location_name,
+          barricade.lat,
+          barricade.lon,
+          barricade.type,
+          barricade.activate_at,
+          barricade.purpose,
+          barricade.rule_source,
+        ],
+      )
+    }
+
+    await query(
+      `UPDATE events SET barricade_rationale = $1, total_barricades_required = $2 WHERE id = $3`,
+      [barricadePlan.rationale, barricadePlan.barricades.length, eventId],
+    )
+
+    await publishWsEvent('barricades:ready', {
+      eventId,
+      barricades: barricadePlan.barricades,
+      rationale: barricadePlan.rationale,
+    })
+
+    // 13. Schedule Propagation Job
     await schedulePropagationJob(
       eventId,
       activeEvent.severity_score,
@@ -685,8 +723,14 @@ export const createEvent = async (req: Request, res: Response) => {
 
     res.status(201).json({
       message: 'Event created successfully',
-      event: eventWithRecommendation,
+      event: {
+        ...eventWithRecommendation,
+        barricade_rationale: barricadePlan.rationale,
+        total_barricades_required: barricadePlan.barricades.length,
+      },
       recommendation: plan,
+      barricades: barricadePlan.barricades,
+      barricade_rationale: barricadePlan.rationale,
       conflicts,
     })
   } catch (error) {
@@ -925,6 +969,129 @@ export const updateAssignmentStatus = async (req: Request, res: Response) => {
     })
   } catch (error) {
     console.error('Error updating assignment status:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+export const getEventBarricades = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const result = await query(
+      `SELECT b.*, u.name as assigned_user_name
+       FROM barricades b
+       LEFT JOIN users u ON b.assigned_user_id = u.id
+       WHERE b.event_id = $1
+       ORDER BY b.created_at ASC`,
+      [id],
+    )
+    res.json({ barricades: result.rows })
+  } catch (error) {
+    console.error('Error fetching event barricades:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+/**
+ * PUT /api/events/:id/barricades/:barricadeId — controller confirms a
+ * recommended barricade. This registers it in the live propagation simulation
+ * (so it starts blocking spread) and auto-assigns the nearest available fleet
+ * member to physically place and manage it.
+ */
+export const confirmBarricade = async (req: Request, res: Response) => {
+  try {
+    const { id: eventId, barricadeId } = req.params
+
+    // 1. Mark the barricade confirmed
+    const result = await query(
+      `UPDATE barricades
+       SET status = 'confirmed', updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND event_id = $2
+       RETURNING *`,
+      [barricadeId, eventId],
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Barricade not found for this event' })
+    }
+
+    const barricade = result.rows[0]
+
+    // 2. Register the barricade in the simulation so the worker blocks
+    //    propagation into this junction (same wiring as fleet on_site).
+    const stateKey = `interventions:${eventId}`
+    const interventionsStr = await redisConnection.get(stateKey)
+    const interventions = interventionsStr
+      ? JSON.parse(interventionsStr)
+      : { barricades: [], fleetDeployments: [] }
+
+    if (!interventions.barricades.includes(barricade.junction_id)) {
+      interventions.barricades.push(barricade.junction_id)
+      await redisConnection.set(stateKey, JSON.stringify(interventions))
+    }
+
+    await redisConnection.publish(
+      'gridlock:interventions',
+      JSON.stringify({
+        event: 'barricade_deployed',
+        data: { eventId, nodeId: barricade.junction_id },
+      }),
+    )
+    console.log(
+      `[Barricade] Registered barricade at junction ${barricade.junction_id} for event ${eventId}`,
+    )
+
+    // 3. Auto-assign the nearest available fleet member to the barricade
+    const fleetResult = await query(
+      `SELECT id, name, current_lat, current_lon FROM users WHERE status = 'available' AND role = 'fleet'`,
+    )
+    const assigned = assignNearestFleet(barricade.lat, barricade.lon, 1, fleetResult.rows)
+
+    let assignedFleet: { user_id: string; user_name: string } | null = null
+    if (assigned.length > 0) {
+      const member = assigned[0]
+      assignedFleet = member
+      const deployByTime = new Date()
+
+      await query(
+        `INSERT INTO fleet_assignments (event_id, user_id, junction_name, role, deploy_by_time, priority, status)
+         VALUES ($1, $2, $3, 'barricade_management', $4, 'High', 'pending')`,
+        [eventId, member.user_id, barricade.location_name, deployByTime],
+      )
+      await query(`UPDATE users SET status = 'dispatched' WHERE id = $1`, [member.user_id])
+      await query(`UPDATE barricades SET assigned_user_id = $1 WHERE id = $2`, [
+        member.user_id,
+        barricadeId,
+      ])
+
+      await publishWsEvent('fleet:dispatched', {
+        eventId,
+        user_id: member.user_id,
+        user_name: member.user_name,
+        junction: barricade.location_name,
+        role: 'barricade_management',
+        priority: 'High',
+        deploy_by_time: deployByTime.toISOString(),
+      })
+    } else {
+      console.warn(`[Barricade] No available fleet to assign to barricade ${barricadeId}`)
+    }
+
+    // 4. Broadcast the confirmation to the dashboard
+    await publishWsEvent('barricade:status_updated', {
+      eventId,
+      barricadeId,
+      status: 'confirmed',
+      junctionName: barricade.location_name,
+      assignedFleet,
+    })
+
+    res.json({
+      message: 'Barricade confirmed successfully',
+      barricade: { ...barricade, status: 'confirmed', assigned_user_id: assignedFleet?.user_id },
+      assignedFleet,
+    })
+  } catch (error) {
+    console.error('Error confirming barricade:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 }
