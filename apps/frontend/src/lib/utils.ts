@@ -7,10 +7,11 @@ function normalizeClassValue(value: ClassValue): string[] {
   const classNames: string[] = []
 
   const visit = (current: ClassValue): void => {
-    if (!current) return
+    if (current === null || current === undefined || current === false) return
 
     if (typeof current === 'string' || typeof current === 'number') {
-      classNames.push(String(current))
+      const className = String(current)
+      if (className) classNames.push(className)
       return
     }
 
@@ -29,5 +30,8 @@ function normalizeClassValue(value: ClassValue): string[] {
 }
 
 export function cn(...classes: ClassValue[]): string {
-  return classes.flatMap((classValue) => normalizeClassValue(classValue)).join(' ')
+  return classes
+    .flatMap((classValue) => normalizeClassValue(classValue))
+    .filter(Boolean)
+    .join(' ')
 }
