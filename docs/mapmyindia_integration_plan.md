@@ -20,7 +20,8 @@
 
 | Purpose | URL |
 |---------|-----|
-| REST API (maps, routes, distance) | `https://apis.mappls.com/advancedmaps/v1/{REST_KEY}/` |
+| REST API (maps) | `https://apis.mappls.com/advancedmaps/v1/{REST_KEY}/` |
+| Route API (routing, distance) | `https://route.mappls.com/route/` |
 | Atlas API (places, search, nearby) | `https://atlas.mappls.com/api/` |
 | OAuth2 Token | `https://outpost.mappls.com/api/security/oauth/token` |
 | JS SDK (vector maps) | `https://apis.mappls.com/advancedmaps/api/{REST_KEY}/map_sdk?layer=vector&v=3.0` |
@@ -274,7 +275,7 @@ export async function getDistanceMatrix(
   const sources = origins.map((_, i) => i).join(';')
   const targets = destinations.map((_, i) => origins.length + i).join(';')
 
-  const url = `https://apis.mappls.com/advancedmaps/v1/${MAPPLS_KEY}/distance_matrix_eta/driving/${originStr};${destStr}?sources=${sources}&destinations=${targets}`
+  const url = `https://route.mappls.com/route/dm/distance_matrix_eta/driving/${originStr};${destStr}?sources=${sources}&destinations=${targets}&access_token=${MAPPLS_KEY}`
 
   const res = await fetch(url)
   if (!res.ok) return null
@@ -329,7 +330,7 @@ ${availableFleet.map((f, i) => {
 ### API Endpoint Details
 
 ```
-GET https://apis.mappls.com/advancedmaps/v1/{KEY}/distance_matrix_eta/driving/{coords}
+GET https://route.mappls.com/route/dm/distance_matrix_eta/driving/{coords}
   ?sources=0;1;2      (indices of origin coords)
   &destinations=3;4;5  (indices of destination coords)
 
@@ -372,7 +373,7 @@ export async function fetchRoute(
 ): Promise<[number, number][] | null> {
   if (!MAPPLS_KEY) return null
 
-  const url = `https://apis.mappls.com/advancedmaps/v1/${MAPPLS_KEY}/route_eta/driving/${from[1]},${from[0]};${to[1]},${to[0]}?geometries=polyline&overview=full`
+  const url = `https://route.mappls.com/route/adv/driving/${from[1]},${from[0]};${to[1]},${to[0]}?geometries=polyline&overview=full&access_token=${MAPPLS_KEY}`
 
   const res = await fetch(url)
   if (!res.ok) return null
@@ -451,7 +452,7 @@ useEffect(() => {
 ### API Endpoint Details
 
 ```
-GET https://apis.mappls.com/advancedmaps/v1/{KEY}/route_eta/driving/{startLon},{startLat};{endLon},{endLat}
+GET https://route.mappls.com/route/adv/driving/{startLon},{startLat};{endLon},{endLat}
   ?geometries=polyline
   &overview=full
 
@@ -574,6 +575,7 @@ export interface ReverseGeocodeResult {
 export async function reverseGeocode(lat: number, lon: number): Promise<ReverseGeocodeResult | null> {
   if (!MAPPLS_KEY) return null
 
+  // ⚠ TODO: Update to Atlas Reverse Geocode API once verified
   const url = `https://apis.mappls.com/advancedmaps/v1/${MAPPLS_KEY}/rev_geocode?lat=${lat}&lng=${lon}`
   const res = await fetch(url)
   if (!res.ok) return null
