@@ -12,7 +12,7 @@ interface Props {
 const STATUS_CLASSES: Record<string, string> = {
   planned: 'bg-primary/15 text-primary',
   active: 'bg-green/15 text-green',
-  closed: 'bg-text-dim/15 text-muted-foreground',
+  closed: 'bg-muted-foreground/15 text-muted-foreground',
 }
 
 export default function EventList({ events, selectedId, onSelect, onClose }: Props) {
@@ -34,10 +34,10 @@ export default function EventList({ events, selectedId, onSelect, onClose }: Pro
           <button
             key={ev.id}
             onClick={() => onSelect(ev)}
-            className={`group w-full cursor-pointer rounded-lg border-l-[3px] border bg-card p-3 text-left transition-all duration-200 hover:bg-card-hover ${
+            className={`group w-full cursor-pointer rounded-lg border-l-[3px] border bg-card p-3 text-left transition-all duration-200 hover:bg-accent ${
               isSelected
                 ? 'border-primary border-l-accent bg-primary/5'
-                : 'border-border border-l-text-dim hover:border-primary/50'
+                : 'border-border border-l-muted-foreground/30 hover:border-primary/50'
             }`}
           >
             {/* Top row */}

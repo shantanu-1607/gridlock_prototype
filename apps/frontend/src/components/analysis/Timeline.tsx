@@ -43,7 +43,7 @@ export default function Timeline({ steps }: Props) {
                   boxShadow: `0 0 12px ${color}60`,
                 }}
               />
-              {i < steps.length - 1 && <div className="my-0.5 w-0.5 flex-1 bg-border-default" />}
+              {i < steps.length - 1 && <div className="my-0.5 w-0.5 flex-1 bg-border" />}
             </div>
 
             {/* Content */}
@@ -52,10 +52,12 @@ export default function Timeline({ steps }: Props) {
                 <span className="font-mono text-xs font-bold" style={{ color }}>
                   {offsetLabel}
                 </span>
-                <span className="font-mono text-[11px] text-text-muted">{timeStr}</span>
+                <span className="font-mono text-[11px] text-muted-foreground">{timeStr}</span>
               </div>
               <div className="text-[13px] font-semibold mb-0.5">{step.title}</div>
-              <div className="text-[11px] leading-relaxed text-text-muted">{step.description}</div>
+              <div className="text-[11px] leading-relaxed text-muted-foreground">
+                {step.description}
+              </div>
             </div>
           </div>
         )

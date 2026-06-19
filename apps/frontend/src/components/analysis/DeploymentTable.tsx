@@ -10,21 +10,25 @@ export default function DeploymentTable({ plan }: Props) {
   return (
     <div>
       <div className="mb-3 flex gap-4">
-        <div className="flex flex-1 items-center gap-2 rounded-md bg-bg-input px-3 py-2.5 text-accent">
+        <div className="flex flex-1 items-center gap-2 rounded-md bg-input px-3 py-2.5 text-accent-foreground">
           <Users size={18} />
           <span className="font-mono text-xl font-bold">{plan.total_officers_deployed}</span>
-          <span className="text-[11px] tracking-wider text-text-muted uppercase">Officers</span>
+          <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
+            Officers
+          </span>
         </div>
-        <div className="flex flex-1 items-center gap-2 rounded-md bg-bg-input px-3 py-2.5 text-accent">
+        <div className="flex flex-1 items-center gap-2 rounded-md bg-input px-3 py-2.5 text-accent-foreground">
           <Construction size={18} />
           <span className="font-mono text-xl font-bold">{plan.total_barricades_deployed}</span>
-          <span className="text-[11px] tracking-wider text-text-muted uppercase">Barricades</span>
+          <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
+            Barricades
+          </span>
         </div>
       </div>
 
       <div className="flex flex-col gap-0.5">
         {/* Header */}
-        <div className="grid grid-cols-[2fr_1fr_1fr_2fr] gap-2 border-b border-border-default px-2 pb-1.5 text-[10px] font-semibold tracking-wider text-text-muted uppercase">
+        <div className="grid grid-cols-[2fr_1fr_1fr_2fr] gap-2 border-b border-border px-2 pb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
           <span>Junction</span>
           <span>Officers</span>
           <span>Barricades</span>
@@ -35,7 +39,7 @@ export default function DeploymentTable({ plan }: Props) {
         {plan.recommendations.map((r, i) => (
           <div
             key={i}
-            className="grid grid-cols-[2fr_1fr_1fr_2fr] items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors hover:bg-bg-input"
+            className="grid grid-cols-[2fr_1fr_1fr_2fr] items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors hover:bg-input"
           >
             <span className="truncate font-medium">{r.junction_name || r.junction_id}</span>
             <span className="text-center font-mono font-semibold">{r.officers}</span>
