@@ -11,7 +11,8 @@ import {
 } from 'lucide-react'
 
 import type { CounterfactualResult, PipelineResult } from '../../types'
-import DeploymentTable from './DeploymentTable'
+import BarrierRecommendationCard from './BarrierRecommendationCard'
+import FleetRecommendationCard from './FleetRecommendationCard'
 import RiskGauge from './RiskGauge'
 import Timeline from './Timeline'
 
@@ -38,7 +39,8 @@ export default function PipelinePanel({ result, counterfactual }: Props) {
   const {
     prediction,
     queue_analysis,
-    deployment_plan,
+    fleet_plan,
+    barricade_plan,
     gating_plan,
     anomaly_detection,
     prestaging_timeline,
@@ -127,12 +129,20 @@ export default function PipelinePanel({ result, counterfactual }: Props) {
         />
       </div>
 
-      {/* Resource Deployment */}
+      {/* Fleet Deployment */}
       <div className="rounded-lg border border-border bg-card p-3.5">
         <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-foreground uppercase">
-          <Users size={14} /> Resource Deployment
+          <Users size={14} /> Fleet Deployment
         </h3>
-        <DeploymentTable plan={deployment_plan} />
+        <FleetRecommendationCard plan={fleet_plan} />
+      </div>
+
+      {/* Barricade Deployment */}
+      <div className="rounded-lg border border-border bg-card p-3.5">
+        <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-foreground uppercase">
+          <Shield size={14} /> Barricade Plan
+        </h3>
+        <BarrierRecommendationCard plan={barricade_plan} />
       </div>
 
       {/* Historical Precedents */}

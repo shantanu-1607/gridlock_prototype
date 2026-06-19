@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, path.resolve(__dirname, '../../'), '')
 
   return {
+    cacheDir: './.vite-cache',
     plugins: [react(), tailwindcss()],
 
     resolve: {

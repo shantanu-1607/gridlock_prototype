@@ -264,7 +264,7 @@ function buildPrestagingTimeline(
 /**
  * Run forward propagation simulation for T+5, T+15, T+30 minute forecasts.
  */
-function runPropagationForecast(lat: number, lon: number, severity: number) {
+function runPropagationForecast(lat: number, lon: number, severity: number, durationMins: number) {
   const state = simulationService.initializeState(lat, lon, severity)
   const forecasts: Record<string, any> = {}
 
@@ -280,7 +280,15 @@ function runPropagationForecast(lat: number, lon: number, severity: number) {
   for (const cp of checkpoints) {
     const ticksNeeded = cp.ticks - ticksSoFar
     for (let i = 0; i < ticksNeeded; i++) {
-      currentState = simulationService.tick(currentState, { barricades: [], fleetDeployments: [] })
+      currentState = simulationService.tick(
+        currentState,
+        { barricades: [], fleetDeployments: [] },
+        '12:00',
+        [],
+        true,
+        severity,
+        durationMins,
+      )
     }
     ticksSoFar = cp.ticks
     forecasts[cp.label] = { ...currentState }
@@ -397,43 +405,59 @@ export const planEvent = async (req: Request, res: Response) => {
     )
 
     // 4. Propagation Forecast
-    const propagationForecast = runPropagationForecast(lat, lon, mlResult.severity_score)
+    const propagationForecast = runPropagationForecast(
+      lat,
+      lon,
+      mlResult.severity_score,
+      mlResult.duration_mins,
+    )
     console.log(`[Plan] Propagation forecast computed for T+5, T+15, T+30`)
 
-    // 5. Resource Deployment Plan
-    // Build junction list from graph neighbors of nearest junction
-    const nearest = graphService.getNearestJunction(lat, lon)
-    const neighborEdges = nearest ? graphService.getNeighbors(nearest.id) : []
-    const junctionsForDeployment = []
-
-    if (nearest) {
-      junctionsForDeployment.push({
-        id: nearest.id,
-        name: nearest.name,
-        congestion_score: mlResult.severity_score,
-        traffic_volume: 1.5,
-        is_diversion_point: false,
-      })
-    }
-    for (const edge of neighborEdges) {
-      const neighbor = graphService.junctions.get(edge.target)
-      if (neighbor) {
-        junctionsForDeployment.push({
-          id: neighbor.id,
-          name: neighbor.name,
-          congestion_score: mlResult.severity_score * edge.cascadeProbability,
-          traffic_volume: 1.0,
-          is_diversion_point: true,
-        })
-      }
-    }
-
-    const deploymentPlan = await callDeployment(junctionsForDeployment, 10, 8)
-    console.log(
-      `[Plan] Deployment: ${deploymentPlan.total_officers_deployed} officers, ${deploymentPlan.total_barricades_deployed} barricades`,
+    // 4b. Congestion Forecast (for recommendations)
+    const congestionForecast = simulationService.getCongestionForecast(
+      lat,
+      lon,
+      mlResult.severity_score,
+      mlResult.duration_mins,
     )
 
+    // 5. Fleet Recommendation Engine
+    const precedents = getHistoricalPrecedents(category)
+    const fleetResult = await query(
+      `SELECT id, name, current_lat, current_lon FROM users WHERE status = 'available' AND role = 'fleet'`,
+    )
+    const availableFleet = fleetResult.rows
+
+    const activeEventObj = {
+      type,
+      category,
+      lat,
+      lon,
+      expected_crowd_size: expected_crowd_size || null,
+      duration_mins: mlResult.duration_mins,
+      severity_score: mlResult.severity_score,
+      affected_corridors: Array.isArray(affected_corridors) ? affected_corridors : [corridor],
+      requires_road_closure: requires_road_closure || false,
+    }
+
+    const fleetPlan = await generateDispatchPlan({
+      event: activeEventObj,
+      forecast: congestionForecast,
+      precedents,
+      availableFleet,
+    })
+    console.log(`[Plan] Fleet Deployment: ${fleetPlan.total_fleet_required} officers`)
+
+    // 5b. Barrier Recommendation Engine
+    const barricadePlan = await generateBarricadePlan({
+      event: activeEventObj,
+      forecast: congestionForecast,
+    })
+    console.log(`[Plan] Barricades: ${barricadePlan.barricades.length} recommended`)
+
     // 6. Advisory Gating
+    const nearest = graphService.getNearestJunction(lat, lon)
+    const neighborEdges = nearest ? graphService.getNeighbors(nearest.id) : []
     const upstreamJunctions = neighborEdges.map((edge) => {
       const j = graphService.junctions.get(edge.target)
       return {
@@ -460,7 +484,12 @@ export const planEvent = async (req: Request, res: Response) => {
       start_datetime,
       mlResult.duration_mins,
       queueResult.risk_level,
-      deploymentPlan,
+      {
+        recommendations: barricadePlan.barricades.map((b) => ({
+          junction_name: b.location_name,
+          barricades: 1,
+        })),
+      },
     )
 
     // 8. Update DB with all pipeline results
@@ -492,7 +521,7 @@ export const planEvent = async (req: Request, res: Response) => {
       queueResult.risk_level,
       queueResult.expected_queue_length,
       queueResult.time_to_spillover,
-      JSON.stringify(deploymentPlan),
+      JSON.stringify(fleetPlan),
       JSON.stringify(gatingPlan),
       JSON.stringify(mlResult.similar_events.slice(0, 3)),
       JSON.stringify(propagationForecast),
@@ -502,10 +531,27 @@ export const planEvent = async (req: Request, res: Response) => {
       eventId,
     ])
 
+    await query(
+      `UPDATE events SET 
+        recommendation_status = 'completed', 
+        recommendation_rationale = $1, 
+        total_fleet_required = $2,
+        barricade_rationale = $3, 
+        total_barricades_required = $4 
+       WHERE id = $5`,
+      [
+        fleetPlan.rationale,
+        fleetPlan.total_fleet_required,
+        barricadePlan.rationale,
+        barricadePlan.barricades.length,
+        eventId,
+      ],
+    )
+
     const plannedEvent = updateResult.rows[0]
 
     // 9. Schedule propagation simulation (runs on future timestamp)
-    await schedulePropagationJob(eventId, mlResult.severity_score, lat, lon)
+    await schedulePropagationJob(eventId, mlResult.severity_score, mlResult.duration_mins, lat, lon)
 
     res.status(201).json({
       message: 'Event planned successfully',
@@ -520,7 +566,8 @@ export const planEvent = async (req: Request, res: Response) => {
           confidence_factors: mlResult.confidence_factors,
         },
         queue_analysis: queueResult,
-        deployment_plan: deploymentPlan,
+        fleet_plan: fleetPlan,
+        barricade_plan: barricadePlan,
         gating_plan: gatingPlan,
         similar_incidents: mlResult.similar_events.slice(0, 3),
         propagation_forecast: propagationForecast,
@@ -607,6 +654,7 @@ export const createEvent = async (req: Request, res: Response) => {
       activeEvent.lat,
       activeEvent.lon,
       activeEvent.severity_score,
+      activeEvent.duration_mins,
     )
 
     // 6. Available fleet inventory
@@ -723,6 +771,7 @@ export const createEvent = async (req: Request, res: Response) => {
     await schedulePropagationJob(
       eventId,
       activeEvent.severity_score,
+      activeEvent.duration_mins,
       activeEvent.lat,
       activeEvent.lon,
     )

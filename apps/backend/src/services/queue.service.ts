@@ -36,6 +36,7 @@ export const publishWsEvent = async (event: string, data: unknown) => {
 export const schedulePropagationJob = async (
   eventId: string,
   initialSeverity: number,
+  durationMins: number,
   lat: number,
   lon: number,
 ) => {
@@ -54,6 +55,7 @@ export const schedulePropagationJob = async (
     {
       eventId,
       initialSeverity,
+      durationMins,
       lat,
       lon,
     },

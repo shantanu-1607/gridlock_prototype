@@ -36,6 +36,7 @@ router.get('/autosuggest', authenticateToken, async (req: Request, res: Response
   try {
     const fallbackRes = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&viewbox=77.4,13.1,77.8,12.8&bounded=1`,
+      { headers: { 'User-Agent': 'gridlock_prototype' } },
     )
     if (fallbackRes.ok) {
       const fallbackData = await fallbackRes.json()

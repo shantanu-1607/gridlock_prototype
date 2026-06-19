@@ -77,7 +77,7 @@ export default function DashboardLayout() {
     setSelectedEvent(ev)
     setEventLat(ev.lat)
     setEventLon(ev.lon)
-    if (ev.deployment_plan && ev.risk_level) {
+    if (ev.fleet_plan && ev.risk_level) {
       setPipelineResult({
         prediction: {
           duration_mins: ev.predicted_duration_mins,
@@ -104,7 +104,8 @@ export default function DashboardLayout() {
           effective_service_rate: 0,
           effective_arrival_rate: 0,
         },
-        deployment_plan: ev.deployment_plan,
+        fleet_plan: ev.fleet_plan,
+        barricade_plan: ev.barricade_plan || { barricades: [], rationale: '', source: 'fallback' },
         gating_plan: ev.gating_plan || {
           risk_level: ev.risk_level,
           blocking_probability: ev.blocking_probability,
@@ -131,6 +132,8 @@ export default function DashboardLayout() {
     setView('form')
     setPipelineResult(null)
     setSelectedEvent(null)
+    setEventLat(undefined)
+    setEventLon(undefined)
   }
 
   const activeEvents = events.filter((e) => e.status === 'planned' || e.status === 'active')
@@ -163,6 +166,7 @@ export default function DashboardLayout() {
             riskLevel={pipelineResult?.queue_analysis.risk_level}
             propagationTick={lastTick}
             pipeline={pipelineResult}
+            activeEvents={activeEvents}
           />
 
           <div className="absolute right-4 bottom-4 z-[1000] font-mono text-[28px] font-light tracking-wider text-muted-foreground opacity-60">

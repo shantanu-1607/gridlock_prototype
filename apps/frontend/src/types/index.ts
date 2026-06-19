@@ -47,19 +47,46 @@ export interface QueueAnalysis {
   effective_arrival_rate: number
 }
 
-export interface DeploymentItem {
-  junction_id: string
-  junction_name: string
-  officers: number
-  barricades: number
-  congestion_score: number
-  expected_improvement_pct: number
+export interface AssignedFleetMember {
+  user_id: string
+  user_name: string
 }
 
-export interface DeploymentPlan {
-  recommendations: DeploymentItem[]
-  total_officers_deployed: number
-  total_barricades_deployed: number
+export interface Deployment {
+  junction: string
+  junctionName: string
+  fleet_count: number
+  role: string
+  priority: string
+  deployByMins: number
+  assignedFleet: AssignedFleetMember[]
+}
+
+export interface DispatchPlan {
+  total_fleet_required: number
+  rationale: string
+  deployments: Deployment[]
+  source: 'llm' | 'fallback'
+}
+
+export type BarricadeType = 'hard_closure' | 'diversion_sign'
+export type BarricadeRule = 'road_closure' | 'severity_path' | 'crowd_perimeter'
+
+export interface BarricadeRecommendation {
+  junction_id: string
+  location_name: string
+  lat: number
+  lon: number
+  type: BarricadeType
+  activate_at: string
+  purpose: string
+  rule_source: BarricadeRule
+}
+
+export interface BarricadePlan {
+  barricades: BarricadeRecommendation[]
+  rationale: string
+  source: 'llm' | 'fallback'
 }
 
 export interface GatingItem {
@@ -126,7 +153,8 @@ export interface CounterfactualResult {
 export interface PipelineResult {
   prediction: PipelinePrediction
   queue_analysis: QueueAnalysis
-  deployment_plan: DeploymentPlan
+  fleet_plan: DispatchPlan
+  barricade_plan: BarricadePlan
   gating_plan: GatingPlan
   similar_incidents: SimilarEvent[]
   propagation_forecast: Record<string, unknown>
@@ -149,7 +177,12 @@ export interface PlannedEvent {
   risk_level: string
   blocking_probability: number
   queue_length: number
-  deployment_plan: DeploymentPlan
+  fleet_plan: DispatchPlan
+  barricade_plan: BarricadePlan
+  total_fleet_required?: number
+  recommendation_rationale?: string
+  total_barricades_required?: number
+  barricade_rationale?: string
   gating_plan: GatingPlan
   prestaging_timeline: TimelineStep[]
   anomaly_score: number

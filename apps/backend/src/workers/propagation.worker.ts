@@ -49,7 +49,7 @@ subscriberRedis.on('message', (channel, message) => {
 export const propagationWorker = new Worker(
   'propagation',
   async (job) => {
-    const { eventId, initialSeverity, lat, lon } = job.data
+    const { eventId, initialSeverity, durationMins, lat, lon } = job.data
     const stateKey = `propagation_state:${eventId}`
 
     // Fetch state from Redis
@@ -94,7 +94,15 @@ export const propagationWorker = new Worker(
     }
 
     // Run the tick algorithm
-    state = simulationService.tick(state, interventions, timeOfDay, otherActiveNodes)
+    state = simulationService.tick(
+      state,
+      interventions,
+      timeOfDay,
+      otherActiveNodes,
+      false,
+      initialSeverity,
+      durationMins,
+    )
 
     // Save updated state back to Redis
     await workerRedis.set(stateKey, JSON.stringify(state))
