@@ -58,6 +58,8 @@ export class SimulationService {
     timeOfDayOrSilent: string | boolean = '12:00',
     otherActiveNodes: string[] = [],
     silent = false,
+    initialSeverity = 1.0,
+    durationMins = 30,
   ): PropagationState {
     const timeOfDay = typeof timeOfDayOrSilent === 'string' ? timeOfDayOrSilent : '12:00'
     if (typeof timeOfDayOrSilent === 'boolean') {
@@ -89,9 +91,14 @@ export class SimulationService {
 
         // Check if neighbor is already active
         if (!newState.activeNodes[neighborId]) {
+          // Throttle the spread chance per tick (max 5%) so congestion creeps realistically over time
+          const spreadFactor = 0.05
           let spreadChance =
-            graphService.getEdgeWeight(nodeId, neighborId, timeOfDay) * nodeData.intensity
-          let childIntensity = nodeData.intensity * 0.8
+            spreadFactor *
+            graphService.getEdgeWeight(nodeId, neighborId, timeOfDay) *
+            nodeData.intensity
+          // Linear drop-off guarantees congestion stops after ~4 hops instead of infecting the entire map
+          let childIntensity = nodeData.intensity - 0.25
 
           // Multi-event merging
           if (otherActiveNodes.includes(neighborId)) {
@@ -128,7 +135,12 @@ export class SimulationService {
 
     // 2. Apply decay to all active nodes
     for (const nodeId of Object.keys(newState.activeNodes)) {
-      let decayFactor = 0.05 // Base decay per tick
+      // Calculate decay factor based on severity and duration
+      // 1 tick = 30 seconds = 0.5 mins
+      // durationMins / 0.5 = total ticks
+      // If we want it to decay from initialSeverity to 0 over total ticks:
+      const totalTicks = Math.max(1, durationMins * 2)
+      let decayFactor = initialSeverity / totalTicks
 
       // If fleet is deployed at this node, recovery is 1.5x faster
       if (interventions.fleetDeployments.includes(nodeId)) {
@@ -170,6 +182,7 @@ export class SimulationService {
     lat: number,
     lon: number,
     initialSeverity: number,
+    durationMins: number = 30,
   ): CongestionForecast {
     const noIntervention: Interventions = { barricades: [], fleetDeployments: [] }
     const ticksPerMinute = 2 // tick cadence matches the 30s propagation job
@@ -178,12 +191,12 @@ export class SimulationService {
     const t0Nodes = Object.keys(state.activeNodes)
 
     for (let i = 0; i < 15 * ticksPerMinute; i++) {
-      state = this.tick(state, noIntervention, true)
+      state = this.tick(state, noIntervention, true, [], true, initialSeverity, durationMins)
     }
     const t15Nodes = Object.keys(state.activeNodes)
 
     for (let i = 0; i < 15 * ticksPerMinute; i++) {
-      state = this.tick(state, noIntervention, true)
+      state = this.tick(state, noIntervention, true, [], true, initialSeverity, durationMins)
     }
     const t30Nodes = Object.keys(state.activeNodes)
 

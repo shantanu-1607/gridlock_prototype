@@ -2,7 +2,7 @@ import { Loader2, Map } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 
 import { useMapplsMap } from '../../hooks/useMapplsMap'
-import type { PipelineResult, PropagationTick } from '../../types'
+import type { PipelineResult, PlannedEvent, PropagationTick } from '../../types'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -28,6 +28,7 @@ interface Props {
   riskLevel?: string
   propagationTick: PropagationTick | null
   pipeline?: PipelineResult | null
+  activeEvents?: PlannedEvent[]
 }
 
 export default function MapplsMap({
@@ -36,6 +37,7 @@ export default function MapplsMap({
   riskLevel,
   propagationTick,
   pipeline,
+  activeEvents,
 }: Props) {
   const { mapRef, map, isLoaded, error, flyTo, addMarker, removeLayer } = useMapplsMap()
 
@@ -191,8 +193,8 @@ export default function MapplsMap({
     if (marker) overlaysRef.current.push(marker)
 
     // Deployment markers as DOM elements (so they don't use the buggy MapmyIndia Circle)
-    if (pipeline?.deployment_plan?.recommendations) {
-      pipeline.deployment_plan.recommendations.forEach((_r, i) => {
+    if (pipeline?.fleet_plan?.deployments) {
+      pipeline.fleet_plan.deployments.forEach((_d, i) => {
         const lat = eventLat + (((i * 0.618) % 1) - 0.5) * 0.01
         const lon = eventLon + (((i * 0.382) % 1) - 0.5) * 0.01
         const depMarker = addMarker(lat, lon, {
@@ -305,6 +307,95 @@ export default function MapplsMap({
     }
   }, [isLoaded, map, propagationTick, pipeline])
 
+  // Heatmap of all events when none is selected
+  useEffect(() => {
+    if (!isLoaded || !map) return
+
+    const sourceId = 'all-events-source'
+    const layerId = 'all-events-heatmap'
+
+    // Only show all events heatmap when no specific event is selected
+    const features =
+      !eventLat && activeEvents
+        ? activeEvents.map((ev) => ({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [ev.lon, ev.lat] },
+            properties: {
+              severity_score: ev.severity_score || 0.5,
+            },
+          }))
+        : []
+
+    const geojsonData = { type: 'FeatureCollection', features }
+
+    if (map.getSource(sourceId)) {
+      map.getSource(sourceId).setData(geojsonData)
+    } else {
+      map.addSource(sourceId, { type: 'geojson', data: geojsonData })
+
+      // We use a heatmap layer where weight is driven by severity_score.
+      // This causes both the color (via density) and the apparent radius to scale with severity.
+      map.addLayer({
+        id: layerId,
+        type: 'heatmap',
+        source: sourceId,
+        maxzoom: 18,
+        paint: {
+          'heatmap-weight': ['interpolate', ['linear'], ['get', 'severity_score'], 0, 0.2, 1, 2],
+          'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 10, 1, 18, 3],
+          'heatmap-color': [
+            'interpolate',
+            ['linear'],
+            ['heatmap-density'],
+            0,
+            'rgba(16, 185, 129, 0)',
+            0.3,
+            'rgba(16, 185, 129, 0.6)',
+            0.6,
+            'rgba(245, 158, 11, 0.8)',
+            1,
+            'rgba(239, 68, 68, 1)',
+          ],
+          'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 10, 25, 18, 80],
+          'heatmap-opacity': 0.8,
+        },
+      })
+
+      // Add a secondary circle layer to ensure sharp centers with specific colors/radii based directly on severity_score
+      map.addLayer({
+        id: layerId + '-points',
+        type: 'circle',
+        source: sourceId,
+        paint: {
+          'circle-radius': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            10,
+            ['*', 5, ['+', 0.5, ['get', 'severity_score']]],
+            18,
+            ['*', 20, ['+', 0.5, ['get', 'severity_score']]],
+          ],
+          'circle-color': [
+            'interpolate',
+            ['linear'],
+            ['get', 'severity_score'],
+            0,
+            '#10b981',
+            0.4,
+            '#f59e0b',
+            0.7,
+            '#f97316',
+            1,
+            '#ef4444',
+          ],
+          'circle-blur': 0.5,
+          'circle-opacity': 0.9,
+        },
+      })
+    }
+  }, [isLoaded, map, activeEvents, eventLat])
+
   // Cleanup Mapbox heatmap layers on unmount
   useEffect(() => {
     return () => {
@@ -312,6 +403,10 @@ export default function MapplsMap({
         try {
           if (map.getLayer('propagation-heatmap')) map.removeLayer('propagation-heatmap')
           if (map.getSource('propagation-source')) map.removeSource('propagation-source')
+          if (map.getLayer('all-events-heatmap-points'))
+            map.removeLayer('all-events-heatmap-points')
+          if (map.getLayer('all-events-heatmap')) map.removeLayer('all-events-heatmap')
+          if (map.getSource('all-events-source')) map.removeSource('all-events-source')
         } catch {
           // Ignore errors on unmount
         }
