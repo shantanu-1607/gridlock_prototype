@@ -4,23 +4,28 @@ type ClassArray = ClassValue[]
 type ClassValue = PrimitiveClassValue | ClassDictionary | ClassArray
 
 function normalizeClassValue(value: ClassValue): string[] {
-  if (!value) return []
+  const classNames: string[] = []
 
-  if (typeof value === 'string' || typeof value === 'number') {
-    return [String(value)]
+  const visit = (current: ClassValue): void => {
+    if (!current) return
+
+    if (typeof current === 'string' || typeof current === 'number') {
+      classNames.push(String(current))
+      return
+    }
+
+    if (Array.isArray(current)) {
+      current.forEach((item) => visit(item))
+      return
+    }
+
+    Object.entries(current).forEach(([className, enabled]) => {
+      if (enabled) classNames.push(className)
+    })
   }
 
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => normalizeClassValue(item))
-  }
-
-  if (typeof value === 'object') {
-    return Object.entries(value)
-      .filter(([, enabled]) => Boolean(enabled))
-      .map(([className]) => className)
-  }
-
-  return []
+  visit(value)
+  return classNames
 }
 
 export function cn(...classes: ClassValue[]): string {
