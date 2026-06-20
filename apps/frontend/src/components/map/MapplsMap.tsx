@@ -135,6 +135,31 @@ const getChevronHtml = (rotationDeg: number) => {
   `
 }
 
+// Routes a multi-point path along real roads by fetching each consecutive
+// junction pair and concatenating, falling back to the straight segment for any
+// pair the routing service can't resolve. Returns [lat, lon][].
+const fetchChainedRoute = async (
+  pts: { lat: number; lon: number }[],
+): Promise<[number, number][]> => {
+  if (!pts || pts.length < 2) return pts.map((p) => [p.lat, p.lon])
+  const segs = await Promise.all(
+    pts.slice(0, -1).map((p, i) => fetchRoute([p.lat, p.lon], [pts[i + 1].lat, pts[i + 1].lon])),
+  )
+  const coords: [number, number][] = []
+  segs.forEach((seg, i) => {
+    const resolved =
+      seg && seg.length >= 2
+        ? seg
+        : ([
+            [pts[i].lat, pts[i].lon],
+            [pts[i + 1].lat, pts[i + 1].lon],
+          ] as [number, number][])
+    // Drop the duplicated shared vertex between consecutive segments.
+    for (const c of i === 0 ? resolved : resolved.slice(1)) coords.push(c)
+  })
+  return coords
+}
+
 // Compass bearing (degrees from north, clockwise) from point a to b ([lat, lon]).
 const bearingDeg = (a: [number, number], b: [number, number]) => {
   const toRad = (d: number) => (d * Math.PI) / 180
@@ -262,7 +287,7 @@ export default function MapplsMap({
       const evColor = isRecovered ? '#6b7280' : getEventColor(ev)
       const categoryIcon = getCategoryIconSvg(ev.category || '')
 
-      const size = isSelected ? 34 : 26
+      const size = isSelected ? 42 : 34
       const opacity = isSelected ? '1.0' : isRecovered ? '0.6' : '0.85'
       const glow =
         isSelected && !isRecovered
@@ -302,7 +327,7 @@ export default function MapplsMap({
             color: white;
             transition: all 0.2s ease-in-out;
           ">
-            ${categoryIcon}
+            <span style="display: flex; transform: scale(1.4);">${categoryIcon}</span>
           </div>
         </div>
       `
@@ -714,18 +739,26 @@ export default function MapplsMap({
     }
 
     const draw = async () => {
-      // At-risk corridor segments come straight from the persisted junction
-      // polyline — no routing call needed.
-      const atRiskFeatures = routes
-        .filter((r) => r.at_risk_path && r.at_risk_path.length >= 2)
-        .map((r) => ({
-          type: 'Feature' as const,
-          geometry: {
-            type: 'LineString' as const,
-            coordinates: r.at_risk_path.map((p) => [p.lon, p.lat]),
-          },
-          properties: {},
-        }))
+      // At-risk corridor segments follow real roads by chaining the persisted
+      // junction polyline through the routing service.
+      const atRiskResults = await Promise.all(
+        routes.map((r) => fetchChainedRoute(r.at_risk_path ?? [])),
+      )
+      if (cancelled || !map) return
+
+      const atRiskFeatures = atRiskResults
+        .map((pts) => {
+          if (!pts || pts.length < 2) return null
+          return {
+            type: 'Feature' as const,
+            geometry: {
+              type: 'LineString' as const,
+              coordinates: pts.map(([lat, lon]) => [lon, lat]),
+            },
+            properties: {},
+          }
+        })
+        .filter(Boolean) as any[]
 
       // Reroute paths follow real roads via the route endpoint (from -> to).
       const rerouteResults = await Promise.all(
