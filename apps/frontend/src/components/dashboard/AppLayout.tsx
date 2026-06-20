@@ -109,6 +109,7 @@ export default function AppLayout() {
         source: 'fallback',
       },
       gating_plan: gatingPlanObj,
+      diversion_plan: (ev as any).diversion_plan || undefined,
       similar_incidents: (ev as any).similar_incidents || [],
       propagation_forecast: (ev as any).propagation_forecast || {},
       prestaging_timeline: ev.prestaging_timeline || [],

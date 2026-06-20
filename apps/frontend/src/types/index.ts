@@ -112,6 +112,29 @@ export interface BarricadePlan {
   source: 'llm' | 'fallback'
 }
 
+export interface DiversionEndpoint {
+  junction_id: string
+  name: string
+  lat: number
+  lon: number
+}
+
+export interface DiversionRoute {
+  at_risk_corridor: string
+  via_corridor: string
+  reason: string
+  from: DiversionEndpoint
+  to: DiversionEndpoint
+  rejoins: boolean
+  at_risk_path: { lat: number; lon: number }[]
+}
+
+export interface DiversionPlan {
+  routes: DiversionRoute[]
+  rationale: string
+  source: 'rule' | 'llm'
+}
+
 export interface GatingItem {
   junction_id: string
   junction_name: string
@@ -180,6 +203,7 @@ export interface PipelineResult {
   fleet_plan: DispatchPlan
   barricade_plan: BarricadePlan
   gating_plan: GatingPlan
+  diversion_plan?: DiversionPlan
   similar_incidents: SimilarEvent[]
   propagation_forecast: Record<string, unknown>
   prestaging_timeline: TimelineStep[]
@@ -208,6 +232,7 @@ export interface PlannedEvent {
   total_barricades_required?: number
   barricade_rationale?: string
   gating_plan: GatingPlan
+  diversion_plan?: DiversionPlan
   prestaging_timeline: TimelineStep[]
   anomaly_score: number
   anomaly_label: string

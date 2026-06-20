@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 
 import { generateBarricadePlan } from '../services/barricade.service'
 import { findConflicts } from '../services/conflict.service'
+import { generateDiversionPlan } from '../services/diversion.service'
 import { graphService } from '../services/graph.service'
 import {
   publishWsEvent,
@@ -458,6 +459,32 @@ export const planEvent = async (req: Request, res: Response) => {
     })
     console.log(`[Plan] Barricades: ${barricadePlan.barricades.length} recommended`)
 
+    // 5c. Diversion Recommendation Engine — reroute traffic off the at-risk
+    // corridor onto a lower-spillover alternate. Avoid corridors already taken
+    // by other active events (multi-event aware).
+    const competingResult = await query(
+      `SELECT affected_corridors FROM events
+       WHERE id <> $1 AND status IN ('planned', 'active')`,
+      [eventId],
+    )
+    const competingCorridors = competingResult.rows.flatMap(
+      (r: { affected_corridors: string[] | null }) =>
+        Array.isArray(r.affected_corridors) ? r.affected_corridors : [],
+    )
+    const diversionPlan = await generateDiversionPlan({
+      event: {
+        category,
+        lat,
+        lon,
+        severity_score: mlResult.severity_score,
+        risk_level: queueResult.risk_level,
+        requires_road_closure: requires_road_closure || false,
+        affected_corridors: Array.isArray(affected_corridors) ? affected_corridors : [corridor],
+      },
+      competingCorridors,
+    })
+    console.log(`[Plan] Diversions: ${diversionPlan.routes.length} route(s) recommended`)
+
     // 6. Advisory Gating
     const nearest = graphService.getNearestJunction(lat, lon)
     const neighborEdges = nearest ? graphService.getNeighbors(nearest.id) : []
@@ -512,8 +539,9 @@ export const planEvent = async (req: Request, res: Response) => {
         prestaging_timeline = $12,
         anomaly_score = $13,
         anomaly_label = $14,
+        diversion_plan = $15,
         status = 'planned'
-      WHERE id = $15
+      WHERE id = $16
       RETURNING *
     `
     const updateResult = await query(updateQuery, [
@@ -531,6 +559,7 @@ export const planEvent = async (req: Request, res: Response) => {
       JSON.stringify(prestagingTimeline),
       anomalyResult.anomaly_score,
       anomalyResult.anomaly_label,
+      JSON.stringify(diversionPlan),
       eventId,
     ])
 
@@ -621,6 +650,7 @@ export const planEvent = async (req: Request, res: Response) => {
         fleet_plan: fleetPlan,
         barricade_plan: barricadePlan,
         gating_plan: gatingPlan,
+        diversion_plan: diversionPlan,
         similar_incidents: mlResult.similar_events.slice(0, 3),
         propagation_forecast: propagationForecast,
         prestaging_timeline: prestagingTimeline,

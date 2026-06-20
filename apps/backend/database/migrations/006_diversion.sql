@@ -1,0 +1,11 @@
+-- Persist the diversion plan (at-risk corridor → reroute-via corridor, with the
+-- divert/rejoin junctions and the at-risk corridor polyline) alongside the other
+-- pipeline outputs on the events row, mirroring how deployment_plan / gating_plan
+-- are stored as JSONB. This lets the "Diversion" map layer and advisory cards
+-- re-hydrate for historical events, not just freshly-planned ones.
+--
+-- Shape: { "routes": [ { at_risk_corridor, via_corridor, reason, rejoins,
+--                        from:{junction_id,name,lat,lon}, to:{...},
+--                        at_risk_path:[{lat,lon}] } ],
+--          "rationale": "...", "source": "rule" | "llm" }
+ALTER TABLE events ADD COLUMN IF NOT EXISTS diversion_plan JSONB DEFAULT '{}';
