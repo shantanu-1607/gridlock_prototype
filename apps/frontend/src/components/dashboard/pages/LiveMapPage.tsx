@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom'
 
 import MapplsMap from '../../map/MapplsMap'
 import type { DashboardOutletContext } from '../AppLayout'
+import { ChatAssistant } from '../ChatAssistant'
 
 export default function LiveMapPage() {
   const { eventLat, eventLon, pipelineResult, lastTick, activeEvents } =
@@ -24,6 +25,8 @@ export default function LiveMapPage() {
         pipeline={pipelineResult}
         activeEvents={activeEvents}
       />
+
+      <ChatAssistant />
 
       <div className="absolute right-4 bottom-4 z-[1000] font-mono text-[28px] font-light tracking-wider text-muted-foreground opacity-60">
         {clock.toLocaleTimeString('en-IN', { hour12: false })}

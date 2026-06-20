@@ -8,6 +8,7 @@ import Redis from 'ioredis'
 import { WebSocket, WebSocketServer } from 'ws'
 
 import authRoutes from './routes/auth.routes'
+import chatRoutes from './routes/chat.routes'
 import eventsRoutes from './routes/events.routes'
 import graphRoutes from './routes/graph.routes'
 import healthRoutes from './routes/health'
@@ -27,6 +28,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/events', eventsRoutes)
 app.use('/api/graph', graphRoutes)
 app.use('/api/map', mapRoutes)
+app.use('/api/chat', chatRoutes)
 
 const subscriberRedis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379')
 subscriberRedis.subscribe('gridlock:events', (err, count) => {
