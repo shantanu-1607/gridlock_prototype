@@ -5,6 +5,99 @@ import { useMapplsMap } from '../../hooks/useMapplsMap'
 import type { PipelineResult, PlannedEvent, PropagationTick } from '../../types'
 import { fetchRoute } from '../../utils/mappls'
 
+const getCategoryIconSvg = (category: string) => {
+  const norm = category?.toLowerCase().trim() || ''
+  if (norm.includes('accident')) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+  }
+  if (norm.includes('protest')) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>`
+  }
+  if (norm.includes('vip') || norm.includes('movement')) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 20h14"/></svg>`
+  }
+  if (norm.includes('water') || norm.includes('logging') || norm.includes('flood')) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6c.6 0 1.2-.4 1.4-1C3.8 4.4 4.4 4 5 4s1.2.4 1.4 1c.2.6.8 1 1.4 1s1.2-.4 1.4-1C9.8 4.4 10.4 4 11 4s1.2.4 1.4 1c.2.6.8 1 1.4 1s1.2-.4 1.4-1c.2-.6.8-1 1.4-1s1.2.4 1.4 1c.2.6.8 1 1.4 1"/><path d="M2 12c.6 0 1.2-.4 1.4-1 .2-.6.8-1 1.4-1s1.2.4 1.4 1c.2.6.8 1 1.4 1s1.2-.4 1.4-1c.2-.6.8-1 1.4-1s1.2.4 1.4 1c.2.6.8 1 1.4 1s1.2-.4 1.4-1c.2-.6.8-1 1.4-1s1.2.4 1.4 1"/><path d="M2 18c.6 0 1.2-.4 1.4-1 .2-.6.8-1 1.4-1s1.2.4 1.4 1c.2.6.8 1 1.4 1s1.2-.4 1.4-1c.2-.6.8-1 1.4-1s1.2.4 1.4 1c.2.6.8 1 1.4 1s1.2-.4 1.4-1c.2-.6.8-1 1.4-1s1.2.4 1.4 1"/></svg>`
+  }
+  if (norm.includes('tree') || norm.includes('fall')) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13V20"/><path d="m18 13-6-6-6 6h12Z"/><path d="M12 2v5"/><path d="m17 7-5-5-5 5h10Z"/></svg>`
+  }
+  if (norm.includes('public') || norm.includes('event')) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>`
+  }
+  if (norm.includes('procession')) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 5.88 9.85 6 7.07l.02-1.85a3.45 3.45 0 0 1 1.96-3A1.91 1.91 0 0 1 10 3.82c0 .94-.48 2-1 3.53a8.87 8.87 0 0 0-.5 3.39c0 1.25.68 2.5 1.5 3.12l1 1.76"/><path d="M12 12.5V10c0-1.74 1.3-3.08 1.4-5.22l.01-1.42A2.43 2.43 0 0 1 14.82.88 1.34 1.34 0 0 1 16.2 2c0 .7-.34 1.5-.7 2.65a6.22 6.22 0 0 0-.35 2.54c0 .94.48 1.88 1.05 2.34l.7 1.32c.7 1.13.9 2.52.9 3.65V16.5"/></svg>`
+  }
+  if (norm.includes('construction') || norm.includes('work')) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l4 10H2z"/><path d="M6 22H18l-2-10H8z"/><path d="M12 2v20"/></svg>`
+  }
+  if (norm.includes('congestion') || norm.includes('traffic')) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="18" x="8" y="3" rx="4"/><path d="M12 8h.01"/><path d="M12 12h.01"/><path d="M12 16h.01"/></svg>`
+  }
+  if (norm.includes('breakdown') || norm.includes('vehicle')) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`
+  }
+  if (norm.includes('condition') || norm.includes('road')) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+}
+
+const getFleetMarkerHtml = (status: string) => {
+  const isOnSite = status === 'on_site' || status === 'completed'
+  const color = isOnSite ? '#3b82f6' : '#6b7280'
+  const isEnRoute = status === 'en_route'
+  const shadow = isOnSite ? 'box-shadow: 0 0 10px #3b82f6;' : ''
+  const border = isOnSite ? 'border: 2px solid white;' : 'border: 2px dashed #9ca3af;'
+  const opacity = isOnSite ? '1.0' : '0.85'
+  const pulse = isEnRoute ? 'animation: fleet-pulse 1.5s infinite ease-in-out;' : ''
+
+  return `
+    <div style="
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      width: 24px; 
+      height: 24px; 
+      border-radius: 50%; 
+      background-color: ${color}; 
+      ${border}
+      ${shadow}
+      opacity: ${opacity};
+      ${pulse}
+      color: white;
+    ">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 9.7a1 1 0 0 1-.68 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 .76-.97l8-2a1 1 0 0 1 .48 0l8 2A1 1 0 0 1 20 6v7z"/></svg>
+    </div>
+  `
+}
+
+const getBarricadeMarkerHtml = (status: string) => {
+  const isConfirmed = status === 'confirmed'
+  const color = isConfirmed ? '#f97316' : '#6b7280'
+  const shadow = isConfirmed ? 'box-shadow: 0 0 10px #f97316;' : ''
+  const border = isConfirmed ? 'border: 2px solid white;' : 'border: 2px dashed #9ca3af;'
+  const opacity = isConfirmed ? '1.0' : '0.85'
+
+  return `
+    <div style="
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      width: 24px; 
+      height: 24px; 
+      border-radius: 50%; 
+      background-color: ${color}; 
+      ${border}
+      ${shadow}
+      opacity: ${opacity};
+      color: white;
+    ">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l4 10H2z"/><path d="M6 22H18l-2-10H8z"/><path d="M12 2v20"/></svg>
+    </div>
+  `
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const RISK_COLORS: Record<string, string> = {
@@ -13,6 +106,15 @@ const RISK_COLORS: Record<string, string> = {
   orange: '#f97316',
   red: '#ef4444',
   critical: '#dc2626',
+}
+
+const getEventColor = (event: PlannedEvent) => {
+  const score = event.severity_score || 0.5
+  if (score > 0.85) return RISK_COLORS.critical
+  if (score > 0.6) return RISK_COLORS.red
+  if (score > 0.3) return RISK_COLORS.orange
+  if (score > 0.15) return RISK_COLORS.yellow
+  return RISK_COLORS.low
 }
 
 const FORECAST_STEPS = [
@@ -30,6 +132,10 @@ interface Props {
   propagationTick: PropagationTick | null
   pipeline?: PipelineResult | null
   activeEvents?: PlannedEvent[]
+  selectedEvent?: PlannedEvent | null
+  onEventSelect?: (ev: PlannedEvent | null) => void
+  assignments?: any[]
+  barricades?: any[]
 }
 
 export default function MapplsMap({
@@ -39,12 +145,120 @@ export default function MapplsMap({
   propagationTick,
   pipeline,
   activeEvents,
+  selectedEvent,
+  onEventSelect,
+  assignments,
+  barricades,
 }: Props) {
   const { mapRef, map, isLoaded, error, flyTo, addMarker, removeLayer } = useMapplsMap()
 
   const [forecastIdx, setForecastIdx] = useState(0)
   const forecast = FORECAST_STEPS[forecastIdx]
-  const overlaysRef = useRef<any[]>([])
+  const eventMarkersRef = useRef<any[]>([])
+  const dispatchOverlaysRef = useRef<any[]>([])
+
+  // Inject stylesheet for animations
+  useEffect(() => {
+    const styleId = 'mappls-custom-styles'
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style')
+      style.id = styleId
+      style.innerHTML = `
+        @keyframes marker-pulse {
+          0% { transform: scale(0.6); opacity: 0.8; }
+          100% { transform: scale(1.3); opacity: 0; }
+        }
+        @keyframes fleet-pulse {
+          0%, 100% { transform: scale(1); opacity: 0.75; }
+          50% { transform: scale(1.12); opacity: 1; }
+        }
+      `
+      document.head.appendChild(style)
+    }
+  }, [])
+
+  // Register click handler on window for the markers to access
+  useEffect(() => {
+    if (!onEventSelect) return
+    ;(window as any).handleEventClick = (eventId: string) => {
+      if (selectedEvent && selectedEvent.id === eventId) {
+        onEventSelect(selectedEvent)
+      } else if (activeEvents) {
+        const found = activeEvents.find((e) => e.id === eventId)
+        if (found) onEventSelect(found)
+      }
+    }
+    return () => {
+      delete (window as any).handleEventClick
+    }
+  }, [selectedEvent, activeEvents, onEventSelect])
+
+  // Render active event markers at all times
+  useEffect(() => {
+    if (!isLoaded || !map || !activeEvents) return
+
+    // Clear old active event markers
+    eventMarkersRef.current.forEach(removeLayer)
+    eventMarkersRef.current = []
+
+    activeEvents.forEach((ev) => {
+      if (!ev.lat || !ev.lon) return
+
+      const isSelected = selectedEvent?.id === ev.id
+      const evColor = getEventColor(ev)
+      const categoryIcon = getCategoryIconSvg(ev.category || '')
+
+      const size = isSelected ? 34 : 26
+      const opacity = isSelected ? '1.0' : '0.85'
+      const glow = isSelected
+        ? `box-shadow: 0 0 20px 4px ${evColor}; border: 2.5px solid white;`
+        : `box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 2px solid white;`
+      const scale = isSelected ? 'transform: scale(1.1);' : ''
+      const zIndex = isSelected ? '50' : '10'
+      const pingSize = size + 12
+      const pingOpacity = isSelected ? 0.35 : 0.2
+      const pingRing = `<div class="animate-ping" style="position: absolute; width: ${pingSize}px; height: ${pingSize}px; border-radius: 50%; background-color: ${evColor}; opacity: ${pingOpacity}; pointer-events: none;"></div>`
+
+      const markerHtml = `
+        <div onclick="window.handleEventClick('${ev.id}')" 
+             style="
+               position: relative; 
+               display: flex; 
+               align-items: center; 
+               justify-content: center; 
+               cursor: pointer; 
+               pointer-events: auto;
+               z-index: ${zIndex};
+               ${scale}
+             ">
+          ${pingRing}
+          <div style="
+            width: ${size}px; 
+            height: ${size}px; 
+            border-radius: 50%; 
+            background-color: ${evColor}; 
+            ${glow}
+            opacity: ${opacity};
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white;
+            transition: all 0.2s ease-in-out;
+          ">
+            ${categoryIcon}
+          </div>
+        </div>
+      `
+
+      const marker = addMarker(ev.lat, ev.lon, { html: markerHtml })
+      if (marker) eventMarkersRef.current.push(marker)
+    })
+
+    return () => {
+      eventMarkersRef.current.forEach(removeLayer)
+      eventMarkersRef.current = []
+    }
+  }, [isLoaded, map, activeEvents, selectedEvent, addMarker, removeLayer])
 
   const color = RISK_COLORS[riskLevel || 'low'] || '#6b7280'
 
@@ -180,37 +394,69 @@ export default function MapplsMap({
     }
 
     // Clear old HTML markers
-    overlaysRef.current.forEach(removeLayer)
-    overlaysRef.current = []
+    dispatchOverlaysRef.current.forEach(removeLayer)
+    dispatchOverlaysRef.current = []
 
-    // Event central marker with CSS animation
-    const markerHtml = `
-      <div style="position: relative; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <div class="animate-ping" style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background-color: ${color}; opacity: 0.4;"></div>
-        <div style="width: 16px; height: 16px; border-radius: 50%; background-color: ${color}; box-shadow: 0 0 15px 2px ${color}; border: 2px solid white;"></div>
-      </div>
-    `
-    const marker = addMarker(eventLat, eventLon, { html: markerHtml })
-    if (marker) overlaysRef.current.push(marker)
+    // Render Fleet dispatches (live or planned)
+    if (assignments && assignments.length > 0) {
+      assignments.forEach((assignment, i) => {
+        let lat = eventLat + (((i * 0.618) % 1) - 0.5) * 0.01
+        let lon = eventLon + (((i * 0.382) % 1) - 0.5) * 0.01
 
-    // Deployment markers as DOM elements (so they don't use the buggy MapmyIndia Circle)
-    if (pipeline?.fleet_plan?.deployments) {
-      pipeline.fleet_plan.deployments.forEach((_d, i) => {
-        const lat = eventLat + (((i * 0.618) % 1) - 0.5) * 0.01
-        const lon = eventLon + (((i * 0.382) % 1) - 0.5) * 0.01
+        const match = pipeline?.fleet_plan?.deployments?.find(
+          (d) =>
+            d.junctionName.toLowerCase().replace(/\s+/g, '') ===
+            assignment.junction_name.toLowerCase().replace(/\s+/g, ''),
+        )
+
+        if (match && match.lat && match.lon) {
+          lat = match.lat
+          lon = match.lon
+        }
+
         const depMarker = addMarker(lat, lon, {
-          html: `<div style="width: 14px; height: 14px; border-radius: 50%; background-color: #3b82f6; border: 2px solid white; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);"></div>`,
+          html: getFleetMarkerHtml(assignment.status),
         })
-        if (depMarker) overlaysRef.current.push(depMarker)
+        if (depMarker) dispatchOverlaysRef.current.push(depMarker)
+      })
+    } else if (pipeline?.fleet_plan?.deployments) {
+      pipeline.fleet_plan.deployments.forEach((d, i) => {
+        const lat = d.lat || eventLat + (((i * 0.618) % 1) - 0.5) * 0.01
+        const lon = d.lon || eventLon + (((i * 0.382) % 1) - 0.5) * 0.01
+        const depMarker = addMarker(lat, lon, {
+          html: getFleetMarkerHtml('pending'),
+        })
+        if (depMarker) dispatchOverlaysRef.current.push(depMarker)
+      })
+    }
+
+    // Render Barricade layouts (live or proposed)
+    if (barricades && barricades.length > 0) {
+      barricades.forEach((barricade) => {
+        if (barricade.lat && barricade.lon) {
+          const barMarker = addMarker(barricade.lat, barricade.lon, {
+            html: getBarricadeMarkerHtml(barricade.status),
+          })
+          if (barMarker) dispatchOverlaysRef.current.push(barMarker)
+        }
+      })
+    } else if (pipeline?.barricade_plan?.barricades) {
+      pipeline.barricade_plan.barricades.forEach((barricade) => {
+        if (barricade.lat && barricade.lon) {
+          const barMarker = addMarker(barricade.lat, barricade.lon, {
+            html: getBarricadeMarkerHtml('recommended'),
+          })
+          if (barMarker) dispatchOverlaysRef.current.push(barMarker)
+        }
       })
     }
 
     return () => {
       // Clean up DOM markers
-      overlaysRef.current.forEach(removeLayer)
-      overlaysRef.current = []
+      dispatchOverlaysRef.current.forEach(removeLayer)
+      dispatchOverlaysRef.current = []
     }
-  }, [isLoaded, map, eventLat, eventLon, color, forecast.scale, pipeline, addMarker, removeLayer])
+  }, [isLoaded, map, eventLat, eventLon, pipeline, assignments, barricades, addMarker, removeLayer])
 
   // Cleanup Mapbox impact layers on unmount
   useEffect(() => {
@@ -407,16 +653,8 @@ export default function MapplsMap({
     const layerId = 'all-events-heatmap'
 
     // Only show all events heatmap when no specific event is selected
-    const features =
-      !eventLat && activeEvents
-        ? activeEvents.map((ev) => ({
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: [ev.lon, ev.lat] },
-            properties: {
-              severity_score: ev.severity_score || 0.5,
-            },
-          }))
-        : []
+    // Disable default all-events density heatmap layer to prevent visual clutter
+    const features: any[] = []
 
     const geojsonData = { type: 'FeatureCollection', features }
 

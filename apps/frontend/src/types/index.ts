@@ -79,6 +79,8 @@ export interface Deployment {
   priority: string
   deployByMins: number
   assignedFleet: AssignedFleetMember[]
+  lat?: number
+  lon?: number
 }
 
 export interface DispatchPlan {

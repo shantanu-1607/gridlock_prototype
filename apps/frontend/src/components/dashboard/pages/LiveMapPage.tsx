@@ -3,11 +3,21 @@ import { useOutletContext } from 'react-router-dom'
 
 import MapplsMap from '../../map/MapplsMap'
 import type { DashboardOutletContext } from '../AppLayout'
-import { ChatAssistant } from '../ChatAssistant'
+import LiveEventDetailsCard from './LiveEventDetailsCard'
 
 export default function LiveMapPage() {
-  const { eventLat, eventLon, pipelineResult, lastTick, activeEvents } =
-    useOutletContext<DashboardOutletContext>()
+  const {
+    eventLat,
+    eventLon,
+    pipelineResult,
+    lastTick,
+    activeEvents,
+    selectedEvent,
+    selectedEventAssignments,
+    selectedEventBarricades,
+    loadingDetails,
+    onEventSelect,
+  } = useOutletContext<DashboardOutletContext>()
   const [clock, setClock] = useState(new Date())
 
   useEffect(() => {
@@ -24,9 +34,21 @@ export default function LiveMapPage() {
         propagationTick={lastTick}
         pipeline={pipelineResult}
         activeEvents={activeEvents}
+        selectedEvent={selectedEvent}
+        onEventSelect={onEventSelect}
+        assignments={selectedEventAssignments}
+        barricades={selectedEventBarricades}
       />
 
-      <ChatAssistant />
+      {selectedEvent && (
+        <LiveEventDetailsCard
+          event={selectedEvent}
+          assignments={selectedEventAssignments}
+          barricades={selectedEventBarricades}
+          loading={loadingDetails}
+          onClose={() => onEventSelect(null)}
+        />
+      )}
 
       <div className="absolute right-4 bottom-4 z-[1000] font-mono text-[28px] font-light tracking-wider text-muted-foreground opacity-60">
         {clock.toLocaleTimeString('en-IN', { hour12: false })}

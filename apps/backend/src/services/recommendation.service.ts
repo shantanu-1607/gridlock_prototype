@@ -98,6 +98,8 @@ export interface Deployment {
   priority: string
   deployByMins: number
   assignedFleet: AssignedFleetMember[]
+  lat: number
+  lon: number
 }
 
 export interface DispatchPlan {
@@ -274,6 +276,8 @@ export function generateFallbackPlan(
       priority: target.priority,
       deployByMins: target.deployByMins,
       assignedFleet,
+      lat: junction.lat,
+      lon: junction.lon,
     })
   }
 
@@ -301,6 +305,8 @@ export function generateFallbackPlan(
           priority: 'High',
           deployByMins: 0,
           assignedFleet: reserveFleet,
+          lat: epicenter.lat,
+          lon: epicenter.lon,
         })
       }
     }
@@ -537,6 +543,8 @@ function resolveRawPlan(
         ? raw_deployment.deploy_by_mins
         : 0,
       assignedFleet,
+      lat: junction.lat,
+      lon: junction.lon,
     })
   }
 

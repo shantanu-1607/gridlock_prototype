@@ -11,7 +11,7 @@ import unusedImports from 'eslint-plugin-unused-imports'
 
 export default [
   {
-    ignores: ['dist', 'node_modules'],
+    ignores: ['dist', 'node_modules', 'node_modules_old_backup'],
   },
 
   js.configs.recommended,
