@@ -1,4 +1,12 @@
-import { FileBarChart, Gauge, Map, Settings, SlidersHorizontal, Sparkles } from 'lucide-react'
+import {
+  FileBarChart,
+  Gauge,
+  History,
+  Map,
+  Settings,
+  SlidersHorizontal,
+  Sparkles,
+} from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 import { cn } from '@/lib/utils'
@@ -8,6 +16,7 @@ const NAV_ITEMS = [
   { to: '/dashboard/overview', label: 'Overview', icon: Gauge },
   { to: '/dashboard/performance', label: 'Performance Metrics', icon: SlidersHorizontal },
   { to: '/dashboard/reports', label: 'Detailed Reports', icon: FileBarChart },
+  { to: '/dashboard/history', label: 'Event History', icon: History },
   { to: '/dashboard/settings', label: 'Settings', icon: Settings },
 ] as const
 

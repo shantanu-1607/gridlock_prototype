@@ -1,6 +1,7 @@
 import { FileText } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
+import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 
@@ -64,6 +65,14 @@ export default function ControlPanel({
                 <FileText size={16} />
                 Recent Plans
               </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs px-2"
+                onClick={() => navigate('/dashboard/history')}
+              >
+                View All
+              </Button>
             </div>
             <EventList
               events={events.slice(0, 10)}

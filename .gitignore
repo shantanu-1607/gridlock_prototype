@@ -221,6 +221,8 @@ __marimo__/
 
 # Node / JS / React
 node_modules/
+node_modules_old/
+node_modules_old_backup/
 dist/
 dist-ssr/
 *.local

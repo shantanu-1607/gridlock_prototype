@@ -7,6 +7,7 @@ import FleetLogin from '../components/auth/FleetLogin'
 import AppLayout from '../components/dashboard/AppLayout'
 import FleetDashboard from '../components/dashboard/FleetDashboard'
 import DetailedReportsPage from '../components/dashboard/pages/DetailedReportsPage'
+import EventHistoryPage from '../components/dashboard/pages/EventHistoryPage'
 import LiveMapPage from '../components/dashboard/pages/LiveMapPage'
 import OverviewPage from '../components/dashboard/pages/OverviewPage'
 import PerformancePage from '../components/dashboard/pages/PerformancePage'
@@ -88,6 +89,7 @@ export const routes: RouteObject[] = [
       { path: 'map', element: <LiveMapPage /> },
       { path: 'overview', element: <OverviewPage /> },
       { path: 'performance', element: <PerformancePage /> },
+      { path: 'history', element: <EventHistoryPage /> },
       { path: 'reports', element: <DetailedReportsPage /> },
       { path: 'settings', element: <SettingsPage /> },
     ],
