@@ -1,4 +1,5 @@
 import { Clock, FileBarChart, Fingerprint, Target } from 'lucide-react'
+import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -6,8 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Timeline from '../../analysis/Timeline'
 import type { DashboardOutletContext } from '../AppLayout'
 
+/** Severity-score → swatch colour (matches the global --color-* tokens). */
+function severityColor(score: number): string {
+  if (score > 0.85) return 'var(--color-red)'
+  if (score > 0.6) return 'var(--color-orange)'
+  if (score > 0.3) return 'var(--color-yellow)'
+  return 'var(--color-green)'
+}
+
 export default function DetailedReportsPage() {
   const { pipelineResult, selectedEvent } = useOutletContext<DashboardOutletContext>()
+  const [showAllMatches, setShowAllMatches] = useState(false)
   const counterfactual = selectedEvent?.counterfactual
 
   if (!pipelineResult) {
@@ -16,7 +26,7 @@ export default function DetailedReportsPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold tracking-tight">Detailed Reports</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Historical precedents, pre-staging timeline, and post-event analysis
+            Event fingerprint, pre-staging timeline, and post-event analysis
           </p>
         </div>
         <Card>
@@ -30,53 +40,230 @@ export default function DetailedReportsPage() {
     )
   }
 
-  const { similar_incidents, prestaging_timeline } = pipelineResult
+  const { similar_incidents, prestaging_timeline, fingerprint_summary } = pipelineResult
+  const matches = similar_incidents ?? []
+  const agg = fingerprint_summary?.aggregated ?? null
+  const meta = fingerprint_summary?.meta ?? null
+
+  const forecast = pipelineResult.prediction.duration_mins
+  const interval = pipelineResult.prediction.prediction_interval
+
+  // Forecast-vs-precedent verdict — the credibility punchline.
+  const verdict = agg
+    ? forecast > agg.max_duration_mins
+      ? {
+          label: 'Longer than any precedent — flag for review',
+          cls: 'text-orange border-orange/30 bg-orange/5',
+        }
+      : forecast < agg.min_duration_mins
+        ? {
+            label: 'Shorter than all precedents',
+            cls: 'text-primary border-primary/30 bg-primary/5',
+          }
+        : {
+            label: 'Consistent with historical precedent',
+            cls: 'text-green border-green/30 bg-green/5',
+          }
+    : null
+
+  // Range strip domain — always wide enough to show the forecast marker.
+  const lo = agg ? Math.min(agg.min_duration_mins, forecast) : 0
+  const hi = agg ? Math.max(agg.max_duration_mins, forecast) : 1
+  const span = hi - lo || 1
+  const pct = (v: number) => Math.max(0, Math.min(100, ((v - lo) / span) * 100))
+
+  // Honest degraded-state notes.
+  const eventCause = selectedEvent?.category?.trim().toLowerCase()
+  const causeRemapped = !!(meta?.cause_matched && eventCause && meta.cause_matched !== eventCause)
+
+  const visibleMatches = showAllMatches ? matches : matches.slice(0, 3)
 
   return (
     <div className="h-full overflow-y-auto p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Detailed Reports</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Historical precedents, pre-staging timeline, and post-event analysis
+          Event fingerprint, pre-staging timeline, and post-event analysis
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {similar_incidents && similar_incidents.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Fingerprint size={16} /> Historical Precedents
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-2">
-                {similar_incidents.map((evt, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between rounded-md border border-border bg-muted p-2.5 text-xs transition-colors hover:border-primary/50"
-                  >
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-semibold capitalize text-foreground">
-                        {evt.event_cause.replace(/_/g, ' ')}
+        {/* ── Event Fingerprint (hero) ─────────────────────────────── */}
+        <Card className="col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Fingerprint size={16} /> Event Fingerprint
+            </CardTitle>
+            {meta && meta.corpus_size > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Pattern-matched against{' '}
+                <span className="font-semibold text-foreground">
+                  {meta.corpus_size.toLocaleString()}
+                </span>{' '}
+                real incidents · {matches.length} closest shown
+                {meta.n_candidates > 0 && (
+                  <span className="text-[11px]">
+                    {' '}
+                    · {meta.n_candidates} same-cause candidates near this time
+                  </span>
+                )}
+              </p>
+            )}
+          </CardHeader>
+          <CardContent>
+            {matches.length === 0 ? (
+              <div className="flex flex-col items-center gap-1 py-8 text-center text-muted-foreground">
+                <Fingerprint size={22} className="opacity-40" />
+                <p className="text-xs font-medium">No close historical analogues found</p>
+                <span className="text-[11px]">
+                  No prior incidents matched this cause and location in the corpus.
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3.5">
+                {/* Forecast anchor */}
+                {agg && (
+                  <div className="rounded-md border border-border bg-muted/50 p-3">
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Model forecast
+                        </span>
+                        <span className="font-mono text-base font-bold text-foreground">
+                          {Math.round(forecast)} min
+                        </span>
+                        {interval?.lower_mins !== null &&
+                          interval?.lower_mins !== undefined &&
+                          interval?.upper_mins !== null &&
+                          interval?.upper_mins !== undefined && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {Math.round(interval.lower_mins)}–{Math.round(interval.upper_mins)}{' '}
+                              min
+                              {interval.coverage
+                                ? ` (${Math.round(interval.coverage * 100)}% interval)`
+                                : ''}
+                            </span>
+                          )}
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Historical analogues
+                        </span>
+                        <span className="font-mono text-base font-bold text-foreground">
+                          {Math.round(agg.avg_duration_mins)} min avg
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          range {Math.round(agg.min_duration_mins)}–
+                          {Math.round(agg.max_duration_mins)} min · {agg.count} matches
+                        </span>
+                      </div>
+                    </div>
+
+                    {verdict && (
+                      <div
+                        className={`mt-2.5 rounded-md border px-2.5 py-1.5 text-[11px] font-medium ${verdict.cls}`}
+                      >
+                        {verdict.label}
+                      </div>
+                    )}
+
+                    {/* Min–avg–max range strip */}
+                    <div className="relative mt-4 mb-1 h-9">
+                      <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-muted" />
+                      {/* historical band */}
+                      <div
+                        className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-primary/40"
+                        style={{
+                          left: `${pct(agg.min_duration_mins)}%`,
+                          width: `${pct(agg.max_duration_mins) - pct(agg.min_duration_mins)}%`,
+                        }}
+                      />
+                      {/* avg marker */}
+                      <div
+                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
+                        style={{ left: `${pct(agg.avg_duration_mins)}%` }}
+                      >
+                        <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+                        <span className="absolute left-1/2 top-3 -translate-x-1/2 whitespace-nowrap text-[9px] text-muted-foreground">
+                          avg
+                        </span>
+                      </div>
+                      {/* forecast marker */}
+                      <div
+                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
+                        style={{ left: `${pct(forecast)}%` }}
+                      >
+                        <div className="h-4 w-0.5 bg-foreground" />
+                        <span className="absolute left-1/2 -top-4 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold text-foreground">
+                          forecast
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Degraded-state honesty notes */}
+                {(causeRemapped || meta?.hour_window_relaxed) && (
+                  <div className="flex flex-col gap-1 text-[10px] text-muted-foreground">
+                    {causeRemapped && (
+                      <span>
+                        ⓘ No exact “{eventCause}” precedent in the corpus — showing closest
+                        analogues (matched as “{meta?.cause_matched}”).
                       </span>
-                      <span className="flex gap-2 text-[10px] text-muted-foreground">
-                        <span>{evt.corridor}</span>
-                        <span>{evt.hour}:00</span>
-                        <span>{Math.round(evt.duration_mins)} min</span>
+                    )}
+                    {meta?.hour_window_relaxed && (
+                      <span>ⓘ Time-of-day window widened to find enough analogues.</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Precedent matches */}
+                <div className="flex flex-col gap-2">
+                  {visibleMatches.map((evt, i) => (
+                    <div
+                      key={evt.event_id || i}
+                      className="flex items-center justify-between rounded-md border border-border bg-muted p-2.5 text-xs transition-colors hover:border-primary/50"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: severityColor(evt.severity_score) }}
+                          title={`severity ${evt.severity_score.toFixed(2)}`}
+                        />
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-semibold capitalize text-foreground">
+                            {evt.event_cause.replace(/_/g, ' ')}
+                          </span>
+                          <span className="flex gap-2 text-[10px] text-muted-foreground">
+                            <span>{evt.corridor}</span>
+                            <span>{evt.hour}:00</span>
+                            <span>{Math.round(evt.duration_mins)} min</span>
+                          </span>
+                        </div>
+                      </div>
+                      <span className="font-mono text-[13px] font-bold text-primary">
+                        {(evt.similarity_score * 100).toFixed(0)}%
                       </span>
                     </div>
-                    <span className="font-mono text-[13px] font-bold text-primary">
-                      {(evt.similarity_score * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  ))}
 
-        <Card>
+                  {matches.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllMatches((v) => !v)}
+                      className="self-center text-[11px] font-medium text-primary hover:underline"
+                    >
+                      {showAllMatches ? 'Show fewer' : `+${matches.length - 3} more`}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Pre-staging Timeline ─────────────────────────────────── */}
+        <Card className="col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
               <Clock size={16} /> Pre-staging Timeline
@@ -87,6 +274,7 @@ export default function DetailedReportsPage() {
           </CardContent>
         </Card>
 
+        {/* ── Post-Event Analysis ──────────────────────────────────── */}
         {counterfactual && counterfactual.prediction_accuracy_pct !== undefined && (
           <Card className="col-span-2">
             <CardHeader>
