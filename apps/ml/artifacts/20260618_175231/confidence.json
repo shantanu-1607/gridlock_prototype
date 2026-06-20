@@ -1,0 +1,10 @@
+{
+  "base_confidence": 0.6302,
+  "residual_std": 93.74,
+  "champion_model": "stacking_ridge",
+  "champion_members": [
+    "catboost",
+    "random_forest",
+    "extra_trees"
+  ]
+}

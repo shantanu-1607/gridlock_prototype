@@ -1,0 +1,128 @@
+{
+  "Non-corridor": {
+    "elevated_threshold": 93.18870384288151,
+    "anomaly_threshold": 152.81132487984712,
+    "severe_threshold": 392.28608729537467,
+    "n_samples": 689
+  },
+  "Mysore Road": {
+    "elevated_threshold": 81.68469412227587,
+    "anomaly_threshold": 125.52527515733364,
+    "severe_threshold": 248.33113319580875,
+    "n_samples": 262
+  },
+  "Tumkur Road": {
+    "elevated_threshold": 94.7946181475048,
+    "anomaly_threshold": 140.98737613754153,
+    "severe_threshold": 294.12612490456786,
+    "n_samples": 198
+  },
+  "Bellary Road 1": {
+    "elevated_threshold": 111.45458452027935,
+    "anomaly_threshold": 157.32401402015614,
+    "severe_threshold": 594.2798655416325,
+    "n_samples": 190
+  },
+  "Bellary Road 2": {
+    "elevated_threshold": 140.74940299160284,
+    "anomaly_threshold": 211.91750782507134,
+    "severe_threshold": 375.97553488711503,
+    "n_samples": 110
+  },
+  "Magadi Road": {
+    "elevated_threshold": 77.18524045835593,
+    "anomaly_threshold": 105.76223962719129,
+    "severe_threshold": 160.46242648368343,
+    "n_samples": 88
+  },
+  "Hosur Road": {
+    "elevated_threshold": 60.03520774686916,
+    "anomaly_threshold": 89.72243028999364,
+    "severe_threshold": 191.69681756400882,
+    "n_samples": 85
+  },
+  "ORR East 1": {
+    "elevated_threshold": 147.00982166095156,
+    "anomaly_threshold": 472.91631682025974,
+    "severe_threshold": 822.0412693824443,
+    "n_samples": 72
+  },
+  "ORR North 1": {
+    "elevated_threshold": 76.1891450060397,
+    "anomaly_threshold": 135.07162907621856,
+    "severe_threshold": 265.5157105223963,
+    "n_samples": 65
+  },
+  "ORR North 2": {
+    "elevated_threshold": 53.45560143669755,
+    "anomaly_threshold": 83.63514658710902,
+    "severe_threshold": 112.82743774158023,
+    "n_samples": 64
+  },
+  "Old Madras Road": {
+    "elevated_threshold": 31.896257142859127,
+    "anomaly_threshold": 51.54701321530958,
+    "severe_threshold": 74.47927359801339,
+    "n_samples": 57
+  },
+  "ORR West 1": {
+    "elevated_threshold": 93.24962008066078,
+    "anomaly_threshold": 144.34444046889712,
+    "severe_threshold": 425.1172090618767,
+    "n_samples": 56
+  },
+  "West of Chord Road": {
+    "elevated_threshold": 36.08283893233853,
+    "anomaly_threshold": 52.74203454031453,
+    "severe_threshold": 67.18767423282245,
+    "n_samples": 43
+  },
+  "Bannerghata Road": {
+    "elevated_threshold": 32.00613044702834,
+    "anomaly_threshold": 41.52657779220078,
+    "severe_threshold": 54.27243514912679,
+    "n_samples": 35
+  },
+  "Old Airport Road": {
+    "elevated_threshold": 70.74649752885595,
+    "anomaly_threshold": 92.73026395033175,
+    "severe_threshold": 129.31463583477682,
+    "n_samples": 28
+  },
+  "ORR East 2": {
+    "elevated_threshold": 93.62615281818839,
+    "anomaly_threshold": 110.90302308849117,
+    "severe_threshold": 132.44152914673063,
+    "n_samples": 28
+  },
+  "CBD 2": {
+    "elevated_threshold": 157.4916998756106,
+    "anomaly_threshold": 198.21473788630612,
+    "severe_threshold": 442.07913435393607,
+    "n_samples": 26
+  },
+  "Varthur Road": {
+    "elevated_threshold": 39.339127571625454,
+    "anomaly_threshold": 51.49421902731169,
+    "severe_threshold": 63.272942102979684,
+    "n_samples": 25
+  },
+  "Hennur Main Road": {
+    "elevated_threshold": 26.73734682509963,
+    "anomaly_threshold": 44.336893384307,
+    "severe_threshold": 53.06896005671598,
+    "n_samples": 22
+  },
+  "Airport New South Road": {
+    "elevated_threshold": 32.204210345005976,
+    "anomaly_threshold": 37.592529011907324,
+    "severe_threshold": 44.858500002353395,
+    "n_samples": 17
+  },
+  "__global__": {
+    "elevated_threshold": 73.15794863307949,
+    "anomaly_threshold": 111.82355102725819,
+    "severe_threshold": 361.2403960685331,
+    "n_samples": 1470
+  }
+}

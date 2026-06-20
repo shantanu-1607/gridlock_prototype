@@ -1,4 +1,10 @@
-artifacts/
+# Ignore all training-run artifacts EXCEPT the deployed champion + Prophet
+# baselines, which must ship in the repo so the ML service runs from a fresh
+# clone / zip / deploy. Regenerate calibration via scripts/calibrate_conformal.py.
+artifacts/*
+!artifacts/20260618_175231/
+!artifacts/prophet_baselines/
+artifacts/20260618_175231/conformal_calibration.prev_*.json
 logs/
 __pycache__/
 *.pyc

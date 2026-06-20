@@ -1,0 +1,13 @@
+{
+  "routing": "soft_blend",
+  "steepness": 0.045,
+  "threshold_mins": 45.0,
+  "metrics": {
+    "log_rmse": 0.9295,
+    "r2": 0.2208,
+    "original_log_rmse": 1.0664,
+    "original_r2": 0.0141,
+    "improvement_log_rmse_pct": -12.8,
+    "improvement_r2_pct": 1466.0
+  }
+}
