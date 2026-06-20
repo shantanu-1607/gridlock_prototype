@@ -1,4 +1,12 @@
-import { Clock, FileBarChart, Fingerprint, Target } from 'lucide-react'
+import {
+  ArrowRight,
+  Clock,
+  FileBarChart,
+  Fingerprint,
+  MapPin,
+  Navigation,
+  Target,
+} from 'lucide-react'
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 
@@ -40,7 +48,9 @@ export default function DetailedReportsPage() {
     )
   }
 
-  const { similar_incidents, prestaging_timeline, fingerprint_summary } = pipelineResult
+  const { similar_incidents, prestaging_timeline, fingerprint_summary, diversion_plan } =
+    pipelineResult
+  const diversionRoutes = diversion_plan?.routes ?? []
   const matches = similar_incidents ?? []
   const agg = fingerprint_summary?.aggregated ?? null
   const meta = fingerprint_summary?.meta ?? null
@@ -273,6 +283,54 @@ export default function DetailedReportsPage() {
             <Timeline steps={prestaging_timeline} />
           </CardContent>
         </Card>
+
+        {/* ── Diversion Routes ─────────────────────────────────────── */}
+        {diversionRoutes.length > 0 && (
+          <Card className="col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Navigation size={16} /> Diversion Routes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-2.5">
+                {diversionRoutes.map((route, i) => (
+                  <div
+                    key={`${route.at_risk_corridor}-${route.via_corridor}-${i}`}
+                    className="rounded-md border border-green/30 bg-green/5 p-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                      <span className="text-red">{route.at_risk_corridor}</span>
+                      <ArrowRight size={14} className="shrink-0 text-muted-foreground" />
+                      <span className="text-green">via {route.via_corridor}</span>
+                      <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        {route.rejoins ? 'Divert + rejoin' : 'Divert'}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <MapPin size={11} className="shrink-0" />
+                      Divert at {route.from.name}
+                      {route.rejoins
+                        ? ` • rejoin ${route.at_risk_corridor} at ${route.to.name}`
+                        : ` • hand off to ${route.to.name}`}
+                    </div>
+                    {route.reason && (
+                      <p className="mt-1.5 text-[11px] leading-relaxed text-foreground/80">
+                        {route.reason}
+                      </p>
+                    )}
+                  </div>
+                ))}
+
+                {diversion_plan?.rationale && (
+                  <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-[11px] leading-relaxed text-foreground">
+                    {diversion_plan.rationale}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* ── Post-Event Analysis ──────────────────────────────────── */}
         {counterfactual && counterfactual.prediction_accuracy_pct !== undefined && (

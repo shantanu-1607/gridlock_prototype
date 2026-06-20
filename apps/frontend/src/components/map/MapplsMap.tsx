@@ -98,6 +98,80 @@ const getBarricadeMarkerHtml = (status: string) => {
   `
 }
 
+// "Divert here" badge anchored at the diversion entry junction.
+const getDivertMarkerHtml = () => {
+  return `
+    <div style="
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      background-color: #16a34a;
+      border: 2px solid white;
+      box-shadow: 0 0 10px #16a34a;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    ">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/><path d="M2 6v4a2 2 0 0 0 2 2h4"/></svg>
+      DIVERT
+    </div>
+  `
+}
+
+// Directional chevron rendered along the reroute path, rotated to the heading.
+const getChevronHtml = (rotationDeg: number) => {
+  return `
+    <div style="
+      transform: rotate(${rotationDeg}deg);
+      color: #22c55e;
+      filter: drop-shadow(0 0 3px rgba(0,0,0,0.7));
+    ">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </div>
+  `
+}
+
+// Routes a multi-point path along real roads by fetching each consecutive
+// junction pair and concatenating, falling back to the straight segment for any
+// pair the routing service can't resolve. Returns [lat, lon][].
+const fetchChainedRoute = async (
+  pts: { lat: number; lon: number }[],
+): Promise<[number, number][]> => {
+  if (!pts || pts.length < 2) return pts.map((p) => [p.lat, p.lon])
+  const segs = await Promise.all(
+    pts.slice(0, -1).map((p, i) => fetchRoute([p.lat, p.lon], [pts[i + 1].lat, pts[i + 1].lon])),
+  )
+  const coords: [number, number][] = []
+  segs.forEach((seg, i) => {
+    const resolved =
+      seg && seg.length >= 2
+        ? seg
+        : ([
+            [pts[i].lat, pts[i].lon],
+            [pts[i + 1].lat, pts[i + 1].lon],
+          ] as [number, number][])
+    // Drop the duplicated shared vertex between consecutive segments.
+    for (const c of i === 0 ? resolved : resolved.slice(1)) coords.push(c)
+  })
+  return coords
+}
+
+// Compass bearing (degrees from north, clockwise) from point a to b ([lat, lon]).
+const bearingDeg = (a: [number, number], b: [number, number]) => {
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const toDeg = (r: number) => (r * 180) / Math.PI
+  const lat1 = toRad(a[0])
+  const lat2 = toRad(b[0])
+  const dLon = toRad(b[1] - a[1])
+  const y = Math.sin(dLon) * Math.cos(lat2)
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon)
+  return (toDeg(Math.atan2(y, x)) + 360) % 360
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const RISK_COLORS: Record<string, string> = {
@@ -163,6 +237,7 @@ export default function MapplsMap({
   const forecast = FORECAST_STEPS[forecastIdx]
   const eventMarkersRef = useRef<any[]>([])
   const dispatchOverlaysRef = useRef<any[]>([])
+  const diversionOverlaysRef = useRef<any[]>([])
 
   // Inject stylesheet for animations
   useEffect(() => {
@@ -218,7 +293,7 @@ export default function MapplsMap({
       const evColor = isMissionAccomplished ? '#10b981' : isRecovered ? '#6b7280' : getEventColor(ev)
       const categoryIcon = getCategoryIconSvg(ev.category || '')
 
-      const size = isSelected ? 34 : 26
+      const size = isSelected ? 42 : 34
       const opacity = isSelected ? '1.0' : isRecovered ? '0.6' : '0.85'
       const glow =
         isSelected && !isRecovered
@@ -258,7 +333,7 @@ export default function MapplsMap({
             color: white;
             transition: all 0.2s ease-in-out;
           ">
-            ${categoryIcon}
+            <span style="display: flex; transform: scale(1.4);">${categoryIcon}</span>
           </div>
         </div>
       `
@@ -613,6 +688,150 @@ export default function MapplsMap({
     }
   }, [isLoaded, map, eventLat, eventLon, pipeline])
 
+  // Render the diversion plan: the at-risk corridor segment (red) and the
+  // reroute path via the alternate corridor (green, with directional chevrons
+  // and a "DIVERT" badge at the entry junction).
+  useEffect(() => {
+    if (!isLoaded || !map) return
+
+    const ATRISK_SRC = 'diversion-atrisk-source'
+    const ATRISK_LINE = 'diversion-atrisk-line'
+    const ATRISK_CASING = 'diversion-atrisk-casing'
+    const REROUTE_SRC = 'diversion-reroute-source'
+    const REROUTE_LINE = 'diversion-reroute-line'
+    const REROUTE_CASING = 'diversion-reroute-casing'
+
+    const cleanup = () => {
+      diversionOverlaysRef.current.forEach(removeLayer)
+      diversionOverlaysRef.current = []
+      try {
+        for (const id of [ATRISK_LINE, ATRISK_CASING, REROUTE_LINE, REROUTE_CASING]) {
+          if (map.getLayer(id)) map.removeLayer(id)
+        }
+        for (const id of [ATRISK_SRC, REROUTE_SRC]) {
+          if (map.getSource(id)) map.removeSource(id)
+        }
+      } catch {
+        // Map may be tearing down
+      }
+    }
+
+    const routes = pipeline?.diversion_plan?.routes ?? []
+    if (routes.length === 0) {
+      cleanup()
+      return
+    }
+
+    let cancelled = false
+
+    const upsertLine = (
+      srcId: string,
+      casingId: string,
+      lineId: string,
+      features: any[],
+      color: string,
+      dashed: boolean,
+    ) => {
+      const data = { type: 'FeatureCollection', features }
+      if (map.getSource(srcId)) {
+        map.getSource(srcId).setData(data)
+        return
+      }
+      map.addSource(srcId, { type: 'geojson', data })
+      map.addLayer({
+        id: casingId,
+        type: 'line',
+        source: srcId,
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#0b1220', 'line-width': 8, 'line-opacity': 0.5 },
+      })
+      map.addLayer({
+        id: lineId,
+        type: 'line',
+        source: srcId,
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': color,
+          'line-width': dashed ? 4 : 5,
+          'line-opacity': 0.9,
+          ...(dashed ? { 'line-dasharray': [2, 1.5] } : {}),
+        },
+      })
+    }
+
+    const draw = async () => {
+      // At-risk corridor segments follow real roads by chaining the persisted
+      // junction polyline through the routing service.
+      const atRiskResults = await Promise.all(
+        routes.map((r) => fetchChainedRoute(r.at_risk_path ?? [])),
+      )
+      if (cancelled || !map) return
+
+      const atRiskFeatures = atRiskResults
+        .map((pts) => {
+          if (!pts || pts.length < 2) return null
+          return {
+            type: 'Feature' as const,
+            geometry: {
+              type: 'LineString' as const,
+              coordinates: pts.map(([lat, lon]) => [lon, lat]),
+            },
+            properties: {},
+          }
+        })
+        .filter(Boolean) as any[]
+
+      // Reroute paths follow real roads via the route endpoint (from -> to).
+      const rerouteResults = await Promise.all(
+        routes.map((r) => fetchRoute([r.from.lat, r.from.lon], [r.to.lat, r.to.lon])),
+      )
+      if (cancelled || !map) return
+
+      const rerouteFeatures = rerouteResults
+        .map((pts) => {
+          if (!pts || pts.length < 2) return null
+          return {
+            type: 'Feature' as const,
+            geometry: {
+              type: 'LineString' as const,
+              coordinates: pts.map(([lat, lon]) => [lon, lat]),
+            },
+            properties: {},
+          }
+        })
+        .filter(Boolean) as any[]
+
+      upsertLine(ATRISK_SRC, ATRISK_CASING, ATRISK_LINE, atRiskFeatures, '#ef4444', false)
+      upsertLine(REROUTE_SRC, REROUTE_CASING, REROUTE_LINE, rerouteFeatures, '#22c55e', true)
+
+      // HTML overlays: a DIVERT badge at each entry + chevrons along the reroute.
+      diversionOverlaysRef.current.forEach(removeLayer)
+      diversionOverlaysRef.current = []
+      routes.forEach((r, i) => {
+        const badge = addMarker(r.from.lat, r.from.lon, { html: getDivertMarkerHtml() })
+        if (badge) diversionOverlaysRef.current.push(badge)
+
+        const pts = rerouteResults[i]
+        if (pts && pts.length >= 2) {
+          for (const frac of [0.4, 0.7]) {
+            const idx = Math.min(pts.length - 1, Math.max(1, Math.floor(pts.length * frac)))
+            const heading = bearingDeg(pts[idx - 1], pts[idx]) - 90
+            const chevron = addMarker(pts[idx][0], pts[idx][1], {
+              html: getChevronHtml(heading),
+            })
+            if (chevron) diversionOverlaysRef.current.push(chevron)
+          }
+        }
+      })
+    }
+
+    draw()
+
+    return () => {
+      cancelled = true
+      cleanup()
+    }
+  }, [isLoaded, map, pipeline, addMarker, removeLayer])
   // Render fleet route polyline
   useEffect(() => {
     if (!isLoaded || !map) return

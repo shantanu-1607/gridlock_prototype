@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 
 import { generateBarricadePlan } from '../services/barricade.service'
 import { findConflicts } from '../services/conflict.service'
+import { generateDiversionPlan } from '../services/diversion.service'
 import { graphService } from '../services/graph.service'
 import {
   publishWsEvent,
@@ -19,6 +20,32 @@ import { simulationService } from '../services/simulation.service'
 import { query } from '../utils/db'
 
 const ML_BASE = process.env.ML_SERVICE_URL || 'http://localhost:8000'
+
+/**
+ * Schedules the propagation simulation without letting a missing/unreachable
+ * Redis block the planning response. BullMQ/ioredis (maxRetriesPerRequest:null)
+ * queue commands indefinitely when Redis is down, which would hang the request;
+ * this bounds the wait and proceeds — the propagation job is a background
+ * simulation, not required for the plan response to be correct.
+ */
+async function schedulePropagationSafe(
+  eventId: string,
+  severity: number,
+  durationMins: number,
+  lat: number,
+  lon: number,
+) {
+  try {
+    await Promise.race([
+      schedulePropagationJob(eventId, severity, durationMins, lat, lon),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('redis unavailable (timed out)')), 3000),
+      ),
+    ])
+  } catch (err) {
+    console.warn('[Plan] Propagation scheduling skipped:', (err as Error).message)
+  }
+}
 
 /**
  * Call ML prediction endpoint.
@@ -462,6 +489,32 @@ export const planEvent = async (req: Request, res: Response) => {
     })
     console.log(`[Plan] Barricades: ${barricadePlan.barricades.length} recommended`)
 
+    // 5c. Diversion Recommendation Engine — reroute traffic off the at-risk
+    // corridor onto a lower-spillover alternate. Avoid corridors already taken
+    // by other active events (multi-event aware).
+    const competingResult = await query(
+      `SELECT affected_corridors FROM events
+       WHERE id <> $1 AND status IN ('planned', 'active')`,
+      [eventId],
+    )
+    const competingCorridors = competingResult.rows.flatMap(
+      (r: { affected_corridors: string[] | null }) =>
+        Array.isArray(r.affected_corridors) ? r.affected_corridors : [],
+    )
+    const diversionPlan = await generateDiversionPlan({
+      event: {
+        category,
+        lat,
+        lon,
+        severity_score: mlResult.severity_score,
+        risk_level: queueResult.risk_level,
+        requires_road_closure: requires_road_closure || false,
+        affected_corridors: Array.isArray(affected_corridors) ? affected_corridors : [corridor],
+      },
+      competingCorridors,
+    })
+    console.log(`[Plan] Diversions: ${diversionPlan.routes.length} route(s) recommended`)
+
     // 6. Advisory Gating
     const nearest = graphService.getNearestJunction(lat, lon)
     const neighborEdges = nearest ? graphService.getNeighbors(nearest.id) : []
@@ -516,9 +569,10 @@ export const planEvent = async (req: Request, res: Response) => {
         prestaging_timeline = $12,
         anomaly_score = $13,
         anomaly_label = $14,
-        fingerprint_summary = $15,
+        diversion_plan = $15,
+        fingerprint_summary = $16,
         status = 'planned'
-      WHERE id = $16
+      WHERE id = $17
       RETURNING *
     `
     const updateResult = await query(updateQuery, [
@@ -536,6 +590,7 @@ export const planEvent = async (req: Request, res: Response) => {
       JSON.stringify(prestagingTimeline),
       anomalyResult.anomaly_score,
       anomalyResult.anomaly_label,
+      JSON.stringify(diversionPlan),
       JSON.stringify({ aggregated: mlResult.aggregated, meta: mlResult.fingerprint_meta }),
       eventId,
     ])
@@ -583,7 +638,13 @@ export const planEvent = async (req: Request, res: Response) => {
     }
 
     // 9. Schedule propagation simulation (runs on future timestamp)
-    await schedulePropagationJob(eventId, mlResult.severity_score, mlResult.duration_mins, lat, lon)
+    await schedulePropagationSafe(
+      eventId,
+      mlResult.severity_score,
+      mlResult.duration_mins,
+      lat,
+      lon,
+    )
 
     res.status(201).json({
       message: 'Event planned successfully',
@@ -601,6 +662,7 @@ export const planEvent = async (req: Request, res: Response) => {
         fleet_plan: fleetPlan,
         barricade_plan: barricadePlan,
         gating_plan: gatingPlan,
+        diversion_plan: diversionPlan,
         similar_incidents: mlResult.similar_events.slice(0, 5),
         fingerprint_summary: { aggregated: mlResult.aggregated, meta: mlResult.fingerprint_meta },
         propagation_forecast: propagationForecast,
@@ -797,7 +859,7 @@ export const createEvent = async (req: Request, res: Response) => {
     })
 
     // 13. Schedule Propagation Job
-    await schedulePropagationJob(
+    await schedulePropagationSafe(
       eventId,
       activeEvent.severity_score,
       activeEvent.duration_mins,

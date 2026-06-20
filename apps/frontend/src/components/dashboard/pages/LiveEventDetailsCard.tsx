@@ -1,8 +1,10 @@
 import {
+  ArrowRight,
   Clock,
   Construction,
   Loader2,
   MapPin,
+  Navigation,
   Send,
   Shield,
   ShieldAlert,
@@ -237,6 +239,9 @@ export default function LiveEventDetailsCard({
 
   const confirmedBarricadesCount = barricades.filter((b) => b.status === 'confirmed').length
 
+  const diversionRoutes = event.diversion_plan?.routes ?? []
+  const diversionRationale = event.diversion_plan?.rationale
+
   return (
     <div className="absolute top-4 right-4 z-[1000] w-96 max-h-[85vh] flex flex-col rounded-2xl border border-border/80 bg-card/90 backdrop-blur-md shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
       {/* Header */}
@@ -455,6 +460,58 @@ export default function LiveEventDetailsCard({
                     </span>
                   </div>
                   <div className="shrink-0 ml-2">{getBarricadeStatusBadge(barricade.status)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Diversion Section */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between border-b border-border pb-1">
+            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <Navigation size={14} className="text-green-500" />
+              Diversion Routes
+            </span>
+            <span className="text-[10px] font-bold uppercase bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full">
+              {diversionRoutes.length} Recommended
+            </span>
+          </div>
+
+          {diversionRoutes.length === 0 ? (
+            <div className="text-center py-4 rounded-xl border border-dashed border-border bg-muted/5 p-3">
+              <Navigation size={20} className="mx-auto text-muted-foreground opacity-40 mb-1" />
+              <p className="text-xs text-muted-foreground">No diversion recommended</p>
+              {diversionRationale && (
+                <p className="text-[10px] text-muted-foreground mt-2 italic px-2">
+                  "{diversionRationale}"
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {diversionRoutes.map((route, i) => (
+                <div
+                  key={`${route.at_risk_corridor}-${route.via_corridor}-${i}`}
+                  className="p-2.5 rounded-lg border border-green-500/20 bg-green-500/5"
+                >
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground flex-wrap">
+                    <span className="text-red-400">{route.at_risk_corridor}</span>
+                    <ArrowRight size={12} className="text-muted-foreground shrink-0" />
+                    <span className="text-green-400">via {route.via_corridor}</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
+                    <MapPin size={10} className="shrink-0" />
+                    Divert at {route.from.name}
+                    {route.rejoins
+                      ? ` • rejoin at ${route.to.name}`
+                      : ` • hand off to ${route.to.name}`}
+                  </div>
+                  {route.reason && (
+                    <p className="text-[10px] text-muted-foreground mt-1 italic leading-snug">
+                      {route.reason}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
