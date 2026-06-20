@@ -12,5 +12,4 @@ matplotlib
 mlflow>=2.12
 dvc>=3.50
 category_encoders>=2.6
-torch>=2.2
 prophet
