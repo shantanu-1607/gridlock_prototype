@@ -98,9 +98,11 @@ jobs:
         run: |
           python -c "
           from src.predict import Predictor, find_latest_artifacts
-          from src.queue_model import compute_queue_metrics, recommend_deployment, recommend_gating
+          from src.queue_model import compute_queue_metrics, recommend_deployment, recommend_gating, compute_tandem_queue_metrics
           from src.counterfactual import run_counterfactual_analysis
-          from src.api.schemas import PredictRequest, PredictResponse
+          from src.active import update_active_prediction
+          from src.api.schemas import PredictRequest, PredictResponse, RepredictRequest, QueueAnalysisResponse
+          from src.api.main import app
           from src.features import Encoders
           from src.data import load_config
           from experiments.feature_registry import FEATURE_SETS
@@ -109,6 +111,10 @@ jobs:
           print(f'Feature sets: {list(FEATURE_SETS.keys())}')
           assert len(MODEL_REGISTRY) >= 3, 'Expected at least 3 models'
           assert len(FEATURE_SETS) >= 6, 'Expected at least 6 feature sets'
+          api_routes = [r.path for r in app.routes if getattr(r, 'path', '').startswith('/api')]
+          for route in ('/api/ml/predict', '/api/ml/queue-analysis', '/api/ml/repredict'):
+              assert route in api_routes, f'Missing API route: {route}'
+          print(f'API routes wired: {len(api_routes)}')
           print('All imports OK')
           "
 
