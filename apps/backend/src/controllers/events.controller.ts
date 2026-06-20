@@ -559,34 +559,8 @@ export const planEvent = async (req: Request, res: Response) => {
 
     const plannedEvent = updateResult.rows[0]
 
-    // 8b. Persist Fleet Assignments
-    for (const deployment of fleetPlan.deployments) {
-      const deployByTime = new Date(Date.now() + deployment.deployByMins * 60000)
-      for (const member of deployment.assignedFleet) {
-        await query(
-          `INSERT INTO fleet_assignments (event_id, user_id, junction_name, role, deploy_by_time, priority, status)
-           VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
-          [
-            eventId,
-            member.user_id,
-            deployment.junctionName,
-            deployment.role,
-            deployByTime,
-            deployment.priority,
-          ],
-        )
-
-        await publishWsEvent('fleet:dispatched', {
-          eventId,
-          user_id: member.user_id,
-          user_name: member.user_name,
-          junction: deployment.junctionName,
-          role: deployment.role,
-          priority: deployment.priority,
-          deploy_by_time: deployByTime.toISOString(),
-        })
-      }
-    }
+    // Note: Fleet Assignments are no longer auto-persisted here. 
+    // They are proposed in the fleetPlan and the controller must manually dispatch them.
 
     // 8c. Persist Barricades
     for (const barricade of barricadePlan.barricades) {
@@ -778,34 +752,8 @@ export const createEvent = async (req: Request, res: Response) => {
     )
     const eventWithRecommendation = recommendationUpdate.rows[0]
 
-    for (const deployment of plan.deployments) {
-      const deployByTime = new Date(Date.now() + deployment.deployByMins * 60000)
-      for (const member of deployment.assignedFleet) {
-        await query(
-          `INSERT INTO fleet_assignments (event_id, user_id, junction_name, role, deploy_by_time, priority, status)
-           VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
-          [
-            eventId,
-            member.user_id,
-            deployment.junctionName,
-            deployment.role,
-            deployByTime,
-            deployment.priority,
-          ],
-        )
-
-        // 10. Notify the specific fleet member's mobile client of their new task
-        await publishWsEvent('fleet:dispatched', {
-          eventId,
-          user_id: member.user_id,
-          user_name: member.user_name,
-          junction: deployment.junctionName,
-          role: deployment.role,
-          priority: deployment.priority,
-          deploy_by_time: deployByTime.toISOString(),
-        })
-      }
-    }
+    // Note: Fleet Assignments are no longer auto-persisted here.
+    // They are proposed in the plan and the controller must manually dispatch them via the UI.
 
     // 11. Tell the dashboard the recommendation is ready to display
     await publishWsEvent('recommendations:ready', {
@@ -926,10 +874,32 @@ export const updateEvent = async (req: Request, res: Response) => {
 
     const updatedEvent = result.rows[0]
 
+    // If event is resolved or closed, free up personnel and assignments
+    if (status === 'resolved' || status === 'closed') {
+      // Free up personnel
+      await query(
+        `UPDATE users 
+         SET status = 'available' 
+         WHERE id IN (
+           SELECT user_id FROM fleet_assignments 
+           WHERE event_id = $1 AND status != 'completed'
+         )`,
+        [id],
+      )
+
+      // Mark assignments as completed
+      await query(
+        `UPDATE fleet_assignments 
+         SET status = 'completed' 
+         WHERE event_id = $1 AND status != 'completed'`,
+        [id],
+      )
+    }
+
     // If event is closed, remove the propagation job and run counterfactual analysis
     if (status === 'closed') {
       await removePropagationJob(id)
-      console.log(`[Close] Event ${id} closed, job removed`)
+      console.log(`[Close] Event ${id} closed, job removed, fleet freed`)
 
       // Compute actual duration from start to close time
       const closeTime = closed_datetime ? new Date(closed_datetime) : new Date()

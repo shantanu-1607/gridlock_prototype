@@ -71,6 +71,29 @@ export interface AssignedFleetMember {
   user_name: string
 }
 
+export interface FleetMember {
+  id: string
+  email: string
+  name: string
+  status: string
+  current_lat: number
+  current_lon: number
+  specialty?: string
+}
+
+export interface FleetAssignment {
+  id: string
+  event_id: string
+  event_name?: string
+  event_lat?: number
+  event_lon?: number
+  junction_name: string
+  role: string
+  deploy_by_time: string
+  priority: string
+  status: string
+}
+
 export interface Deployment {
   junction: string
   junctionName: string

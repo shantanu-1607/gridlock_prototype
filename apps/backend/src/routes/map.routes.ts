@@ -113,7 +113,7 @@ router.get('/route', authenticateToken, async (req: Request, res: Response) => {
   if (MAPPLS_KEY) {
     try {
       const mapplsRes = await fetch(
-        `https://route.mappls.com/route/adv/driving/${fromLon},${fromLat};${toLon},${toLat}?geometries=polyline&overview=full&access_token=${MAPPLS_KEY}`,
+        `https://route.mappls.com/route/direction/route_adv/driving/${fromLon},${fromLat};${toLon},${toLat}?geometries=polyline&overview=full&access_token=${MAPPLS_KEY}`,
       )
 
       if (mapplsRes.ok) {

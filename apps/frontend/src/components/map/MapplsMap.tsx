@@ -67,7 +67,7 @@ const getFleetMarkerHtml = (status: string) => {
       ${pulse}
       color: white;
     ">
-      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 9.7a1 1 0 0 1-.68 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 .76-.97l8-2a1 1 0 0 1 .48 0l8 2A1 1 0 0 1 20 6v7z"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
     </div>
   `
 }
@@ -139,6 +139,8 @@ interface Props {
   onEventSelect?: (ev: PlannedEvent | null) => void
   assignments?: any[]
   barricades?: any[]
+  liveFleetLocations?: Record<string, any>
+  fleetRoute?: [number, number][] | null
 }
 
 export default function MapplsMap({
@@ -152,6 +154,8 @@ export default function MapplsMap({
   onEventSelect,
   assignments,
   barricades,
+  liveFleetLocations,
+  fleetRoute,
 }: Props) {
   const { mapRef, map, isLoaded, error, flyTo, addMarker, removeLayer } = useMapplsMap()
 
@@ -198,18 +202,20 @@ export default function MapplsMap({
 
   // Render active event markers at all times
   useEffect(() => {
-    if (!isLoaded || !map || !activeEvents) return
+    const eventsToRender = activeEvents || (selectedEvent ? [selectedEvent] : [])
+    if (!isLoaded || !map || eventsToRender.length === 0) return
 
     // Clear old active event markers
     eventMarkersRef.current.forEach(removeLayer)
     eventMarkersRef.current = []
 
-    activeEvents.forEach((ev) => {
+    eventsToRender.forEach((ev) => {
       if (!ev.lat || !ev.lon) return
 
       const isRecovered = ev.status === 'resolved' || ev.status === 'closed'
+      const isMissionAccomplished = assignments?.some((a) => a.status === 'completed')
       const isSelected = selectedEvent?.id === ev.id
-      const evColor = isRecovered ? '#6b7280' : getEventColor(ev)
+      const evColor = isMissionAccomplished ? '#10b981' : isRecovered ? '#6b7280' : getEventColor(ev)
       const categoryIcon = getCategoryIconSvg(ev.category || '')
 
       const size = isSelected ? 34 : 26
@@ -280,6 +286,7 @@ export default function MapplsMap({
 
     const sourceId = 'impact-source'
     const isRecovered = selectedEvent?.status === 'resolved' || selectedEvent?.status === 'closed'
+    const isMissionAccomplished = assignments?.some((a) => a.status === 'completed')
 
     const activeNodesArray = propagationTick?.activeNodes
       ? Object.values(propagationTick.activeNodes)
@@ -294,9 +301,9 @@ export default function MapplsMap({
         ? maxNodeIntensity
         : (selectedEvent?.severity_score ?? pipeline?.prediction?.severity_score ?? 0.5)
 
-    const impactColor = isRecovered ? '#6b7280' : getScoreColor(currentSeverity)
+    const impactColor = isMissionAccomplished ? '#10b981' : isRecovered ? '#6b7280' : getScoreColor(currentSeverity)
 
-    if (isRecovered) {
+    if (isRecovered && !isMissionAccomplished) {
       if (map.getSource(sourceId)) {
         ;(map.getSource(sourceId) as any).setData({ type: 'FeatureCollection', features: [] })
       }
@@ -436,7 +443,10 @@ export default function MapplsMap({
             assignment.junction_name.toLowerCase().replace(/\s+/g, ''),
         )
 
-        if (match && match.lat && match.lon) {
+        if (liveFleetLocations && liveFleetLocations[assignment.user_id]) {
+          lat = liveFleetLocations[assignment.user_id].lat
+          lon = liveFleetLocations[assignment.user_id].lon
+        } else if (match && match.lat && match.lon) {
           lat = match.lat
           lon = match.lon
         }
@@ -483,7 +493,18 @@ export default function MapplsMap({
       dispatchOverlaysRef.current.forEach(removeLayer)
       dispatchOverlaysRef.current = []
     }
-  }, [isLoaded, map, eventLat, eventLon, pipeline, assignments, barricades, addMarker, removeLayer])
+  }, [
+    isLoaded,
+    map,
+    eventLat,
+    eventLon,
+    pipeline,
+    assignments,
+    barricades,
+    liveFleetLocations,
+    addMarker,
+    removeLayer,
+  ])
 
   // Cleanup Mapbox impact layers on unmount
   useEffect(() => {
@@ -591,6 +612,81 @@ export default function MapplsMap({
       removeDiversionLayers()
     }
   }, [isLoaded, map, eventLat, eventLon, pipeline])
+
+  // Render fleet route polyline
+  useEffect(() => {
+    if (!isLoaded || !map) return
+
+    const sourceId = 'fleet-route-source'
+    const lineLayerId = 'fleet-route-line'
+    const casingLayerId = 'fleet-route-casing'
+
+    const removeFleetLayers = () => {
+      try {
+        if (map.getLayer(lineLayerId)) map.removeLayer(lineLayerId)
+        if (map.getLayer(casingLayerId)) map.removeLayer(casingLayerId)
+        if (map.getSource(sourceId)) map.removeSource(sourceId)
+      } catch {
+        // Ignore
+      }
+    }
+
+    if (!fleetRoute || fleetRoute.length < 2) {
+      removeFleetLayers()
+      return
+    }
+
+    const geojsonData = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            // GeoJSON expects [lon, lat]; fetchRoute returns [lat, lon]
+            coordinates: fleetRoute.map(([lat, lon]) => [lon, lat]),
+          },
+          properties: {},
+        },
+      ],
+    }
+
+    if (map.getSource(sourceId)) {
+      ;(map.getSource(sourceId) as any).setData(geojsonData)
+    } else {
+      map.addSource(sourceId, { type: 'geojson', data: geojsonData })
+
+      // Dark casing underneath
+      map.addLayer({
+        id: casingLayerId,
+        type: 'line',
+        source: sourceId,
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#000000',
+          'line-width': 7,
+          'line-opacity': 0.6,
+        },
+      })
+
+      // Highlighted route line (Uber style)
+      map.addLayer({
+        id: lineLayerId,
+        type: 'line',
+        source: sourceId,
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#3b82f6', // Bright blue
+          'line-width': 4,
+          'line-opacity': 0.9,
+        },
+      })
+    }
+
+    return () => {
+      removeFleetLayers()
+    }
+  }, [isLoaded, map, fleetRoute])
 
   const prevNodesRef = useRef<Record<string, { intensity: number; lat: number; lon: number }>>({})
   const currentNodesRef = useRef<Record<string, { intensity: number; lat: number; lon: number }>>(
