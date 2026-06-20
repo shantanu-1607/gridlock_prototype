@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react'
 
 import { useMapplsMap } from '../../hooks/useMapplsMap'
 import type { PipelineResult, PlannedEvent, PropagationTick } from '../../types'
+import { fetchRoute } from '../../utils/mappls'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -226,6 +227,97 @@ export default function MapplsMap({
       }
     }
   }, [map])
+
+  // Render diversion route polylines from the event epicenter to each barricade/diversion point
+  useEffect(() => {
+    if (!isLoaded || !map || !eventLat || !eventLon) return
+
+    const sourceId = 'diversion-routes-source'
+    const lineLayerId = 'diversion-routes-line'
+    const casingLayerId = 'diversion-routes-casing'
+
+    const removeDiversionLayers = () => {
+      try {
+        if (map.getLayer(lineLayerId)) map.removeLayer(lineLayerId)
+        if (map.getLayer(casingLayerId)) map.removeLayer(casingLayerId)
+        if (map.getSource(sourceId)) map.removeSource(sourceId)
+      } catch {
+        // Ignore — map may be tearing down
+      }
+    }
+
+    const barricades = pipeline?.barricade_plan?.barricades ?? []
+    if (barricades.length === 0) {
+      removeDiversionLayers()
+      return
+    }
+
+    let cancelled = false
+
+    const drawRoutes = async () => {
+      const routes = await Promise.all(
+        barricades.map((b) => fetchRoute([eventLat, eventLon], [b.lat, b.lon])),
+      )
+      if (cancelled || !map) return
+
+      const features = routes
+        .map((points, i) => {
+          if (!points || points.length < 2) return null
+          return {
+            type: 'Feature' as const,
+            geometry: {
+              type: 'LineString' as const,
+              // GeoJSON expects [lon, lat]; fetchRoute returns [lat, lon]
+              coordinates: points.map(([lat, lon]) => [lon, lat]),
+            },
+            properties: { type: barricades[i].type },
+          }
+        })
+        .filter(Boolean)
+
+      const geojsonData = { type: 'FeatureCollection', features }
+
+      if (map.getSource(sourceId)) {
+        map.getSource(sourceId).setData(geojsonData)
+      } else {
+        map.addSource(sourceId, { type: 'geojson', data: geojsonData })
+
+        // Dark casing underneath for contrast against the dark basemap
+        map.addLayer({
+          id: casingLayerId,
+          type: 'line',
+          source: sourceId,
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': '#0b1220',
+            'line-width': 6,
+            'line-opacity': 0.55,
+          },
+        })
+
+        // Dashed route line: red for hard closures, blue for diversion signs
+        map.addLayer({
+          id: lineLayerId,
+          type: 'line',
+          source: sourceId,
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': ['match', ['get', 'type'], 'hard_closure', '#ef4444', '#3b82f6'],
+            'line-width': 3,
+            'line-opacity': 0.85,
+            'line-dasharray': [2, 1.5],
+          },
+        })
+      }
+    }
+
+    drawRoutes()
+
+    return () => {
+      cancelled = true
+      removeDiversionLayers()
+    }
+  }, [isLoaded, map, eventLat, eventLon, pipeline])
 
   // Render propagation tick overlays (Heatmap with gaussian blur & animations) using native Mapbox Heatmap Layer for smooth blending
   useEffect(() => {
