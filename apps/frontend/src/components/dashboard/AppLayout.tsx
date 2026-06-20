@@ -62,18 +62,24 @@ export default function AppLayout() {
     setSelectedEventAssignments([])
     setSelectedEventBarricades([])
 
-    const fleetPlanObj = ev.fleet_plan ||
-      (ev as any).deployment_plan || {
-        total_fleet_required: ev.total_fleet_required || 0,
-        rationale: ev.recommendation_rationale || '',
-        deployments: [],
-        source: 'fallback',
-      }
+    // Spread the stored plan, then guarantee the required arrays exist so an
+    // empty `{}` plan (e.g. events stored before the pipeline populated them)
+    // still yields well-formed data downstream.
+    const rawFleet: any = ev.fleet_plan || (ev as any).deployment_plan || {}
+    const fleetPlanObj = {
+      ...rawFleet,
+      total_fleet_required: rawFleet.total_fleet_required ?? ev.total_fleet_required ?? 0,
+      rationale: rawFleet.rationale ?? ev.recommendation_rationale ?? '',
+      deployments: rawFleet.deployments ?? [],
+      source: rawFleet.source ?? 'fallback',
+    }
     const riskLevelVal = ev.risk_level || 'green'
-    const gatingPlanObj = ev.gating_plan || {
-      risk_level: riskLevelVal,
-      blocking_probability: ev.blocking_probability || 0,
-      recommendations: [],
+    const rawGating: any = ev.gating_plan || {}
+    const gatingPlanObj = {
+      ...rawGating,
+      risk_level: rawGating.risk_level ?? riskLevelVal,
+      blocking_probability: rawGating.blocking_probability ?? ev.blocking_probability ?? 0,
+      recommendations: rawGating.recommendations ?? [],
     }
 
     setPipelineResult({

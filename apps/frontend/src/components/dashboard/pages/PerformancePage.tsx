@@ -50,7 +50,7 @@ export default function PerformancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="h-[280px]">
-            {fleet_plan.deployments.length > 0 ? (
+            {fleet_plan.deployments?.length ? (
               <DeploymentBarChart items={fleet_plan.deployments} />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -82,7 +82,7 @@ export default function PerformancePage() {
           </CardContent>
         </Card>
 
-        {gating_plan.recommendations.length > 0 && (
+        {gating_plan.recommendations?.length ? (
           <Card className="col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-sm">
@@ -110,7 +110,7 @@ export default function PerformancePage() {
               </div>
             </CardContent>
           </Card>
-        )}
+        ) : null}
       </div>
     </div>
   )
