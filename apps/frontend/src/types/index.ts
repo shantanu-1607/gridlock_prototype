@@ -153,7 +153,28 @@ export interface SimilarEvent {
   corridor: string
   hour: number
   duration_mins: number
+  severity_score: number
   similarity_score: number
+}
+
+export interface FingerprintAggregate {
+  avg_duration_mins: number
+  min_duration_mins: number
+  max_duration_mins: number
+  avg_severity_score: number
+  count: number
+}
+
+export interface FingerprintMeta {
+  corpus_size: number
+  n_candidates: number
+  cause_matched: string
+  hour_window_relaxed: boolean
+}
+
+export interface FingerprintSummary {
+  aggregated: FingerprintAggregate | null
+  meta: FingerprintMeta | null
 }
 
 export interface CounterfactualScenario {
@@ -181,6 +202,7 @@ export interface PipelineResult {
   barricade_plan: BarricadePlan
   gating_plan: GatingPlan
   similar_incidents: SimilarEvent[]
+  fingerprint_summary?: FingerprintSummary
   propagation_forecast: Record<string, unknown>
   prestaging_timeline: TimelineStep[]
   anomaly_detection: AnomalyResult
@@ -209,6 +231,8 @@ export interface PlannedEvent {
   barricade_rationale?: string
   gating_plan: GatingPlan
   prestaging_timeline: TimelineStep[]
+  similar_incidents?: SimilarEvent[]
+  fingerprint_summary?: FingerprintSummary
   anomaly_score: number
   anomaly_label: string
   counterfactual?: CounterfactualResult

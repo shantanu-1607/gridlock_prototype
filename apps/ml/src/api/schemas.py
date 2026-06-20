@@ -56,8 +56,17 @@ class SimilarEvent(BaseModel):
 
 class AggregatedFingerprint(BaseModel):
     avg_duration_mins: float
+    min_duration_mins: float = 0.0
+    max_duration_mins: float = 0.0
     avg_severity_score: float
     count: int
+
+
+class FingerprintMeta(BaseModel):
+    corpus_size: int = 0          # total real incidents in the reference corpus
+    n_candidates: int = 0         # incidents searched after cause/time filtering
+    cause_matched: str = ""       # cause actually matched (after fallback mapping)
+    hour_window_relaxed: bool = False
 
 
 class PredictionInterval(BaseModel):
@@ -81,6 +90,7 @@ class PredictResponse(BaseModel):
     model_timestamp: str
     similar_events: list[SimilarEvent]
     aggregated: AggregatedFingerprint | None = None
+    fingerprint_meta: FingerprintMeta | None = None
     prediction_interval: PredictionInterval | None = None
     confidence_factors: ConfidenceFactors | None = None
 

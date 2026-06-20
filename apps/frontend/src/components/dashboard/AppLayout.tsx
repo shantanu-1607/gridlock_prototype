@@ -110,6 +110,7 @@ export default function AppLayout() {
       },
       gating_plan: gatingPlanObj,
       similar_incidents: (ev as any).similar_incidents || [],
+      fingerprint_summary: (ev as any).fingerprint_summary || undefined,
       propagation_forecast: (ev as any).propagation_forecast || {},
       prestaging_timeline: ev.prestaging_timeline || [],
       anomaly_detection: {
