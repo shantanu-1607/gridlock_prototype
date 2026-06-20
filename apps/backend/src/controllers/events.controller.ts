@@ -34,12 +34,13 @@ async function callMLPredict(eventData: any) {
     if (response.ok) {
       const data = await response.json()
       return {
-        duration_mins: 3, // HARDCODED for testing
+        duration_mins: data.predicted_duration_mins,
         severity_score: data.severity_score,
         severity_label: data.severity_label,
         confidence: data.confidence,
         similar_events: data.similar_events || [],
         aggregated: data.aggregated || null,
+        fingerprint_meta: data.fingerprint_meta || null,
         prediction_interval: data.prediction_interval || null,
         confidence_factors: data.confidence_factors || null,
       }
@@ -47,13 +48,16 @@ async function callMLPredict(eventData: any) {
   } catch (error) {
     console.log('[ML] Predict endpoint not reachable, using stubbed values.')
   }
+  // Fallback only when the ML service is unreachable — 60 min is a neutral
+  // city-typical incident duration, not a real prediction.
   return {
-    duration_mins: 3, // HARDCODED for testing
+    duration_mins: 60,
     severity_score: 0.8,
     severity_label: 'High',
     confidence: 0.5,
     similar_events: [],
     aggregated: null,
+    fingerprint_meta: null,
     prediction_interval: null,
     confidence_factors: null,
   }
@@ -540,8 +544,9 @@ export const planEvent = async (req: Request, res: Response) => {
         anomaly_score = $13,
         anomaly_label = $14,
         diversion_plan = $15,
+        fingerprint_summary = $16,
         status = 'planned'
-      WHERE id = $16
+      WHERE id = $17
       RETURNING *
     `
     const updateResult = await query(updateQuery, [
@@ -554,12 +559,13 @@ export const planEvent = async (req: Request, res: Response) => {
       queueResult.time_to_spillover,
       JSON.stringify(fleetPlan),
       JSON.stringify(gatingPlan),
-      JSON.stringify(mlResult.similar_events.slice(0, 3)),
+      JSON.stringify(mlResult.similar_events.slice(0, 5)),
       JSON.stringify(propagationForecast),
       JSON.stringify(prestagingTimeline),
       anomalyResult.anomaly_score,
       anomalyResult.anomaly_label,
       JSON.stringify(diversionPlan),
+      JSON.stringify({ aggregated: mlResult.aggregated, meta: mlResult.fingerprint_meta }),
       eventId,
     ])
 
@@ -651,7 +657,8 @@ export const planEvent = async (req: Request, res: Response) => {
         barricade_plan: barricadePlan,
         gating_plan: gatingPlan,
         diversion_plan: diversionPlan,
-        similar_incidents: mlResult.similar_events.slice(0, 3),
+        similar_incidents: mlResult.similar_events.slice(0, 5),
+        fingerprint_summary: { aggregated: mlResult.aggregated, meta: mlResult.fingerprint_meta },
         propagation_forecast: propagationForecast,
         prestaging_timeline: prestagingTimeline,
         anomaly_detection: anomalyResult,

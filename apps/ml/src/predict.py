@@ -282,11 +282,14 @@ class Predictor:
 
         similar = []
         aggregated = None
+        fingerprint_meta = None
         if self.fingerprinter is not None:
             lat = float(event.get("latitude", 0))
             lon = float(event.get("longitude", 0))
             cause = str(event.get("event_cause", ""))
-            similar = self.fingerprinter.find_similar(lat, lon, cause, hour=hour, k=5)
+            similar, fingerprint_meta = self.fingerprinter.find_similar_with_meta(
+                lat, lon, cause, hour=hour, k=5
+            )
             aggregated = self.fingerprinter.aggregate(similar)
 
         # --- Conformal prediction interval ---
@@ -303,6 +306,7 @@ class Predictor:
             "model_timestamp": self.timestamp,
             "similar_events": similar,
             "aggregated": aggregated,
+            "fingerprint_meta": fingerprint_meta,
             "prediction_interval": {
                 "lower_mins": interval["lower_mins"],
                 "upper_mins": interval["upper_mins"],
