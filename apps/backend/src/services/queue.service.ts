@@ -26,7 +26,18 @@ const pubSubRedis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379')
  * connected client.
  */
 export const publishWsEvent = async (event: string, data: unknown) => {
-  await pubSubRedis.publish('gridlock:events', JSON.stringify({ event, data }))
+  // Best-effort broadcast: never let an unreachable Redis hang the caller (the
+  // offline command queue would otherwise wait indefinitely).
+  try {
+    await Promise.race([
+      pubSubRedis.publish('gridlock:events', JSON.stringify({ event, data })),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('redis publish timed out')), 2000),
+      ),
+    ])
+  } catch (err) {
+    console.warn('[WS] publish skipped:', (err as Error).message)
+  }
 }
 
 /**

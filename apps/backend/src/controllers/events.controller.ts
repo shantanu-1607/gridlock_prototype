@@ -22,6 +22,32 @@ import { query } from '../utils/db'
 const ML_BASE = process.env.ML_SERVICE_URL || 'http://localhost:8000'
 
 /**
+ * Schedules the propagation simulation without letting a missing/unreachable
+ * Redis block the planning response. BullMQ/ioredis (maxRetriesPerRequest:null)
+ * queue commands indefinitely when Redis is down, which would hang the request;
+ * this bounds the wait and proceeds — the propagation job is a background
+ * simulation, not required for the plan response to be correct.
+ */
+async function schedulePropagationSafe(
+  eventId: string,
+  severity: number,
+  durationMins: number,
+  lat: number,
+  lon: number,
+) {
+  try {
+    await Promise.race([
+      schedulePropagationJob(eventId, severity, durationMins, lat, lon),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('redis unavailable (timed out)')), 3000),
+      ),
+    ])
+  } catch (err) {
+    console.warn('[Plan] Propagation scheduling skipped:', (err as Error).message)
+  }
+}
+
+/**
  * Call ML prediction endpoint.
  */
 async function callMLPredict(eventData: any) {
@@ -638,7 +664,13 @@ export const planEvent = async (req: Request, res: Response) => {
     }
 
     // 9. Schedule propagation simulation (runs on future timestamp)
-    await schedulePropagationJob(eventId, mlResult.severity_score, mlResult.duration_mins, lat, lon)
+    await schedulePropagationSafe(
+      eventId,
+      mlResult.severity_score,
+      mlResult.duration_mins,
+      lat,
+      lon,
+    )
 
     res.status(201).json({
       message: 'Event planned successfully',
@@ -879,7 +911,7 @@ export const createEvent = async (req: Request, res: Response) => {
     })
 
     // 13. Schedule Propagation Job
-    await schedulePropagationJob(
+    await schedulePropagationSafe(
       eventId,
       activeEvent.severity_score,
       activeEvent.duration_mins,
