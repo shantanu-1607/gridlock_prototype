@@ -9,7 +9,6 @@ const pool = new Pool({
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle pg client', err)
-  process.exit(-1)
 })
 
 export const query = async (text: string, params?: any[]) => {
