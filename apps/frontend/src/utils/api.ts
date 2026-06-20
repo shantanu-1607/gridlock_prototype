@@ -1,6 +1,12 @@
 /* eslint-disable no-undef */
 /* eslint-disable no-console */
-import type { PipelineResult, PlanEventPayload, PlannedEvent } from '../types'
+import type {
+  FleetAssignment,
+  FleetMember,
+  PipelineResult,
+  PlanEventPayload,
+  PlannedEvent,
+} from '../types'
 import type { LoginCredentials, User, UserRole } from '../types/auth'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -187,4 +193,50 @@ export async function getEventBarricades(id: string): Promise<any[]> {
 export function createWebSocket(): WebSocket {
   const wsUrl = API_BASE.replace(/^http/, 'ws')
   return new WebSocket(wsUrl)
+}
+
+export async function getAvailableFleet(specialty?: string): Promise<FleetMember[]> {
+  const url = specialty
+    ? `${API_BASE}/api/fleet/available?specialty=${encodeURIComponent(specialty)}`
+    : `${API_BASE}/api/fleet/available`
+  const res = await fetchWithAuth(url)
+  if (!res.ok) throw new Error(`Fetch available fleet failed: ${res.statusText}`)
+  const data = await res.json()
+  return data.fleet
+}
+
+export async function assignFleetMember(
+  eventId: string,
+  userId: string,
+  junctionName: string,
+  role: string,
+  priority: string,
+): Promise<FleetAssignment> {
+  const res = await fetchWithAuth(`${API_BASE}/api/fleet/assign`, {
+    method: 'POST',
+    body: JSON.stringify({ eventId, userId, junctionName, role, priority }),
+  })
+  if (!res.ok) throw new Error(`Assign fleet member failed: ${res.statusText}`)
+  const data = await res.json()
+  return data.assignment
+}
+
+export async function getMyAssignments(): Promise<FleetAssignment[]> {
+  const res = await fetchWithAuth(`${API_BASE}/api/fleet/my-assignments`)
+  if (!res.ok) throw new Error(`Fetch my assignments failed: ${res.statusText}`)
+  const data = await res.json()
+  return data.assignments
+}
+
+export async function updateMyAssignmentStatus(
+  assignmentId: string,
+  status: string,
+): Promise<FleetAssignment> {
+  const res = await fetchWithAuth(`${API_BASE}/api/fleet/my-assignments/${assignmentId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
+  if (!res.ok) throw new Error(`Update assignment status failed: ${res.statusText}`)
+  const data = await res.json()
+  return data.assignment
 }

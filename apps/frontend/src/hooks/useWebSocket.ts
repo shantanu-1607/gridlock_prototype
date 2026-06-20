@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { PropagationTick } from '../types'
 
@@ -8,6 +8,7 @@ export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null)
   const [connected, setConnected] = useState(false)
   const [lastTick, setLastTick] = useState<PropagationTick | null>(null)
+  const [lastFleetLocation, setLastFleetLocation] = useState<any>(null)
 
   useEffect(() => {
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null
@@ -34,6 +35,8 @@ export function useWebSocket() {
             const msg = JSON.parse(event.data)
             if (msg.event === 'propagation:tick') {
               setLastTick(msg.data)
+            } else if (msg.event === 'controller:fleet_locations') {
+              setLastFleetLocation(msg.data)
             }
           } catch {
             /* ignore parse errors */
@@ -54,5 +57,11 @@ export function useWebSocket() {
     }
   }, [])
 
-  return { connected, lastTick }
+  const sendMessage = useCallback((type: string, payload: any) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type, payload }))
+    }
+  }, [])
+
+  return { connected, lastTick, lastFleetLocation, sendMessage }
 }

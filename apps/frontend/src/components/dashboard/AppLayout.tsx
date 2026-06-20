@@ -29,6 +29,8 @@ export interface DashboardOutletContext {
   selectedEventAssignments: any[]
   selectedEventBarricades: any[]
   loadingDetails: boolean
+  refetchEventDetails: () => void
+  liveFleetLocations: Record<string, any>
 }
 
 export default function AppLayout() {
@@ -43,8 +45,18 @@ export default function AppLayout() {
   const [selectedEventAssignments, setSelectedEventAssignments] = useState<any[]>([])
   const [selectedEventBarricades, setSelectedEventBarricades] = useState<any[]>([])
   const [loadingDetails, setLoadingDetails] = useState(false)
+  const [liveFleetLocations, setLiveFleetLocations] = useState<Record<string, any>>({})
 
-  const { connected, lastTick } = useWebSocket()
+  const { connected, lastTick, lastFleetLocation } = useWebSocket()
+
+  useEffect(() => {
+    if (lastFleetLocation) {
+      setLiveFleetLocations((prev) => ({
+        ...prev,
+        [lastFleetLocation.userId]: lastFleetLocation,
+      }))
+    }
+  }, [lastFleetLocation])
 
   const handleEventSelect = (ev: PlannedEvent | null) => {
     if (!ev) {
@@ -263,6 +275,10 @@ export default function AppLayout() {
     selectedEventAssignments,
     selectedEventBarricades,
     loadingDetails,
+    refetchEventDetails: () => {
+      if (selectedEvent) fetchSelectedEventDetails(selectedEvent.id)
+    },
+    liveFleetLocations,
   }
 
   return (

@@ -3,6 +3,7 @@ import {
   Construction,
   Loader2,
   MapPin,
+  Send,
   Shield,
   ShieldAlert,
   UserCheck,
@@ -11,6 +12,7 @@ import {
 import { useEffect, useState } from 'react'
 
 import type { PlannedEvent, PropagationTick } from '../../../types'
+import { assignFleetMember } from '../../../utils/api'
 
 interface Props {
   event: PlannedEvent
@@ -19,6 +21,7 @@ interface Props {
   loading: boolean
   lastTick?: PropagationTick
   onClose: () => void
+  onAssignFleet?: () => void
 }
 
 const getFleetStatusBadge = (status: string) => {
@@ -48,7 +51,14 @@ const getFleetStatusBadge = (status: string) => {
       return (
         <span className="flex items-center gap-1 text-[10px] font-bold text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-md border border-yellow-500/20">
           <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
-          PENDING
+          DEPLOYMENT REQUESTED
+        </span>
+      )
+    case 'recommended':
+      return (
+        <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-dashed border-border">
+          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
+          PROPOSED
         </span>
       )
     case 'blocked':
@@ -101,8 +111,78 @@ export default function LiveEventDetailsCard({
   loading,
   lastTick,
   onClose,
+  onAssignFleet,
 }: Props) {
   const [elapsedMins, setElapsedMins] = useState(0)
+  const [deployLoading, setDeployLoading] = useState<string | null>(null)
+  const [deployAllLoading, setDeployAllLoading] = useState(false)
+
+  // Merge backend assignments with recommended ones
+  const backendAssignments = assignments || []
+  const recommendedDeployments =
+    event.fleet_plan?.deployments || (event as any).deployment_plan?.deployments || []
+  const recommendedList = recommendedDeployments.flatMap((d: any) =>
+    d.assignedFleet.map((f: any) => ({
+      id: `rec-${f.user_id}-${d.junctionName || d.junction}`,
+      user_id: f.user_id,
+      user_name: f.user_name,
+      junction_name: d.junctionName || d.junction,
+      role: d.role,
+      priority: d.priority || 'Medium',
+      status: 'recommended',
+      isRecommended: true,
+    })),
+  )
+
+  const displayAssignments = [...backendAssignments]
+  recommendedList.forEach((rec: any) => {
+    const exists = displayAssignments.some(
+      (a) => a.user_id === rec.user_id && a.junction_name === rec.junction_name,
+    )
+    if (!exists) {
+      displayAssignments.push(rec)
+    }
+  })
+
+  const hasProposed = displayAssignments.some((a: any) => a.isRecommended)
+  const displayOnSiteCount = displayAssignments.filter(
+    (a: any) => a.status === 'on_site' || a.status === 'completed',
+  ).length
+
+  const handleDeploy = async (assignment: any) => {
+    setDeployLoading(assignment.id)
+    try {
+      await assignFleetMember(
+        event.id,
+        assignment.user_id,
+        assignment.junction_name,
+        assignment.role,
+        assignment.priority,
+      )
+      if (onAssignFleet) onAssignFleet()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setDeployLoading(null)
+    }
+  }
+
+  const handleDeployAll = async () => {
+    setDeployAllLoading(true)
+    try {
+      const pending = displayAssignments.filter((a: any) => a.isRecommended)
+      await Promise.all(
+        pending.map((a: any) =>
+          assignFleetMember(event.id, a.user_id, a.junction_name, a.role, a.priority),
+        ),
+      )
+      if (onAssignFleet) onAssignFleet()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setDeployAllLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!event.start_datetime) return
@@ -154,24 +234,6 @@ export default function LiveEventDetailsCard({
         : currentSeverity > 0.3
           ? 'Medium'
           : 'Low'
-
-  // If the backend fleet_assignments table is empty (e.g. for older events), extract from the JSON deployment_plan
-  const displayAssignments =
-    assignments.length > 0
-      ? assignments
-      : (event as any).deployment_plan?.deployments?.flatMap((d: any) =>
-          d.assignedFleet.map((f: any) => ({
-            id: f.user_id + '-' + d.junctionName,
-            junction_name: d.junctionName,
-            user_name: f.user_name,
-            role: d.role,
-            status: 'pending', // fallback status
-          })),
-        ) || []
-
-  const displayOnSiteCount = displayAssignments.filter(
-    (a: any) => a.status === 'on_site' || a.status === 'completed',
-  ).length
 
   const confirmedBarricadesCount = barricades.filter((b) => b.status === 'confirmed').length
 
@@ -283,9 +345,24 @@ export default function LiveEventDetailsCard({
               <Shield size={14} className="text-blue-500" />
               Fleet Deployment
             </span>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full">
-              {displayOnSiteCount} / {displayAssignments.length} Deployed
-            </span>
+            <div className="flex items-center gap-2">
+              {hasProposed && (
+                <button
+                  onClick={handleDeployAll}
+                  className="text-[10px] font-bold bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded flex items-center gap-1 transition-colors"
+                >
+                  {deployAllLoading ? (
+                    <Loader2 size={10} className="animate-spin" />
+                  ) : (
+                    <Send size={10} />
+                  )}
+                  Deploy All
+                </button>
+              )}
+              <span className="text-[10px] font-bold text-muted-foreground uppercase bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full">
+                {displayOnSiteCount} / {displayAssignments.length} Deployed
+              </span>
+            </div>
           </div>
 
           {displayAssignments.length === 0 ? (
@@ -303,7 +380,7 @@ export default function LiveEventDetailsCard({
               {displayAssignments.map((assignment: any) => (
                 <div
                   key={assignment.id}
-                  className="flex items-center justify-between p-2 rounded-lg border border-border bg-background hover:bg-muted/10 transition-colors"
+                  className="relative group overflow-hidden flex items-center justify-between p-2 rounded-lg border border-border bg-background hover:bg-muted/10 transition-colors"
                 >
                   <div className="flex flex-col min-w-0">
                     <span className="text-xs font-semibold text-foreground truncate flex items-center gap-1">
@@ -315,6 +392,23 @@ export default function LiveEventDetailsCard({
                     </span>
                   </div>
                   <div className="shrink-0 ml-2">{getFleetStatusBadge(assignment.status)}</div>
+
+                  {assignment.isRecommended && (
+                    <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button
+                        onClick={() => handleDeploy(assignment)}
+                        disabled={deployLoading === assignment.id}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-3 py-1 rounded shadow-sm flex items-center gap-1 disabled:opacity-50"
+                      >
+                        {deployLoading === assignment.id ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Send size={12} />
+                        )}
+                        Deploy {assignment.user_name.split(' ')[0]}
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
