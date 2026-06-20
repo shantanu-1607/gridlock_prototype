@@ -18,7 +18,6 @@ export function TypingMessage({ content, speed = 15, onComplete }: TypingMessage
 
   useEffect(() => {
     let i = 0
-    setDisplayedContent('')
 
     const timer = setInterval(() => {
       if (i < content.length) {

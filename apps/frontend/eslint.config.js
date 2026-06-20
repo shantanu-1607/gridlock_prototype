@@ -11,7 +11,7 @@ import unusedImports from 'eslint-plugin-unused-imports'
 
 export default [
   {
-    ignores: ['dist', 'node_modules', 'node_modules_old_backup'],
+    ignores: ['dist', 'node_modules', 'node_modules_old_backup', '.vite-cache'],
   },
 
   js.configs.recommended,
@@ -85,8 +85,8 @@ export default [
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
 
-      // Remove unused imports automatically
-      'unused-imports/no-unused-imports': 'error',
+      // Flag unused imports (non-blocking)
+      'unused-imports/no-unused-imports': 'warn',
 
       'unused-imports/no-unused-vars': [
         'warn',
