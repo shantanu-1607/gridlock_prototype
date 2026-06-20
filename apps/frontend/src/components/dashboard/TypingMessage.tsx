@@ -18,19 +18,25 @@ export function TypingMessage({ content, speed = 15, onComplete }: TypingMessage
 
   useEffect(() => {
     let i = 0
-    setDisplayedContent('')
+    let timer: ReturnType<typeof setInterval>
 
-    const timer = setInterval(() => {
-      if (i < content.length) {
-        setDisplayedContent(content.substring(0, i + 1))
-        i++
-      } else {
-        clearInterval(timer)
-        if (onCompleteRef.current) onCompleteRef.current()
-      }
-    }, speed)
+    const startTimeout = setTimeout(() => {
+      setDisplayedContent('')
+      timer = setInterval(() => {
+        if (i < content.length) {
+          setDisplayedContent(content.substring(0, i + 1))
+          i++
+        } else {
+          clearInterval(timer)
+          if (onCompleteRef.current) onCompleteRef.current()
+        }
+      }, speed)
+    }, 0)
 
-    return () => clearInterval(timer)
+    return () => {
+      clearTimeout(startTimeout)
+      if (timer) clearInterval(timer)
+    }
   }, [content, speed])
 
   return (
@@ -38,7 +44,7 @@ export function TypingMessage({ content, speed = 15, onComplete }: TypingMessage
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          table: ({ node, ...props }) => (
+          table: ({ node: _, ...props }) => (
             <div className="overflow-x-auto my-2">
               <table
                 className="min-w-full divide-y divide-zinc-700 border border-zinc-700"
@@ -46,22 +52,22 @@ export function TypingMessage({ content, speed = 15, onComplete }: TypingMessage
               />
             </div>
           ),
-          th: ({ node, ...props }) => (
+          th: ({ node: _, ...props }) => (
             <th
               className="px-3 py-2 bg-zinc-800 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider"
               {...props}
             />
           ),
-          td: ({ node, ...props }) => (
+          td: ({ node: _, ...props }) => (
             <td
               className="px-3 py-2 whitespace-nowrap text-sm text-zinc-300 border-t border-zinc-700"
               {...props}
             />
           ),
-          p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-          ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-2" {...props} />,
-          ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-2" {...props} />,
-          li: ({ node, ...props }) => <li className="mb-1" {...props} />,
+          p: ({ node: _, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+          ul: ({ node: _, ...props }) => <ul className="list-disc pl-5 mb-2" {...props} />,
+          ol: ({ node: _, ...props }) => <ol className="list-decimal pl-5 mb-2" {...props} />,
+          li: ({ node: _, ...props }) => <li className="mb-1" {...props} />,
         }}
       >
         {displayedContent}

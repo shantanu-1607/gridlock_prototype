@@ -224,9 +224,19 @@ export default function AppLayout() {
   const handleCloseEvent = useCallback(
     async (id: string) => {
       try {
-        await closeEvent(id)
+        const result = await closeEvent(id)
         fetchEvents()
-        setSelectedEvent((prev) => (prev?.id === id ? { ...prev, status: 'closed' } : prev))
+        setSelectedEvent((prev) => {
+          if (prev?.id !== id) return prev
+          const closed = { ...prev, status: 'closed' }
+          // If the close response includes a freshly computed counterfactual,
+          // stitch it in immediately so DetailedReportsPage shows real data
+          // without waiting for the next fetchEvents() poll cycle.
+          if (result.counterfactual) {
+            closed.counterfactual = result.counterfactual
+          }
+          return closed
+        })
       } catch (err) {
         console.error('Failed to close event', err)
       }

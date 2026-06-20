@@ -33,7 +33,7 @@ async function callMLPredict(eventData: any) {
     if (response.ok) {
       const data = await response.json()
       return {
-        duration_mins: 3, // HARDCODED for testing
+        duration_mins: data.predicted_duration_mins,
         severity_score: data.severity_score,
         severity_label: data.severity_label,
         confidence: data.confidence,
@@ -43,11 +43,11 @@ async function callMLPredict(eventData: any) {
         confidence_factors: data.confidence_factors || null,
       }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log('[ML] Predict endpoint not reachable, using stubbed values.')
   }
   return {
-    duration_mins: 3, // HARDCODED for testing
+    duration_mins: 45, // ML unreachable fallback
     severity_score: 0.8,
     severity_label: 'High',
     confidence: 0.5,
@@ -75,7 +75,7 @@ async function callQueueAnalysis(params: {
       body: JSON.stringify(params),
     })
     if (response.ok) return await response.json()
-  } catch (error) {
+  } catch (error: any) {
     console.log('[ML] Queue analysis endpoint not reachable, using defaults.')
   }
   return {
@@ -105,7 +105,7 @@ async function callDeployment(junctions: any[], officers: number, barricades: nu
       }),
     })
     if (response.ok) return await response.json()
-  } catch (error) {
+  } catch (error: any) {
     console.log('[ML] Deployment endpoint not reachable.')
   }
   return { recommendations: [], total_officers_deployed: 0, total_barricades_deployed: 0 }
@@ -122,7 +122,7 @@ async function callGating(params: any) {
       body: JSON.stringify(params),
     })
     if (response.ok) return await response.json()
-  } catch (error) {
+  } catch (error: any) {
     console.log('[ML] Gating endpoint not reachable.')
   }
   return { risk_level: 'yellow', blocking_probability: 0.5, recommendations: [] }
@@ -144,7 +144,7 @@ async function callAnomalyDetection(params: {
       body: JSON.stringify(params),
     })
     if (response.ok) return await response.json()
-  } catch (error) {
+  } catch (error: any) {
     console.log('[ML] Anomaly detection endpoint not reachable.')
   }
   return {
@@ -178,7 +178,7 @@ async function callCounterfactual(params: {
       body: JSON.stringify(params),
     })
     if (response.ok) return await response.json()
-  } catch (error) {
+  } catch (error: any) {
     console.log('[ML] Counterfactual endpoint not reachable.')
   }
   return null
@@ -627,7 +627,7 @@ export const planEvent = async (req: Request, res: Response) => {
         anomaly_detection: anomalyResult,
       },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Plan] Error planning event:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
@@ -862,7 +862,7 @@ export const createEvent = async (req: Request, res: Response) => {
       barricade_rationale: barricadePlan.rationale,
       conflicts,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating event:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
@@ -881,7 +881,7 @@ export const getEvents = async (req: Request, res: Response) => {
 
     const result = await query(sqlQuery, params)
     res.json({ events: result.rows })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching events:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
@@ -897,7 +897,7 @@ export const getEventById = async (req: Request, res: Response) => {
     }
 
     res.json({ event: result.rows[0] })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching event:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
@@ -975,7 +975,7 @@ export const updateEvent = async (req: Request, res: Response) => {
               corridor,
             }),
           })
-        } catch {
+        } catch (error: any) {
           console.log('[Close] Accuracy endpoint not reachable — skipping post-event learning.')
         }
       }
@@ -992,7 +992,7 @@ export const updateEvent = async (req: Request, res: Response) => {
       message: 'Event updated successfully',
       event: updatedEvent,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating event:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
@@ -1010,7 +1010,7 @@ export const getEventAssignments = async (req: Request, res: Response) => {
       [id],
     )
     res.json({ assignments: result.rows })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching event assignments:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
@@ -1096,7 +1096,7 @@ export const updateAssignmentStatus = async (req: Request, res: Response) => {
       message: 'Assignment status updated successfully',
       assignment: updatedAssignment,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating assignment status:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
@@ -1114,7 +1114,7 @@ export const getEventBarricades = async (req: Request, res: Response) => {
       [id],
     )
     res.json({ barricades: result.rows })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching event barricades:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
@@ -1219,7 +1219,7 @@ export const confirmBarricade = async (req: Request, res: Response) => {
       barricade: { ...barricade, status: 'confirmed', assigned_user_id: assignedFleet?.user_id },
       assignedFleet,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error confirming barricade:', error)
     res.status(500).json({ error: 'Internal server error' })
   }

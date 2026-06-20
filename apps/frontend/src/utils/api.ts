@@ -159,7 +159,11 @@ export async function getEvents(status?: string): Promise<PlannedEvent[]> {
   return data.events
 }
 
-export async function closeEvent(id: string): Promise<{ message: string; event: PlannedEvent }> {
+export async function closeEvent(id: string): Promise<{
+  message: string
+  event: PlannedEvent
+  counterfactual?: import('../types').CounterfactualResult
+}> {
   const res = await fetchWithAuth(`${API_BASE}/api/events/${id}`, {
     method: 'PUT',
     body: JSON.stringify({
