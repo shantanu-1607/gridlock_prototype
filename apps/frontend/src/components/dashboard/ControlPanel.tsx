@@ -31,7 +31,6 @@ export default function ControlPanel({
 
   const handleEventSelect = (ev: PlannedEvent) => {
     onEventSelect(ev)
-    navigate('/dashboard/overview')
   }
 
   const handlePlanSubmit = async (payload: PlanEventPayload) => {

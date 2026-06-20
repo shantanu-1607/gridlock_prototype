@@ -10,8 +10,12 @@ interface ChatMessage {
   content: string
 }
 
-export function ChatAssistant() {
-  const [isOpen, setIsOpen] = useState(false)
+interface ChatAssistantProps {
+  isOpen: boolean
+  setIsOpen: (isOpen: boolean) => void
+}
+
+export function ChatAssistant({ isOpen, setIsOpen }: ChatAssistantProps) {
   const [input, setInput] = useState('')
   const [history, setHistory] = useState<ChatMessage[]>([
     {
@@ -37,7 +41,7 @@ export function ChatAssistant() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [isOpen])
+  }, [isOpen, setIsOpen])
 
   // Auto-scroll to the bottom of the chat
   const scrollToBottom = () => {
@@ -87,11 +91,11 @@ export function ChatAssistant() {
   }
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] flex flex-col items-center pointer-events-auto">
+    <div className="absolute bottom-6 left-6 z-[1000] flex flex-col pointer-events-auto">
       {isOpen && (
         <div
           ref={chatBoxRef}
-          className="mb-4 w-[400px] sm:w-[450px] h-[500px] max-h-[70vh] bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col animate-in slide-in-from-bottom-5 fade-in duration-300"
+          className="w-[400px] sm:w-[450px] h-[500px] max-h-[70vh] bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col animate-in slide-in-from-bottom-5 fade-in duration-300"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 bg-zinc-900/50">
@@ -219,16 +223,6 @@ export function ChatAssistant() {
             </form>
           </div>
         </div>
-      )}
-
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2.5 px-6 py-3.5 rounded-full bg-zinc-950/80 backdrop-blur-md border border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.4)] text-zinc-300 hover:text-white hover:border-zinc-700 transition-all duration-300 hover:scale-105 active:scale-95 group animate-in slide-in-from-bottom-5 fade-in"
-        >
-          <Sparkles className="w-5 h-5 text-blue-400 group-hover:text-blue-300 transition-colors" />
-          <span className="font-medium tracking-wide text-[15px]">Ask AI Assistant</span>
-        </button>
       )}
     </div>
   )

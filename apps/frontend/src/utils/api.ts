@@ -170,6 +170,19 @@ export async function closeEvent(id: string): Promise<{ message: string; event: 
   if (!res.ok) throw new Error(`Close failed: ${res.statusText}`)
   return res.json()
 }
+export async function getEventAssignments(id: string): Promise<any[]> {
+  const res = await fetchWithAuth(`${API_BASE}/api/events/${id}/assignments`)
+  if (!res.ok) throw new Error(`Fetch assignments failed: ${res.statusText}`)
+  const data = await res.json()
+  return data.assignments
+}
+
+export async function getEventBarricades(id: string): Promise<any[]> {
+  const res = await fetchWithAuth(`${API_BASE}/api/events/${id}/barricades`)
+  if (!res.ok) throw new Error(`Fetch barricades failed: ${res.statusText}`)
+  const data = await res.json()
+  return data.barricades
+}
 
 export function createWebSocket(): WebSocket {
   const wsUrl = API_BASE.replace(/^http/, 'ws')
