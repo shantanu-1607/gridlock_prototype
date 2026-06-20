@@ -9,7 +9,7 @@ import {
   Send,
   Shield,
 } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -17,51 +17,11 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 
 import { useAuth } from '../../hooks/useAuth'
+import { useWebSocket } from '../../hooks/useWebSocket'
+import type { FleetAssignment } from '../../types'
+import { getMyAssignments, updateMyAssignmentStatus } from '../../utils/api'
+import { fetchRoute } from '../../utils/mappls'
 import MapplsMap from '../map/MapplsMap'
-
-interface Assignment {
-  id: string
-  junction: string
-  role: string
-  deployBy: string
-  priority: 'Critical' | 'High' | 'Medium' | 'Low'
-  status: 'pending' | 'en_route' | 'on_site' | 'completed'
-  lat: number
-  lon: number
-}
-
-const MOCK_ASSIGNMENTS: Assignment[] = [
-  {
-    id: '1',
-    junction: 'JalahalliCross',
-    role: 'Traffic Direction',
-    deployBy: 'T-15 mins',
-    priority: 'Critical',
-    status: 'pending',
-    lat: 13.04,
-    lon: 77.518,
-  },
-  {
-    id: '2',
-    junction: 'SM Circle',
-    role: 'Incident Clearance',
-    deployBy: 'T-5 mins',
-    priority: 'High',
-    status: 'pending',
-    lat: 13.039,
-    lon: 77.519,
-  },
-  {
-    id: '3',
-    junction: 'Peenya Industrial',
-    role: 'Diversion Management',
-    deployBy: 'T+10 mins',
-    priority: 'Medium',
-    status: 'pending',
-    lat: 13.028,
-    lon: 77.522,
-  },
-]
 
 const PRIORITY_STYLES: Record<string, string> = {
   Critical: 'bg-destructive text-destructive-foreground',
@@ -74,24 +34,125 @@ const STATUS_FLOW = ['pending', 'en_route', 'on_site', 'completed'] as const
 
 export default function FleetDashboard() {
   const { user, logout } = useAuth()
-  const [assignments, setAssignments] = useState(MOCK_ASSIGNMENTS)
-  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null)
+  const { connected, sendMessage } = useWebSocket()
+  const [assignments, setAssignments] = useState<FleetAssignment[]>([])
+  const [selectedAssignment, setSelectedAssignment] = useState<FleetAssignment | null>(null)
   const [showReport, setShowReport] = useState(false)
   const [reportType, setReportType] = useState('vehicle_breakdown')
   const [reportDesc, setReportDesc] = useState('')
+  const [liveLocation, setLiveLocation] = useState<{ lat: number; lon: number } | null>(null)
+  const [routePath, setRoutePath] = useState<[number, number][] | null>(null)
 
-  const updateStatus = (id: string, e: React.MouseEvent) => {
+  const fetchAssignments = async () => {
+    try {
+      const data = await getMyAssignments()
+      setAssignments(data)
+      setSelectedAssignment((prev) => {
+        if (!prev) return data.length > 0 ? data[0] : null
+        const updated = data.find((a: FleetAssignment) => a.id === prev.id)
+        return updated || prev
+      })
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  useEffect(() => {
+    fetchAssignments()
+    const interval = setInterval(fetchAssignments, 15000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const getDistanceFromLatLonInM = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3
+    const dLat = (lat2 - lat1) * (Math.PI / 180)
+    const dLon = (lon2 - lon1) * (Math.PI / 180)
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+  }
+
+  const liveLocationRef = React.useRef<{ lat: number; lon: number } | null>(null)
+
+  useEffect(() => {
+    const activeAssignment = assignments.find((a) => a.status === 'en_route')
+    if (!activeAssignment || !user) {
+      liveLocationRef.current = null
+      return
+    }
+
+    if (!liveLocationRef.current) {
+      liveLocationRef.current = {
+        lat: (activeAssignment.event_lat || 12.9716) - 0.015,
+        lon: (activeAssignment.event_lon || 77.5946) - 0.015,
+      }
+      setLiveLocation(liveLocationRef.current)
+    }
+
+    const targetLat = activeAssignment.event_lat || 12.9716
+    const targetLon = activeAssignment.event_lon || 77.5946
+
+    // Fetch route for highlighted path
+    if (!routePath) {
+      fetchRoute(
+        [liveLocationRef.current.lat, liveLocationRef.current.lon],
+        [targetLat, targetLon]
+      ).then(route => {
+        if (route) setRoutePath(route)
+      })
+    }
+
+    const interval = setInterval(() => {
+      if (!liveLocationRef.current) return
+      const current = liveLocationRef.current
+
+      const newLat = current.lat + (targetLat - current.lat) * 0.15
+      const newLon = current.lon + (targetLon - current.lon) * 0.15
+      const newLoc = { lat: newLat, lon: newLon }
+      liveLocationRef.current = newLoc
+      setLiveLocation(newLoc)
+
+      if (connected) {
+        sendMessage('fleet:location_update', {
+          userId: (user as any).id || '',
+          userName: user.name || user.email,
+          role: activeAssignment.role,
+          lat: newLat,
+          lon: newLon,
+        })
+      }
+
+      const dist = getDistanceFromLatLonInM(newLat, newLon, targetLat, targetLon)
+      if (dist < 50) {
+        clearInterval(interval)
+        updateMyAssignmentStatus(activeAssignment.id, 'on_site').then(() => {
+          fetchAssignments()
+        })
+      }
+    }, 2000)
+
+    return () => clearInterval(interval)
+  }, [assignments, user, connected, sendMessage])
+
+  const updateStatus = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    setAssignments((prev) =>
-      prev.map((a) => {
-        if (a.id !== id) return a
-        const currentIdx = STATUS_FLOW.indexOf(a.status as (typeof STATUS_FLOW)[number])
-        if (currentIdx < STATUS_FLOW.length - 1) {
-          return { ...a, status: STATUS_FLOW[currentIdx + 1] }
-        }
-        return a
-      }),
-    )
+    const assignment = assignments.find((a) => a.id === id)
+    if (!assignment) return
+    const currentIdx = STATUS_FLOW.indexOf(assignment.status as (typeof STATUS_FLOW)[number])
+    if (currentIdx < STATUS_FLOW.length - 1) {
+      const nextStatus = STATUS_FLOW[currentIdx + 1]
+      try {
+        await updateMyAssignmentStatus(id, nextStatus)
+        fetchAssignments()
+      } catch (err) {
+        console.error(err)
+      }
+    }
   }
 
   const getStatusLabel = (status: string) => {
@@ -184,13 +245,15 @@ export default function FleetDashboard() {
                     {/* Top row */}
                     <div className="mb-4 flex items-start justify-between">
                       <div>
-                        <h3 className="text-lg font-bold text-foreground">{assignment.junction}</h3>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          {assignment.role}
+                        <h3 className="text-lg font-bold text-foreground">
+                          {assignment.junction_name}
+                        </h3>
+                        <p className="text-sm font-medium text-muted-foreground capitalize">
+                          {assignment.role.replace(/_/g, ' ')}
                         </p>
                       </div>
                       <span
-                        className={`rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${PRIORITY_STYLES[assignment.priority]}`}
+                        className={`rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${PRIORITY_STYLES[assignment.priority] || PRIORITY_STYLES.Medium}`}
                       >
                         {assignment.priority}
                       </span>
@@ -200,11 +263,15 @@ export default function FleetDashboard() {
                     <div className="mb-4 flex gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1.5 whitespace-nowrap">
                         <Clock size={16} />
-                        {assignment.deployBy}
+                        {new Date(assignment.deploy_by_time).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                       </span>
                       <span className="flex items-center gap-1.5 truncate">
                         <MapPin size={16} />
-                        {assignment.lat.toFixed(3)}, {assignment.lon.toFixed(3)}
+                        {assignment.event_lat ? assignment.event_lat.toFixed(3) : 'N/A'},{' '}
+                        {assignment.event_lon ? assignment.event_lon.toFixed(3) : 'N/A'}
                       </span>
                     </div>
 
@@ -246,10 +313,12 @@ export default function FleetDashboard() {
                         className="px-4"
                         onClick={(e) => {
                           e.stopPropagation()
-                          window.open(
-                            `https://maps.google.com/?q=${assignment.lat},${assignment.lon}`,
-                            '_blank',
-                          )
+                          if (assignment.event_lat && assignment.event_lon) {
+                            window.open(
+                              `https://maps.google.com/?q=${assignment.event_lat},${assignment.event_lon}`,
+                              '_blank',
+                            )
+                          }
                         }}
                         title="Navigate via Google Maps"
                       >
@@ -328,8 +397,8 @@ export default function FleetDashboard() {
         {/* Right Pane - Map */}
         <main className="relative flex-1 overflow-hidden z-0">
           <MapplsMap
-            eventLat={selectedAssignment?.lat || 12.9716}
-            eventLon={selectedAssignment?.lon || 77.5946}
+            eventLat={selectedAssignment?.event_lat || 12.9716}
+            eventLon={selectedAssignment?.event_lon || 77.5946}
             riskLevel={
               selectedAssignment?.priority === 'Critical'
                 ? 'critical'
@@ -339,6 +408,41 @@ export default function FleetDashboard() {
             }
             propagationTick={null}
             pipeline={null}
+            selectedEvent={
+              selectedAssignment
+                ? ({
+                    id: selectedAssignment.event_id,
+                    lat: selectedAssignment.event_lat,
+                    lon: selectedAssignment.event_lon,
+                    category: 'Accident', // Fallback to get an icon
+                    severity_score: selectedAssignment.priority === 'Critical' ? 0.9 : 0.5,
+                    status: 'active',
+                  } as any)
+                : null
+            }
+            assignments={
+              selectedAssignment
+                ? [{ ...selectedAssignment, user_id: (user as any).id || '' }]
+                : []
+            }
+            liveFleetLocations={
+              liveLocation
+                ? {
+                    [(user as any).id || '']: {
+                      userId: (user as any).id || '',
+                      lat: liveLocation.lat,
+                      lon: liveLocation.lon,
+                    },
+                  }
+                : undefined
+            }
+            fleetRoute={
+              selectedAssignment &&
+              selectedAssignment.status !== 'completed' &&
+              selectedAssignment.status !== 'on_site'
+                ? routePath
+                : null
+            }
           />
         </main>
       </div>

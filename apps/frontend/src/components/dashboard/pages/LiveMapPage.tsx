@@ -17,6 +17,8 @@ export default function LiveMapPage() {
     selectedEventBarricades,
     loadingDetails,
     onEventSelect,
+    refetchEventDetails,
+    liveFleetLocations,
   } = useOutletContext<DashboardOutletContext>()
   const [clock, setClock] = useState(new Date())
 
@@ -38,6 +40,7 @@ export default function LiveMapPage() {
         onEventSelect={onEventSelect}
         assignments={selectedEventAssignments}
         barricades={selectedEventBarricades}
+        liveFleetLocations={liveFleetLocations}
       />
 
       {selectedEvent && (
@@ -48,6 +51,7 @@ export default function LiveMapPage() {
           loading={loadingDetails}
           lastTick={lastTick?.eventId === selectedEvent.id ? lastTick : undefined}
           onClose={() => onEventSelect(null)}
+          onAssignFleet={refetchEventDetails}
         />
       )}
 
