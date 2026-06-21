@@ -210,12 +210,8 @@ export default function LiveEventDetailsCard({
 
   const predicted = event.predicted_duration_mins || 0
   const isRecovered = event.status === 'resolved' || event.status === 'closed'
-  const isDemobilization = event.status === 'demobilization'
   const isFuture = elapsedMins < 0
-  // "Overdue" only applies to an incident that is actually running. A planned event with a
-  // back-dated start must not show a giant overdue from (now - past start).
-  const isOverdue =
-    event.status === 'active' && !isRecovered && !isFuture && !isDemobilization && elapsedMins >= predicted
+  const isOverdue = !isRecovered && !isFuture && elapsedMins >= predicted
 
   const startsInMins = Math.max(0, Math.ceil(-elapsedMins))
   const remainingMins = Math.max(0, Math.ceil(predicted - Math.max(0, elapsedMins)))
@@ -264,12 +260,9 @@ export default function LiveEventDetailsCard({
               {event.category}
             </span>
             <span
-              className={`px-2 py-0.5 text-[10px] font-bold rounded text-white capitalize ${event.status === 'active'
-                  ? 'bg-red-600 animate-pulse'
-                  : event.status === 'demobilization'
-                    ? 'bg-yellow-500 animate-pulse text-yellow-950'
-                    : 'bg-blue-600'
-                }`}
+              className={`px-2 py-0.5 text-[10px] font-bold rounded text-white capitalize ${
+                event.status === 'active' ? 'bg-red-600 animate-pulse' : 'bg-blue-600'
+              }`}
             >
               {event.status}
             </span>
@@ -333,9 +326,7 @@ export default function LiveEventDetailsCard({
                     ? 'Starts In'
                     : isOverdue
                       ? 'Overdue By'
-                      : isDemobilization
-                        ? 'Demobilizing'
-                        : 'Remaining Time'}
+                      : 'Remaining Time'}
               </span>
               <div className="flex items-baseline gap-1 mt-1">
                 <span
@@ -355,9 +346,7 @@ export default function LiveEventDetailsCard({
             <span className="text-[10px] text-muted-foreground leading-none">
               {isRecovered
                 ? 'Total Incident Duration'
-                : isDemobilization
-                  ? 'Packing up & Dispersing'
-                  : `Of ${Math.round(predicted)} mins predicted`}
+                : `Of ${Math.round(predicted)} mins predicted`}
             </span>
           </div>
         </div>

@@ -1,16 +1,21 @@
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import {
+  Activity,
   AlertCircle,
+  Camera,
   CheckCircle2,
   Clock,
+  Loader2,
   LogOut,
   MapPin,
+  Mic,
   Navigation,
   Send,
   Shield,
   Waypoints,
 } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -21,7 +26,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useAuth } from '../../hooks/useAuth'
 import { useWebSocket } from '../../hooks/useWebSocket'
 import type { FleetAssignment } from '../../types'
-import { getMyAssignments, updateMyAssignmentStatus } from '../../utils/api'
+import { getMyAssignments, reportFieldIncident, updateMyAssignmentStatus } from '../../utils/api'
 import { fetchRoute } from '../../utils/mappls'
 import MapplsMap from '../map/MapplsMap'
 
@@ -56,10 +61,50 @@ export default function FleetDashboard() {
   const [assignments, setAssignments] = useState<FleetAssignment[]>([])
   const [selectedAssignment, setSelectedAssignment] = useState<FleetAssignment | null>(null)
   const [showReport, setShowReport] = useState(false)
-  const [reportType, setReportType] = useState('vehicle_breakdown')
+  const [reportType, setReportType] = useState('Vehicle Breakdown')
   const [reportDesc, setReportDesc] = useState('')
+  const [priority, setPriority] = useState('Medium')
+  const [requiresBackup, setRequiresBackup] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showCameraView, setShowCameraView] = useState(false)
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false)
   const [liveLocation, setLiveLocation] = useState<{ lat: number; lon: number } | null>(null)
   const [routePath, setRoutePath] = useState<[number, number][] | null>(null)
+
+  const handleSubmitReport = async () => {
+    if (!liveLocationRef.current) {
+      toast.error('Unable to determine your location.')
+      return
+    }
+    setIsSubmitting(true)
+    try {
+      await reportFieldIncident({
+        type: 'unplanned',
+        category: reportType,
+        name: `Field Report: ${reportType}`,
+        description: reportDesc,
+        lat: liveLocationRef.current.lat,
+        lon: liveLocationRef.current.lon,
+        start_datetime: new Date().toISOString(),
+        priority,
+        requires_road_closure: requiresBackup,
+      })
+
+      // Simulate "AI Processing" time
+      setTimeout(() => {
+        setIsSubmitting(false)
+        setShowReport(false)
+        toast.success('Incident dispatched. GridLock AI is processing.')
+        setReportDesc('')
+        setPriority('Medium')
+        setRequiresBackup(false)
+      }, 1500)
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to report incident.')
+      setIsSubmitting(false)
+    }
+  }
 
   const fetchAssignments = async () => {
     try {
@@ -434,24 +479,54 @@ export default function FleetDashboard() {
                     transition={{ duration: 0.25 }}
                   >
                     <Card className="p-5 border-orange-500/30">
-                      <h3 className="mb-4 text-sm font-bold text-foreground">Incident Report</h3>
+                      <h3 className="mb-4 text-sm font-bold text-foreground flex items-center">
+                        <Activity className="mr-2 text-orange-500 animate-pulse" size={16} />
+                        Live Field Report
+                      </h3>
                       <div className="flex flex-col gap-3">
                         <div className="space-y-1.5">
                           <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                            Type
+                            Incident Type
                           </label>
                           <select
                             value={reportType}
                             onChange={(e) => setReportType(e.target.value)}
                             className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
-                            <option value="vehicle_breakdown">Vehicle Breakdown</option>
-                            <option value="accident">Accident</option>
-                            <option value="water_logging">Water Logging</option>
-                            <option value="tree_fall">Tree Fall</option>
-                            <option value="pot_holes">Pot Holes</option>
-                            <option value="others">Others</option>
+                            <option value="Vehicle Breakdown">Vehicle Breakdown</option>
+                            <option value="Accident">Accident</option>
+                            <option value="Water Logging">Water Logging</option>
+                            <option value="Tree Fall">Tree Fall</option>
+                            <option value="Pot Holes">Pot Holes</option>
+                            <option value="Others">Others</option>
                           </select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                            Severity Level
+                          </label>
+                          <div className="flex gap-1.5 bg-muted/50 p-1 rounded-lg">
+                            {['Critical', 'High', 'Medium', 'Low'].map((p) => (
+                              <div
+                                key={p}
+                                onClick={() => setPriority(p)}
+                                className={`flex-1 text-center py-1.5 text-[10px] font-bold uppercase cursor-pointer rounded-md transition-colors ${
+                                  priority === p
+                                    ? p === 'Critical'
+                                      ? 'bg-destructive text-white'
+                                      : p === 'High'
+                                        ? 'bg-orange-500 text-white'
+                                        : p === 'Medium'
+                                          ? 'bg-yellow-500 text-white'
+                                          : 'bg-emerald-500 text-white'
+                                    : 'text-muted-foreground hover:bg-muted'
+                                }`}
+                              >
+                                {p}
+                              </div>
+                            ))}
+                          </div>
                         </div>
 
                         <div className="space-y-1.5">
@@ -462,9 +537,53 @@ export default function FleetDashboard() {
                             value={reportDesc}
                             onChange={(e) => setReportDesc(e.target.value)}
                             placeholder="Provide details..."
-                            rows={3}
-                            className="flex min-h-[70px] w-full rounded-lg border border-input bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            rows={2}
+                            className="flex min-h-[50px] w-full rounded-lg border border-input bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           />
+                        </div>
+
+                        <div className="flex items-center justify-between mt-1 mb-1">
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setShowCameraView(true)
+                                setTimeout(() => setShowCameraView(false), 800)
+                              }}
+                              className={`h-8 px-2.5 ${showCameraView ? 'border-emerald-500 text-emerald-500' : 'text-muted-foreground'}`}
+                            >
+                              <Camera
+                                size={14}
+                                className={showCameraView ? 'animate-bounce' : ''}
+                              />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setIsRecordingVoice(true)
+                                setTimeout(() => setIsRecordingVoice(false), 2000)
+                              }}
+                              className={`h-8 px-2.5 ${isRecordingVoice ? 'border-red-500 text-red-500 animate-pulse' : 'text-muted-foreground'}`}
+                            >
+                              <Mic size={14} />
+                            </Button>
+                          </div>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                              Req. Backup
+                            </span>
+                            <div
+                              className={`w-8 h-4 rounded-full transition-colors relative ${requiresBackup ? 'bg-orange-500' : 'bg-muted'}`}
+                              onClick={() => setRequiresBackup(!requiresBackup)}
+                            >
+                              <div
+                                className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${requiresBackup ? 'left-4.5 right-0.5' : 'left-0.5'}`}
+                                style={{ left: requiresBackup ? '18px' : '2px' }}
+                              />
+                            </div>
+                          </label>
                         </div>
 
                         <div className="flex gap-2 mt-1">
@@ -472,12 +591,26 @@ export default function FleetDashboard() {
                             variant="outline"
                             className="flex-1 h-9 text-xs"
                             onClick={() => setShowReport(false)}
+                            disabled={isSubmitting}
                           >
                             Cancel
                           </Button>
-                          <Button className="flex-1 h-9 bg-orange-500 hover:bg-orange-600 text-white text-xs">
-                            <Send size={13} className="mr-1.5" />
-                            Submit
+                          <Button
+                            className="flex-1 h-9 bg-orange-500 hover:bg-orange-600 text-white text-xs"
+                            onClick={handleSubmitReport}
+                            disabled={isSubmitting}
+                          >
+                            {isSubmitting ? (
+                              <>
+                                <Loader2 size={13} className="mr-1.5 animate-spin" />
+                                AI Processing...
+                              </>
+                            ) : (
+                              <>
+                                <Send size={13} className="mr-1.5" />
+                                Submit
+                              </>
+                            )}
                           </Button>
                         </div>
                       </div>

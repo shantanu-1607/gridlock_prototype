@@ -240,3 +240,12 @@ export async function updateMyAssignmentStatus(
   const data = await res.json()
   return data.assignment
 }
+
+export async function reportFieldIncident(payload: any): Promise<any> {
+  const res = await fetchWithAuth(`${API_BASE}/api/events`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(`Report field incident failed: ${res.statusText}`)
+  return await res.json()
+}

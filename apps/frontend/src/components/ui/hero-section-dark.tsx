@@ -70,6 +70,7 @@ const HeroSection = React.forwardRef<HTMLDivElement, HeroSectionProps>(
       ctaHref = '#',
       bottomImage,
       gridOptions,
+      children,
       ...props
     },
     ref,
@@ -106,6 +107,9 @@ const HeroSection = React.forwardRef<HTMLDivElement, HeroSectionProps>(
                 </span>
               </div>
             </div>
+
+            {children}
+
             {bottomImage && (
               <div className="mt-32 mx-10 relative z-10">
                 <img

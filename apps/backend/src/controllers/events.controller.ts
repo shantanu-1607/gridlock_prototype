@@ -144,27 +144,6 @@ async function callDeployment(junctions: any[], officers: number, barricades: nu
 }
 
 /**
- * Call ML reprediction endpoint for dynamic updates
- */
-async function callMLRepredict(params: {
-  original_total_mins: number
-  elapsed_mins: number
-  is_cleared?: boolean
-}) {
-  try {
-    const response = await fetch(`${ML_BASE}/api/ml/repredict`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
-    })
-    if (response.ok) return await response.json()
-  } catch (error) {
-    console.log('[ML] Repredict endpoint not reachable.')
-  }
-  return null
-}
-
-/**
  * Call ML gating recommendation endpoint.
  */
 async function callGating(params: any) {
@@ -631,37 +610,9 @@ export const planEvent = async (req: Request, res: Response) => {
       eventId,
     ])
 
-    // 8a. Persist full prediction detail so re-selecting / syncing a saved event shows the
-    // model's REAL confidence + interval + queue + anomaly (not "—" or scalar fallbacks).
-    // Guarded: if migration 007 has not been applied, this warns and planEvent still succeeds.
-    try {
-      await query(
-        `UPDATE events SET
-           confidence = $1,
-           prediction_interval = $2,
-           confidence_factors = $3,
-           queue_analysis = $4,
-           anomaly_detection = $5
-         WHERE id = $6`,
-        [
-          mlResult.confidence,
-          JSON.stringify(mlResult.prediction_interval),
-          JSON.stringify(mlResult.confidence_factors),
-          JSON.stringify(queueResult),
-          JSON.stringify(anomalyResult),
-          eventId,
-        ],
-      )
-    } catch (e) {
-      console.warn(
-        '[Plan] Could not persist prediction detail (run migration 007_prediction_detail.sql):',
-        (e as Error).message,
-      )
-    }
-
     await query(
-      `UPDATE events SET
-        recommendation_status = 'completed',
+      `UPDATE events SET 
+        recommendation_status = 'completed', 
         recommendation_rationale = $1, 
         total_fleet_required = $2,
         barricade_rationale = $3, 
@@ -1208,60 +1159,6 @@ export const updateAssignmentStatus = async (req: Request, res: Response) => {
         )
       } else {
         console.warn(`[Fleet] Junction named "${junctionName}" not found in graph service`)
-      }
-    } else if (status === 'completed') {
-      console.log(
-        `[Assignment] Officer cleared incident. Triggering dynamic ML feedback loop for Event ${eventId}.`,
-      )
-      // Dynamic ML Feedback Loop: Slash duration and enter demobilization
-      const eventResult = await query(
-        `SELECT start_datetime, duration_mins FROM events WHERE id = $1`,
-        [eventId],
-      )
-      if (eventResult.rows.length > 0) {
-        const ev = eventResult.rows[0]
-        const startTime = new Date(ev.start_datetime)
-        const elapsedMins = Math.max(0, (Date.now() - startTime.getTime()) / 60000)
-
-        console.log(
-          `[ML] Original predicted duration was ${ev.duration_mins} mins. Actual elapsed time so far: ${elapsedMins.toFixed(2)} mins. Calling repredict...`,
-        )
-
-        const repredict = await callMLRepredict({
-          original_total_mins: ev.duration_mins || 60,
-          elapsed_mins: elapsedMins,
-          is_cleared: true,
-        })
-
-        if (repredict) {
-          console.log(`[ML] Repredict endpoint returned:`, repredict)
-          const slashedDuration = repredict.updated_total_mins
-          await query(
-            `UPDATE events SET duration_mins = $1, predicted_duration_mins = $1, status = 'demobilization' WHERE id = $2`,
-            [slashedDuration, eventId],
-          )
-
-          await publishWsEvent('event:status_updated', {
-            eventId,
-            status: 'demobilization',
-            duration_mins: slashedDuration,
-            repredict_note: repredict.note,
-          })
-
-          generateAmbientUpdate('incident_demobilization', {
-            eventId,
-            status: 'demobilization',
-            note: repredict.note,
-          })
-
-          console.log(
-            `[ML] Event ${eventId} cleared early. Slashed duration to ${slashedDuration} mins. Entering demobilization.`,
-          )
-        } else {
-          console.warn(
-            `[ML] Repredict endpoint failed to return a valid response for Event ${eventId}.`,
-          )
-        }
       }
     }
 

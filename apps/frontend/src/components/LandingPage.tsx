@@ -2,18 +2,15 @@ import { motion, useInView, type Variants } from 'framer-motion'
 import {
   Activity,
   ArrowRight,
-  BarChart3,
   Brain,
   CheckCircle2,
   ChevronRight,
   Clock,
-  Eye,
   MapPin,
   Navigation,
   Radar,
   Send,
   Shield,
-  TrendingDown,
   Users,
   Waypoints,
   Zap,
@@ -31,65 +28,65 @@ import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 const features = [
   {
-    title: 'Real-time Analytics',
+    title: 'Graph BFS Propagation Engine',
     description:
-      'Monitor city-wide traffic patterns and congestion levels in real-time with our advanced AI analytics engine.',
+      'Simulates real-time queue spillback and congestion spread on a live road graph, mapping exactly where gridlock will hit next.',
     icon: Activity,
   },
   {
-    title: 'Smart Routing',
+    title: 'ML Event Fingerprinting',
     description:
-      'Context-aware route optimization for field units based on live incident and congestion data.',
-    icon: MapPin,
+      'Pattern-matches live incidents against thousands of historical analogues to instantly predict severity, duration, and clearance times.',
+    icon: Brain,
   },
   {
-    title: 'Instant Deployment',
+    title: 'LLM-Powered Interventions',
     description:
-      'Dispatch resources to high-priority zones with one-click automated deployment workflows.',
+      'Large language models dynamically recommend optimal barricade placements and generate alternative routing strategies to choke off congestion.',
     icon: Zap,
   },
   {
-    title: 'Deep Insights',
+    title: 'Powered by MapMyIndia',
     description:
-      'Comprehensive reports and historical trend analysis to drive smarter infrastructure decisions.',
-    icon: BarChart3,
+      'Enterprise-grade geocoding and mapping infrastructure provides the highly accurate spatial context required for our AI simulations.',
+    icon: MapPin,
   },
 ]
 
 const stats = [
-  { value: 40, suffix: '%', label: 'Congestion Reduction', icon: TrendingDown },
-  { value: 12, suffix: 's', label: 'Avg. Response Time', icon: Clock },
-  { value: 500, suffix: '+', label: 'Intersections Monitored', icon: Eye },
-  { value: 99.9, suffix: '%', label: 'System Uptime', icon: Shield },
+  { value: 30, suffix: 'm', label: 'Congestion Forecast', icon: Clock },
+  { value: 2.4, suffix: 'k+', label: 'Incident Fingerprints', icon: Brain },
+  { value: 1, suffix: 's', label: 'Dispatch Latency', icon: Zap },
+  { value: 1, suffix: '', label: 'Unified Mission', icon: Waypoints },
 ]
 
 const steps = [
   {
     step: '01',
-    title: 'Ingest & Monitor',
+    title: 'Detect',
     description:
-      'Live feeds from 500+ sensors, cameras, and GPS units flow into the platform. AI models detect anomalies in seconds.',
-    icon: Brain,
-  },
-  {
-    step: '02',
-    title: 'Analyze & Predict',
-    description:
-      'Machine learning pipelines forecast congestion 30 minutes ahead, identify bottlenecks, and score incident severity.',
+      'Live data from city infrastructure flows into the platform, instantly highlighting anomalies and traffic buildup.',
     icon: Activity,
   },
   {
-    step: '03',
-    title: 'Command & Deploy',
+    step: '02',
+    title: 'Anticipate',
     description:
-      'Controllers issue directives from a unified dashboard. Fleet units receive optimized routes on their mobile workspace.',
+      'The system forecasts congestion spread, recommending barricade deployments and resource allocation before gridlock occurs.',
+    icon: Brain,
+  },
+  {
+    step: '03',
+    title: 'Dispatch',
+    description:
+      'Controllers issue routing orders and barricade plans. Fleet units receive them instantly on their MapMyIndia-powered mobile workspace.',
     icon: Send,
   },
   {
     step: '04',
-    title: 'Resolve & Report',
+    title: 'Resolve',
     description:
-      'Field officers close incidents in real-time. The system auto-generates detailed after-action reports and trend analytics.',
+      'Officers clear incidents on-site. The dashboard updates in real-time, restoring normal traffic flow patterns automatically.',
     icon: CheckCircle2,
   },
 ]
@@ -216,12 +213,12 @@ export default function LandingPage() {
 
       {/* ── Hero ───────────────────────────────────────────────────── */}
       <HeroSection
-        title="Welcome to GridLock"
+        title="The Traffic Bottleneck Ends Here"
         subtitle={{
-          regular: 'AI-Powered Traffic ',
-          gradient: 'Command Center.',
+          regular: 'Clear congestion before it happens with ',
+          gradient: 'GridLock.',
         }}
-        description="Predict, manage, and mitigate urban congestion in real-time. Unify your command center and field operations on one intelligent platform."
+        description="Transform reactive traffic control into a proactive science. GridLock leverages graph simulation and ML fingerprinting to anticipate congestion spread, automatically dispatch fleets, and deploy barricades—all unified on MapMyIndia."
         ctaText="Get Started"
         ctaHref="#roles-section"
         onClick={scrollToRoles as unknown as React.MouseEventHandler<HTMLDivElement>}
@@ -232,7 +229,164 @@ export default function LandingPage() {
           lightLineColor: 'rgba(0,0,0,0.06)',
           darkLineColor: 'rgba(255,255,255,0.06)',
         }}
-      />
+      >
+        {/* CSS Mockup of Command Center */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="relative mt-16 max-w-5xl mx-auto rounded-xl border border-border/60 bg-background/50 backdrop-blur-2xl shadow-2xl overflow-hidden hidden md:block"
+        >
+          {/* Mac-like Window Header */}
+          <div className="flex items-center gap-2 px-4 py-3 bg-muted/30 border-b border-border/40">
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-red-500/80" />
+              <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+              <div className="w-3 h-3 rounded-full bg-green-500/80" />
+            </div>
+            <div className="mx-auto flex items-center gap-2 px-3 py-1 bg-background/80 rounded-md border border-border/30 text-xs text-muted-foreground">
+              <Shield size={12} className="text-primary" />
+              GridLock Command Center
+            </div>
+            <div className="w-[42px]" /> {/* Spacer for symmetry */}
+          </div>
+
+          {/* App Body */}
+          <div className="flex h-[450px]">
+            {/* Sidebar */}
+            <div className="w-64 border-r border-border/40 bg-muted/10 p-4 flex flex-col gap-4">
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Live Metrics
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-background/80 border border-border/40 rounded-lg p-2">
+                    <p className="text-xs text-muted-foreground">Active</p>
+                    <p className="text-lg font-bold text-red-500">3</p>
+                  </div>
+                  <div className="bg-background/80 border border-border/40 rounded-lg p-2">
+                    <p className="text-xs text-muted-foreground">Fleet</p>
+                    <p className="text-lg font-bold text-emerald-500">12/15</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Recent Alerts
+                </p>
+                {[
+                  {
+                    title: 'Severe Congestion',
+                    loc: 'Siddalingaiah Circle',
+                    time: 'Just now',
+                    color: 'bg-red-500',
+                  },
+                  {
+                    title: 'Barricade Deployed',
+                    loc: 'MG Road Junction',
+                    time: '2m ago',
+                    color: 'bg-primary',
+                  },
+                  {
+                    title: 'Officer Dispatched',
+                    loc: 'Koramangala 80ft',
+                    time: '5m ago',
+                    color: 'bg-emerald-500',
+                  },
+                ].map((alert, i) => (
+                  <div
+                    key={i}
+                    className="bg-background/80 border border-border/40 rounded-lg p-2.5 flex gap-3 items-start"
+                  >
+                    <div className={`w-2 h-2 mt-1 rounded-full ${alert.color}`} />
+                    <div>
+                      <p className="text-xs font-medium text-foreground">{alert.title}</p>
+                      <p className="text-[10px] text-muted-foreground">{alert.loc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Map Area */}
+            <div className="flex-1 relative bg-[#0a0a0a] overflow-hidden">
+              {/* Map Grid Pattern */}
+              <div
+                className="absolute inset-0 opacity-[0.03]"
+                style={{
+                  backgroundImage:
+                    'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)',
+                  backgroundSize: '20px 20px',
+                }}
+              />
+
+              {/* Simulated Map Elements */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full">
+                {/* Arterial Road */}
+                <div className="absolute top-[40%] left-0 w-full h-4 bg-muted/20 border-y border-border/10 transform -rotate-12" />
+                <div className="absolute top-0 left-[60%] w-4 h-full bg-muted/20 border-x border-border/10 transform rotate-12" />
+
+                {/* Heatmap Bloom */}
+                <div className="absolute top-[35%] left-[55%] w-32 h-32 bg-red-500/20 rounded-full blur-2xl animate-pulse" />
+                <div className="absolute top-[38%] left-[58%] w-16 h-16 bg-red-500/40 rounded-full blur-xl animate-pulse" />
+
+                {/* Markers */}
+                <div className="absolute top-[38%] left-[58%] flex items-center justify-center">
+                  <div className="absolute w-8 h-8 bg-red-500/30 rounded-full animate-ping" />
+                  <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-background shadow-lg z-10" />
+                </div>
+
+                <div className="absolute top-[60%] left-[30%]">
+                  <div className="flex items-center gap-1 bg-background/90 px-2 py-1 rounded-full border border-emerald-500/30 shadow-lg">
+                    <Navigation size={10} className="text-emerald-500" />
+                    <span className="text-[10px] font-medium text-emerald-500">Unit 04</span>
+                  </div>
+                </div>
+
+                <div className="absolute top-[25%] left-[70%]">
+                  <div className="flex items-center gap-1 bg-background/90 px-2 py-1 rounded-full border border-primary/30 shadow-lg">
+                    <Shield size={10} className="text-primary" />
+                    <span className="text-[10px] font-medium text-primary">Barricade</span>
+                  </div>
+                </div>
+
+                {/* Simulated Route Path */}
+                <svg
+                  className="absolute inset-0 w-full h-full pointer-events-none"
+                  style={{ zIndex: 0 }}
+                >
+                  <path
+                    d="M 280 270 Q 350 240 500 180"
+                    fill="none"
+                    stroke="rgba(16, 185, 129, 0.4)"
+                    strokeWidth="3"
+                    strokeDasharray="6 6"
+                  />
+                </svg>
+              </div>
+
+              {/* Map Controls */}
+              <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+                <div className="bg-background/90 border border-border/40 rounded-lg p-1.5 text-muted-foreground">
+                  <div className="p-1 hover:bg-muted rounded">
+                    <ChevronRight size={14} className="-rotate-90" />
+                  </div>
+                  <div className="h-px bg-border/40 my-0.5" />
+                  <div className="p-1 hover:bg-muted rounded">
+                    <ChevronRight size={14} className="rotate-90" />
+                  </div>
+                </div>
+              </div>
+              <div className="absolute bottom-4 left-4 bg-background/80 px-2 py-1 rounded-md border border-border/30 backdrop-blur-md">
+                <span className="text-[9px] text-muted-foreground font-medium">
+                  Powered by MapMyIndia
+                </span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </HeroSection>
 
       {/* ── Trusted By (marquee) ───────────────────────────────────── */}
       {/* <motion.section
@@ -366,36 +520,69 @@ export default function LandingPage() {
             </p>
           </motion.div>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-60px' }}
-            variants={staggerContainer}
-            className="grid grid-cols-1 md:grid-cols-2 gap-6"
-          >
-            {steps.map((s, i) => (
-              <motion.div
-                key={i}
-                variants={fadeUp}
-                whileHover={{ y: -4 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                className="group relative rounded-2xl border border-border bg-card p-8 hover:border-primary/40 transition-colors duration-300 overflow-hidden"
-              >
-                {/* step number watermark */}
-                <span className="absolute top-4 right-6 text-7xl font-black text-muted/40 select-none pointer-events-none">
-                  {s.step}
-                </span>
+          <div className="relative max-w-2xl mx-auto mt-12">
+            {/* Background track */}
+            <div className="absolute left-8 top-6 bottom-0 w-px bg-border/50" />
 
-                <div className="relative z-10">
-                  <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300">
-                    <s.icon size={22} strokeWidth={2} />
+            {steps.map((s, i) => (
+              <div key={i} className="relative pl-20 pb-12 last:pb-0">
+                {/* The vertical segment that lights up */}
+                {i < steps.length - 1 && (
+                  <motion.div
+                    className="absolute left-8 top-6 h-full w-px bg-primary origin-top z-10"
+                    initial={{ scaleY: 0 }}
+                    whileInView={{ scaleY: 1 }}
+                    viewport={{ once: true, margin: '-20%' }}
+                    transition={{ duration: 0.8, ease: 'linear' }}
+                  />
+                )}
+
+                {/* Dot background */}
+                <div className="absolute left-[27px] top-6 h-3.5 w-3.5 rounded-full bg-background border-2 border-border z-10" />
+
+                {/* Dot active state */}
+                <motion.div
+                  className="absolute left-[27px] top-6 h-3.5 w-3.5 rounded-full bg-primary z-20"
+                  initial={{ scale: 0, opacity: 0 }}
+                  whileInView={{ scale: 1, opacity: 1 }}
+                  viewport={{ once: true, margin: '-20%' }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.2 }}
+                />
+
+                <motion.div
+                  className="absolute left-[23px] top-[20px] h-[22px] w-[22px] rounded-full bg-primary/30 blur-sm z-0"
+                  initial={{ scale: 0, opacity: 0 }}
+                  whileInView={{ scale: 1, opacity: 1 }}
+                  viewport={{ once: true, margin: '-20%' }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                />
+
+                {/* Content Card */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, margin: '-20%' }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="bg-card border border-border p-6 rounded-xl hover:border-primary/40 transition-colors relative"
+                >
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <s.icon size={20} />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                        Stage {s.step}
+                      </span>
+                      <h3 className="text-xl font-bold text-foreground">{s.title}</h3>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">{s.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{s.description}</p>
-                </div>
-              </motion.div>
+                  <p className="text-sm text-muted-foreground leading-relaxed pl-14">
+                    {s.description}
+                  </p>
+                </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 

@@ -102,7 +102,6 @@ class RepredictRequest(BaseModel):
     elapsed_mins: float
     interval_lower_mins: Optional[float] = None
     interval_upper_mins: Optional[float] = None
-    is_cleared: bool = False
 
 
 class RepredictResponse(BaseModel):

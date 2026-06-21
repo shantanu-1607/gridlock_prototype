@@ -1,4 +1,4 @@
-import { Loader2, Map } from 'lucide-react'
+import { ChevronDown, ChevronUp, Loader2, Map } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 
 import { useMapplsMap } from '../../hooks/useMapplsMap'
@@ -47,9 +47,9 @@ const getFleetMarkerHtml = (status: string) => {
   const isOnSite = status === 'on_site' || status === 'completed'
   const color = isOnSite ? '#3b82f6' : '#6b7280'
   const isEnRoute = status === 'en_route'
-  const shadow = isOnSite ? 'box-shadow: 0 0 10px #3b82f6;' : ''
+  const shadow = isOnSite ? 'box-shadow: 0 0 15px 4px rgba(59, 130, 246, 0.6);' : ''
   const border = isOnSite ? 'border: 2px solid white;' : 'border: 2px dashed #9ca3af;'
-  const opacity = isOnSite ? '1.0' : '0.85'
+  const opacity = isOnSite ? '1.0' : '0.9'
   const pulse = isEnRoute ? 'animation: fleet-pulse 1.5s infinite ease-in-out;' : ''
 
   return `
@@ -57,17 +57,23 @@ const getFleetMarkerHtml = (status: string) => {
       display: flex; 
       align-items: center; 
       justify-content: center; 
-      width: 24px; 
-      height: 24px; 
+      width: 28px; 
+      height: 28px; 
+      min-width: 28px;
+      min-height: 28px;
+      box-sizing: border-box;
+      flex-shrink: 0;
       border-radius: 50%; 
       background-color: ${color}; 
       ${border}
       ${shadow}
       opacity: ${opacity};
       ${pulse}
-      color: white;
+      font-size: 16px;
+      line-height: 1;
+      user-select: none;
     ">
-      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+      👮
     </div>
   `
 }
@@ -91,7 +97,7 @@ const getBarricadeMarkerHtml = (
   const shadow = isDemobilized
     ? 'box-shadow: 0 0 10px #22c55e;'
     : isConfirmed
-      ? `box-shadow: 0 0 10px ${color};`
+      ? `box-shadow: 0 0 15px 4px ${color}80;`
       : ''
   const border =
     isDemobilized || isConfirmed ? 'border: 2px solid white;' : 'border: 2px dashed #9ca3af;'
@@ -99,12 +105,12 @@ const getBarricadeMarkerHtml = (
 
   const getIcon = () => {
     if (isDemobilized) {
-      return `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
+      return `✅`
     }
     if (type === 'hard_closure') {
-      return `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`
+      return `🚧`
     }
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/><path d="M2 6v4a2 2 0 0 0 2 2h4"/></svg>`
+    return `🪧`
   }
 
   const tooltipHtml = purpose
@@ -129,15 +135,20 @@ const getBarricadeMarkerHtml = (
       display: flex; 
       align-items: center; 
       justify-content: center; 
-      width: 24px; 
-      height: 24px; 
+      width: 26px; 
+      height: 26px; 
+      min-width: 26px;
+      min-height: 26px;
+      box-sizing: border-box;
+      flex-shrink: 0;
       border-radius: 50%; 
       background-color: ${color}; 
       ${border}
       ${shadow}
       opacity: ${opacity};
-      color: white;
+      font-size: 14px;
       cursor: help;
+      user-select: none;
     ">
       ${getIcon()}
       ${tooltipHtml}
@@ -285,6 +296,8 @@ export default function MapplsMap({
   const eventMarkersRef = useRef<any[]>([])
   const dispatchOverlaysRef = useRef<any[]>([])
   const diversionOverlaysRef = useRef<any[]>([])
+  const prevActiveNodesRef = useRef<Set<string>>(new Set())
+  const [isPropCardOpen, setIsPropCardOpen] = useState(true)
 
   // Inject stylesheet for animations
   useEffect(() => {
@@ -300,6 +313,15 @@ export default function MapplsMap({
         @keyframes fleet-pulse {
           0%, 100% { transform: scale(1); opacity: 0.75; }
           50% { transform: scale(1.12); opacity: 1; }
+        }
+        @keyframes float-up-fade {
+          0% { transform: translateY(0px) scale(0.8); opacity: 0; }
+          10% { transform: translateY(-5px) scale(1.2); opacity: 1; }
+          100% { transform: translateY(-30px) scale(1); opacity: 0; }
+        }
+        @keyframes flash-stop {
+          0%, 100% { transform: scale(1); opacity: 1; color: #ef4444; }
+          50% { transform: scale(1.3); opacity: 0.5; color: #f87171; }
         }
       `
       document.head.appendChild(style)
@@ -432,11 +454,103 @@ export default function MapplsMap({
     } else {
       const severityMultiplier = 0.5 + currentSeverity * 1.5
 
-      const pointData = {
+      let pointData: any = {
         type: 'FeatureCollection',
         features: [
-          { type: 'Feature', geometry: { type: 'Point', coordinates: [eventLon, eventLat] } },
+          {
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [eventLon, eventLat] },
+            properties: { intensity: 1.0 },
+          },
         ],
+      }
+
+      const edgeData: any = {
+        type: 'FeatureCollection',
+        features: [],
+      }
+
+      if (activeNodesArray && activeNodesArray.length > 0) {
+        pointData = {
+          type: 'FeatureCollection',
+          features: activeNodesArray.map((node: any) => ({
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [Number(node.lon || eventLon), Number(node.lat || eventLat)],
+            },
+            properties: { intensity: node.intensity / (maxNodeIntensity || 1) },
+          })),
+        }
+
+        edgeData.features = activeNodesArray.map((node: any) => ({
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [eventLon, eventLat],
+              [Number(node.lon || eventLon), Number(node.lat || eventLat)],
+            ],
+          },
+        }))
+
+        const currentNodes = new Set(Object.keys(propagationTick?.activeNodes || {}))
+        const prevNodes = prevActiveNodesRef.current
+        const newNodes = Object.keys(propagationTick?.activeNodes || {}).filter(
+          (n) => !prevNodes.has(n),
+        )
+
+        newNodes.forEach((nodeKey) => {
+          const node = propagationTick!.activeNodes[nodeKey]
+          const lat = Number(node.lat || eventLat)
+          const lon = Number(node.lon || eventLon)
+
+          const barricadeList = barricades?.length
+            ? barricades
+            : pipeline?.barricade_plan?.barricades || []
+          const hitBarricade = barricadeList.find(
+            (b) => b.lat && b.lon && Math.abs(b.lat - lat) < 0.002 && Math.abs(b.lon - lon) < 0.002,
+          )
+          if (hitBarricade) {
+            const m = addMarker(lat, lon, {
+              html: '<div style="font-weight: 900; color: #ef4444; font-size: 16px; text-shadow: 0 0 6px rgba(0,0,0,0.8); animation: flash-stop 1s ease-out forwards; pointer-events: none; z-index: 9999;">STOP ✖</div>',
+            })
+            if (m) setTimeout(() => removeLayer(m), 1000)
+          }
+
+          const fleetList = assignments?.length
+            ? assignments
+            : pipeline?.fleet_plan?.deployments || []
+          const hitFleet = fleetList.find((d) => {
+            let dLat = d.lat,
+              dLon = d.lon
+            if (liveFleetLocations && d.user_id && liveFleetLocations[d.user_id]) {
+              dLat = liveFleetLocations[d.user_id].lat
+              dLon = liveFleetLocations[d.user_id].lon
+            } else if (!dLat && !dLon) {
+              const match = pipeline?.fleet_plan?.deployments?.find(
+                (dep) =>
+                  dep.junctionName.toLowerCase().replace(/\s+/g, '') ===
+                  (d.junction_name || '').toLowerCase().replace(/\s+/g, ''),
+              )
+              if (match) {
+                dLat = match.lat
+                dLon = match.lon
+              }
+            }
+            return dLat && dLon && Math.abs(dLat - lat) < 0.002 && Math.abs(dLon - lon) < 0.002
+          })
+          if (hitFleet) {
+            const m = addMarker(lat, lon, {
+              html: '<div style="font-weight: 900; color: #60a5fa; font-size: 16px; text-shadow: 0 0 6px rgba(0,0,0,0.8); animation: float-up-fade 1.5s ease-out forwards; pointer-events: none; z-index: 9999;">▼ -20%</div>',
+            })
+            if (m) setTimeout(() => removeLayer(m), 1500)
+          }
+        })
+
+        prevActiveNodesRef.current = currentNodes
+      } else {
+        prevActiveNodesRef.current = new Set()
       }
 
       // Dynamically calculate radius at zoom 11 based on forecast and severity
@@ -444,38 +558,46 @@ export default function MapplsMap({
       const rMiddle = 35 * forecast.scale * severityMultiplier
       const rOuter = 75 * forecast.scale * severityMultiplier
 
+      const getRadiusExpression = (baseRadius: number) => [
+        'interpolate',
+        ['exponential', 2],
+        ['zoom'],
+        11,
+        baseRadius,
+        20,
+        baseRadius * 512,
+      ]
+
+      // Spread Trails Layer
+      if (map.getSource('spread-edges-source')) {
+        ;(map.getSource('spread-edges-source') as any).setData(edgeData)
+      } else {
+        map.addSource('spread-edges-source', { type: 'geojson', data: edgeData })
+        map.addLayer({
+          id: 'spread-edges-layer',
+          type: 'line',
+          source: 'spread-edges-source',
+          paint: {
+            'line-color': impactColor,
+            'line-width': 2,
+            'line-opacity': 0.15,
+            'line-dasharray': [2, 2],
+          },
+        })
+      }
+
       if (map.getSource(sourceId)) {
         ;(map.getSource(sourceId) as any).setData(pointData)
 
         // Update radius and color
         if (map.getLayer('impact-inner')) {
-          map.setPaintProperty('impact-inner', 'circle-radius', [
-            'interpolate',
-            ['exponential', 2],
-            ['zoom'],
-            11,
-            rInner,
-            20,
-            rInner * 512,
-          ])
-          map.setPaintProperty('impact-middle', 'circle-radius', [
-            'interpolate',
-            ['exponential', 2],
-            ['zoom'],
-            11,
-            rMiddle,
-            20,
-            rMiddle * 512,
-          ])
-          map.setPaintProperty('impact-outer', 'circle-radius', [
-            'interpolate',
-            ['exponential', 2],
-            ['zoom'],
-            11,
-            rOuter,
-            20,
-            rOuter * 512,
-          ])
+          map.setPaintProperty('impact-inner', 'circle-radius', getRadiusExpression(rInner) as any)
+          map.setPaintProperty(
+            'impact-middle',
+            'circle-radius',
+            getRadiusExpression(rMiddle) as any,
+          )
+          map.setPaintProperty('impact-outer', 'circle-radius', getRadiusExpression(rOuter) as any)
 
           map.setPaintProperty('impact-inner', 'circle-color', impactColor)
           map.setPaintProperty('impact-middle', 'circle-color', impactColor)
@@ -490,18 +612,12 @@ export default function MapplsMap({
           type: 'circle',
           source: sourceId,
           paint: {
-            'circle-radius': [
-              'interpolate',
-              ['exponential', 2],
-              ['zoom'],
-              11,
-              rOuter,
-              20,
-              rOuter * 512,
-            ],
+            'circle-radius': getRadiusExpression(rOuter) as any,
             'circle-color': impactColor,
-            'circle-opacity': 0.15,
+            'circle-opacity': ['*', ['get', 'intensity'], 0.15] as any,
             'circle-blur': 1.5,
+            'circle-radius-transition': { duration: 300 } as any,
+            'circle-opacity-transition': { duration: 300 } as any,
           },
         })
 
@@ -511,18 +627,12 @@ export default function MapplsMap({
           type: 'circle',
           source: sourceId,
           paint: {
-            'circle-radius': [
-              'interpolate',
-              ['exponential', 2],
-              ['zoom'],
-              11,
-              rMiddle,
-              20,
-              rMiddle * 512,
-            ],
+            'circle-radius': getRadiusExpression(rMiddle) as any,
             'circle-color': impactColor,
-            'circle-opacity': 0.25,
+            'circle-opacity': ['*', ['get', 'intensity'], 0.25] as any,
             'circle-blur': 1,
+            'circle-radius-transition': { duration: 300 } as any,
+            'circle-opacity-transition': { duration: 300 } as any,
           },
         })
 
@@ -532,18 +642,12 @@ export default function MapplsMap({
           type: 'circle',
           source: sourceId,
           paint: {
-            'circle-radius': [
-              'interpolate',
-              ['exponential', 2],
-              ['zoom'],
-              11,
-              rInner,
-              20,
-              rInner * 512,
-            ],
+            'circle-radius': getRadiusExpression(rInner) as any,
             'circle-color': impactColor,
-            'circle-opacity': 0.4,
+            'circle-opacity': ['*', ['get', 'intensity'], 0.4] as any,
             'circle-blur': 0.5,
+            'circle-radius-transition': { duration: 300 } as any,
+            'circle-opacity-transition': { duration: 300 } as any,
           },
         })
       }
@@ -1260,6 +1364,67 @@ export default function MapplsMap({
             >
               {riskLevel.toUpperCase()}
             </span>
+          )}
+        </div>
+      )}
+
+      {/* Floating Operational Dashboard */}
+      {selectedEvent && propagationTick && propagationTick.eventId === selectedEvent.id && (
+        <div className="absolute bottom-6 left-6 z-40 bg-[#0b1220]/90 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-2xl min-w-[220px]">
+          <div
+            className="flex justify-between items-center cursor-pointer group"
+            onClick={() => setIsPropCardOpen(!isPropCardOpen)}
+          >
+            <div className="text-[10px] font-bold text-slate-400 tracking-widest uppercase group-hover:text-slate-300 transition-colors">
+              Live Propagation
+            </div>
+            <button className="text-slate-500 group-hover:text-slate-300 transition-colors">
+              {isPropCardOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+            </button>
+          </div>
+
+          {isPropCardOpen && (
+            <div className="space-y-3 mt-4">
+              <div className="flex justify-between items-center gap-6">
+                <span className="text-slate-300 text-sm">Affected Junctions</span>
+                <span className="text-white font-mono font-bold text-lg">
+                  {Object.keys(propagationTick.activeNodes || {}).length}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center gap-6">
+                <span className="text-slate-300 text-sm">Spread Rate</span>
+                <span className="text-white font-mono font-bold text-lg flex items-baseline gap-1">
+                  {(
+                    Math.max(0, Object.keys(propagationTick.activeNodes || {}).length - 1) /
+                    Math.max(0.5, propagationTick.tick * 0.5)
+                  ).toFixed(1)}
+                  <span className="text-[10px] text-slate-500 font-sans tracking-wide">
+                    nodes/min
+                  </span>
+                </span>
+              </div>
+
+              <div className="pt-3 mt-3 border-t border-white/10">
+                <div className="text-slate-400 text-xs mb-2 uppercase tracking-wider font-semibold">
+                  Mitigated By
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex items-center gap-1.5 bg-blue-500/10 px-2.5 py-1 rounded-md border border-blue-500/20">
+                    <span className="text-base">👮</span>
+                    <span className="text-blue-400 font-bold">
+                      {assignments?.length || pipeline?.fleet_plan?.deployments?.length || 0}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-red-500/10 px-2.5 py-1 rounded-md border border-red-500/20">
+                    <span className="text-base">🚧</span>
+                    <span className="text-red-400 font-bold">
+                      {barricades?.length || pipeline?.barricade_plan?.barricades?.length || 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       )}
