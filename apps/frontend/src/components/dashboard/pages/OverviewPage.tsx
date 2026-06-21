@@ -104,7 +104,9 @@ export default function OverviewPage() {
                 <BarChart3 size={20} className="shrink-0 text-primary" />
                 <div>
                   <span className="block font-mono text-xl font-bold leading-tight">
-                    {(pipelineResult.prediction.confidence * 100).toFixed(0)}%
+                    {typeof pipelineResult.prediction.confidence === 'number'
+                      ? `${(pipelineResult.prediction.confidence * 100).toFixed(0)}%`
+                      : '—'}
                   </span>
                   <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
                     Confidence

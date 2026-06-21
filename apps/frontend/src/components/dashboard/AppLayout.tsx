@@ -107,7 +107,7 @@ export default function AppLayout() {
               : Number(ev.severity_score) > 0.3
                 ? 'Medium'
                 : 'Low',
-        confidence: 0.7,
+        confidence: null,
         prediction_interval: null,
         confidence_factors: null,
       },
