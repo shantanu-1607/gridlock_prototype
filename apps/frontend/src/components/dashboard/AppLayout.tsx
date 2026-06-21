@@ -290,7 +290,7 @@ export default function AppLayout() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-screen flex-col bg-background dark:bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-slate-900 dark:to-slate-950">
       <Header wsConnected={connected} activeEvents={activeEvents.length} />
 
       <motion.div

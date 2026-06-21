@@ -262,7 +262,7 @@ export default function LandingPage() {
       </motion.section> */}
 
       {/* ── Stats ──────────────────────────────────────────────────── */}
-      <section className="relative z-10 py-20 px-6">
+      <section className="relative z-10 py-10 px-6">
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -289,7 +289,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features ───────────────────────────────────────────────── */}
-      <section id="features" className="relative py-28 px-6 z-10 bg-muted/20">
+      <section id="features" className="relative py-16 px-6 z-10 bg-muted/20">
         <div className="max-w-5xl mx-auto">
           <motion.div
             initial="hidden"
@@ -346,7 +346,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── How It Works ───────────────────────────────────────────── */}
-      <section id="how-it-works" className="relative py-28 px-6 z-10">
+      <section id="how-it-works" className="relative py-16 px-6 z-10">
         <div className="max-w-5xl mx-auto">
           <motion.div
             initial="hidden"
@@ -400,7 +400,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Role Selection ─────────────────────────────────────────── */}
-      <section id="roles-section" className="relative py-28 px-6 z-10 bg-muted/20">
+      <section id="roles-section" className="relative py-16 px-6 z-10 bg-muted/20">
         <div className="max-w-5xl mx-auto">
           <motion.div
             initial="hidden"
@@ -523,7 +523,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA Banner ─────────────────────────────────────────────── */}
-      <section className="relative z-10 py-24 px-6">
+      <section className="relative z-10 py-16 px-6">
         <motion.div
           initial="hidden"
           whileInView="visible"

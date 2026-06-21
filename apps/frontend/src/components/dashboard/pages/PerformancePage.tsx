@@ -15,16 +15,16 @@ export default function PerformancePage() {
     return (
       <div className="h-full overflow-y-auto p-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold tracking-tight">Performance Metrics</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-3xl font-extrabold tracking-tight">Performance Metrics</h1>
+          <p className="text-base text-muted-foreground mt-1">
             Resource deployment and signal gating impact
           </p>
         </div>
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-2 py-16 text-center text-muted-foreground">
-            <Users size={28} className="opacity-50" />
-            <p className="text-sm font-medium">No event selected</p>
-            <span className="text-xs">Plan a new event or select one from the control panel</span>
+            <Users size={32} className="opacity-50" />
+            <p className="text-lg font-medium">No event selected</p>
+            <span className="text-sm">Plan a new event or select one from the control panel</span>
           </CardContent>
         </Card>
       </div>
@@ -36,8 +36,8 @@ export default function PerformancePage() {
   return (
     <div className="h-full overflow-y-auto p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Performance Metrics</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <h1 className="text-3xl font-extrabold tracking-tight">Performance Metrics</h1>
+        <p className="text-base text-muted-foreground mt-1">
           Resource deployment and signal gating impact
         </p>
       </div>
@@ -45,15 +45,15 @@ export default function PerformancePage() {
       <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Users size={16} /> Deployment by Junction
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Users size={20} /> Deployment by Junction
             </CardTitle>
           </CardHeader>
           <CardContent className="h-[280px]">
             {fleet_plan.deployments?.length ? (
               <DeploymentBarChart items={fleet_plan.deployments} />
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+              <div className="flex h-full items-center justify-center text-lg text-muted-foreground">
                 No deployments recommended
               </div>
             )}
@@ -62,8 +62,8 @@ export default function PerformancePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Users size={16} /> Fleet Deployment Detail
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Users size={20} /> Fleet Deployment Detail
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -73,8 +73,8 @@ export default function PerformancePage() {
 
         <Card className="col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Construction size={16} /> Barricade Plan
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Construction size={20} /> Barricade Plan
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -85,8 +85,8 @@ export default function PerformancePage() {
         {gating_plan.recommendations?.length ? (
           <Card className="col-span-2">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <GitBranch size={16} /> Signal Gating Recommendations
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <GitBranch size={20} /> Signal Gating Recommendations
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -94,15 +94,15 @@ export default function PerformancePage() {
                 {gating_plan.recommendations.map((g, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between rounded-md bg-input p-2.5 text-xs"
+                    className="flex items-center justify-between rounded-md bg-input p-3.5 text-base"
                   >
                     <span className="flex-1 font-medium">{g.junction_name}</span>
-                    <div className="flex items-center gap-1.5 font-mono">
+                    <div className="flex items-center gap-2.5 font-mono">
                       <span className="text-muted-foreground">{g.current_green_secs}s</span>
                       <span className="text-yellow">&rarr;</span>
                       <span className="font-semibold text-yellow">{g.recommended_green_secs}s</span>
                     </div>
-                    <span className="min-w-[70px] text-right font-mono text-[11px] font-semibold text-red">
+                    <span className="min-w-[90px] text-right font-mono text-sm font-semibold text-red">
                       -{g.reduction_pct.toFixed(0)}% green
                     </span>
                   </div>

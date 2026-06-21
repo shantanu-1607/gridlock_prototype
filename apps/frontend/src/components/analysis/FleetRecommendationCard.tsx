@@ -22,15 +22,15 @@ export default function FleetRecommendationCard({ plan }: Props) {
         <div className="flex items-center gap-3">
           <Users size={18} className="text-primary" />
           <div className="flex items-baseline gap-2">
-            <span className="font-mono text-xl font-bold">{plan.total_fleet_required}</span>
-            <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
+            <span className="font-mono text-2xl font-bold">{plan.total_fleet_required}</span>
+            <span className="text-sm tracking-wider text-muted-foreground uppercase">
               Officers Dispatched
             </span>
           </div>
         </div>
         {plan.uncertainty_level && (
           <span
-            className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${UNCERTAINTY_STYLE[plan.uncertainty_level] || 'bg-muted text-muted-foreground'}`}
+            className={`rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider ${UNCERTAINTY_STYLE[plan.uncertainty_level] || 'bg-muted text-muted-foreground'}`}
             title="ML prediction uncertainty driving the contingency reserve"
           >
             {plan.uncertainty_level} uncertainty
@@ -39,7 +39,7 @@ export default function FleetRecommendationCard({ plan }: Props) {
       </div>
 
       {typeof plan.contingency_reserve === 'number' && plan.contingency_reserve > 0 && (
-        <div className="flex items-center gap-2 rounded-md border border-orange/30 bg-orange/5 px-2.5 py-1.5 text-[11px] text-foreground">
+        <div className="flex items-center gap-2 rounded-md border border-orange/30 bg-orange/5 px-2.5 py-1.5 text-sm text-foreground">
           <ShieldQuestion size={14} className="shrink-0 text-orange" />
           <span>
             <span className="font-semibold text-orange">
@@ -52,7 +52,7 @@ export default function FleetRecommendationCard({ plan }: Props) {
 
       {/* Rationale */}
       {plan.rationale && (
-        <div className="rounded-md border border-primary/20 bg-primary/5 px-2.5 py-2 text-[11px] leading-relaxed text-foreground">
+        <div className="rounded-md border border-primary/20 bg-primary/5 px-2.5 py-2 text-sm leading-relaxed text-foreground">
           <span className="font-semibold block mb-1 text-primary">Strategic Rationale:</span>
           {plan.rationale}
         </div>
@@ -63,7 +63,7 @@ export default function FleetRecommendationCard({ plan }: Props) {
         {plan.deployments.map((d, i) => (
           <div
             key={i}
-            className="flex flex-col gap-2 rounded-md border border-border bg-card p-2.5 text-xs transition-colors hover:border-primary/50"
+            className="flex flex-col gap-2 rounded-md border border-border bg-card p-2.5 text-sm transition-colors hover:border-primary/50"
           >
             <div className="flex items-start justify-between">
               <div className="flex flex-col gap-0.5">
@@ -71,14 +71,14 @@ export default function FleetRecommendationCard({ plan }: Props) {
                   <Navigation size={12} className="text-muted-foreground" />
                   {d.junctionName}
                 </span>
-                <span className="text-[10px] text-muted-foreground capitalize">
+                <span className="text-xs text-muted-foreground capitalize">
                   {d.role.replace(/_/g, ' ')}
                 </span>
               </div>
 
               <div className="flex flex-col items-end gap-1">
                 <span
-                  className={`px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-wider ${
+                  className={`px-1.5 py-0.5 rounded-[4px] text-xs font-bold uppercase tracking-wider ${
                     d.priority === 'Critical'
                       ? 'bg-red/10 text-red'
                       : d.priority === 'High'
@@ -90,7 +90,7 @@ export default function FleetRecommendationCard({ plan }: Props) {
                 >
                   {d.priority} Priority
                 </span>
-                <span className="font-mono text-[10px] text-muted-foreground">
+                <span className="font-mono text-xs text-muted-foreground">
                   Deploy in {d.deployByMins}m
                 </span>
               </div>
@@ -101,7 +101,7 @@ export default function FleetRecommendationCard({ plan }: Props) {
                 {d.assignedFleet.map((f, j) => (
                   <span
                     key={j}
-                    className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] text-foreground"
+                    className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-xs text-foreground"
                   >
                     <ShieldAlert size={10} className="text-primary/70" />
                     {f.user_name}
