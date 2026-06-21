@@ -1,14 +1,85 @@
-# gridlock_prototype
+# GridLock — AI-Powered Traffic Command Center
 
-# GridLock Project 2
-
-An AI-powered Traffic Command Center for forecasting and managing event-driven congestion caused by planned and unplanned events. The system predicts congestion, simulates its propagation across the road network, recommends interventions such as fleet dispatch and barricade placement, and provides an AI assistant for traffic controllers.
+> Predict. Simulate. Intervene. GridLock turns event-driven congestion from a reactive crisis into a managed operation.
 
 ---
 
-# Architecture
+## Table of Contents
 
-## 1. High level Architecture
+1. [What Is GridLock?](#1-what-is-gridlock)
+2. [Key Features](#2-key-features)
+3. [System Architecture](#3-system-architecture)
+4. [The 9-Stage Planning Pipeline](#4-the-9-stage-planning-pipeline)
+5. [Real-Time Propagation Engine](#5-real-time-propagation-engine)
+6. [ML Prediction Engine](#6-ml-prediction-engine)
+7. [AI Decision Engines](#7-ai-decision-engines)
+8. [LLM Integration Layer](#8-llm-integration-layer)
+9. [Database Schema](#9-database-schema)
+10. [Frontend & User Roles](#10-frontend--user-roles)
+11. [Tech Stack](#11-tech-stack)
+12. [Infrastructure & Deployment](#12-infrastructure--deployment)
+13. [Data Flow & Request Lifecycle](#13-data-flow--request-lifecycle)
+
+---
+
+## 1. What Is GridLock?
+
+GridLock is an AI-powered Traffic Command Center built for urban traffic controllers managing **planned and unplanned events** — concerts, festivals, rallies, accidents, emergency closures.
+
+Standard traffic management is reactive: gridlock forms, then humans respond. GridLock flips this. The moment an event is registered, it triggers a **9-stage automated pipeline** that:
+
+- Predicts congestion **duration and severity** using an ML ensemble
+- Simulates congestion **propagation across 294 road junctions** using BFS graph traversal
+- Generates a **fleet dispatch plan** with real ETAs via mapping APIs
+- Places **barricades** algorithmically at optimal choke points
+- Computes **diversion routes** that avoid corridors saturated by competing events
+- Runs **every 30 seconds** as a background worker to reflect real-time intervention effects
+
+The system serves two user roles: **Controllers** (command center operators) and **Fleet Members** (on-ground personnel), each with a dedicated dashboard.
+
+---
+
+## 2. Key Features
+
+### Event Management
+- Supports **planned events** (concerts, sports, festivals, rallies, construction) and **unplanned events** (accidents, protests, emergency closures)
+- Automatic severity classification and anomaly scoring on event creation
+- Conflict detection within a **1.5 km radius** to flag spatio-temporal event overlaps
+
+### Congestion Prediction & Simulation
+- ML ensemble predicts **event duration and severity** with conformal prediction intervals
+- **BFS-based propagation engine** simulates congestion spread across the road graph at T+5, T+15, and T+30 minute horizons
+- Live heatmap (🟢 low / 🟡 medium / 🔴 severe) updated every 30 seconds via WebSocket
+- **Queue spillback model** (M/M/c/K) computes blocking probabilities and tandem corridor spillover
+- **Multi-event gridlock detection**: when two propagating congestion fronts collide, the system flags a merge event and spikes the intensity
+
+### Fleet Dispatch
+- LLM-generated dispatch plans, ranked by real ETA from **Mappls Distance Matrix API**
+- Uncertainty-aware: reserves contingency fleet members based on prediction confidence intervals
+- Dynamic reassignment support as conditions evolve
+
+### Barricade Placement
+- Three rule types: **road closure**, **severity-path blocking**, and **crowd perimeter**
+- Barricades modeled in the simulation — the propagation engine stops BFS traversal at barricaded nodes
+- Deployed fleet members accelerate decay at their assigned junctions (1.5× decay rate)
+
+### Diversion Planning
+- Graph-walk corridor rerouting that explicitly avoids corridors already saturated by competing active events
+- LLM-generated prose explanations for each diversion route
+
+### AI Chatbot
+- Context-aware chatbot (Groq-backed) with full event state in prompt context
+- Example queries: *"How many officers for tomorrow's match?"* / *"What if it starts raining during the concert?"* / *"Show me alternate routes for the festival."*
+
+### Ambient AI Engine
+- Every 2 minutes (every 4th propagation tick), an LLM-generated radio-style situational report is broadcast to controllers
+- Covers active event state, fleet positions, and developing congestion fronts
+
+---
+
+## 3. System Architecture
+
+GridLock is a monorepo with four services: a React frontend, a Node.js/Express backend, a Python FastAPI ML service, and Redis as the shared state and messaging layer.
 
 ``` mermaid
 ---
@@ -112,30 +183,257 @@ classDef Ash fill:#EEEEEE,stroke:#999999,color:#000000;
 class LP,CD,FD,API,WSS,PW,MLP,MLA,MLQ,MLF,MLC,PG,RD,GROQ,MAPPLS Ash;
 ```
 
-## 2. Infrastructure (Docker Compose topology)
+**External dependencies:**
+- **Mappls API** — distance matrix for real-world ETAs used in fleet dispatch ranking
+- **Groq LLM** — backs all five LLM-powered services (dispatch, barricades, diversions, ambient sitreeps, chatbot)
+
+### Service Breakdown
+
+| Layer | Technology | Responsibility |
+|---|---|---|
+| Frontend | React + Vite + TypeScript | Controller & Fleet dashboards, live map, heatmap |
+| Backend API | Node.js + Express + TypeScript | REST endpoints, WebSocket gateway, BullMQ orchestration |
+| ML Service | Python + FastAPI | Prediction, queueing models, anomaly detection, counterfactuals |
+| Cache / Queue | Redis 7 | BullMQ jobs, Pub/Sub for WebSocket fan-out, propagation state store |
+| Database | PostgreSQL | Persistent event, user, assignment, and barricade records |
+| Experiment Tracking | MLflow | ML model training and experiment logging |
+
+---
+
+## 4. The 9-Stage Planning Pipeline
+
+Every event — planned or unplanned — triggers this pipeline synchronously before returning a response to the controller.
 
 ```mermaid
-graph LR
-    subgraph "docker-compose"
-        REDIS["redis<br/>redis:7-alpine<br/>:6379<br/>Pub/Sub · BullMQ · State store"]
-        BACKEND["backend<br/>apps/backend<br/>:4000<br/>Express API + WS + BullMQ Worker"]
-        FRONTEND["frontend<br/>apps/frontend<br/>:5173<br/>Vite + React SPA"]
-        ML["ml<br/>apps/ml<br/>:8000<br/>FastAPI ML Service"]
-        MLFLOW["mlflow<br/>python:3.11-slim<br/>:5001<br/>MLflow Experiment Tracker"]
-    end
+---
+config:
+  theme: base
+  look: handDrawn
+  themeVariables:
+    primaryColor: "#F6F3D6"
+    primaryBorderColor: "#B8B25A"
+    primaryTextColor: "#222222"
 
-    EXTPG[("External PostgreSQL<br/>via DATABASE_URL")]
+    secondaryColor: "#EEECC8"
+    secondaryBorderColor: "#B8B25A"
 
-    FRONTEND -->|REST + WS| BACKEND
-    BACKEND -->|HTTP /api/ml/*| ML
-    BACKEND -->|Pub/Sub + Queue| REDIS
-    BACKEND -->|SQL| EXTPG
-    ML -.->|logs experiments| MLFLOW
+    tertiaryColor: "#F9F8E8"
+
+    lineColor: "#555555"
+
+    fontFamily: "'Recursive Variable', sans-serif"
+---
+graph TD
+    A["1. INSERT event (status='planned')"] --> B["2. ML Prediction<br/>(duration + severity + confidence + conformal interval)"]
+    B --> C["3a. Queue Analysis<br/>(M/M/c/K blocking probability + tandem spillback)"]
+    B --> C2["3b. Anomaly Detection<br/>(Prophet corridor baseline deviation)"]
+    C --> D["4. Propagation Forecast<br/>(BFS simulation at T+5, T+10, T+15, T+30)"]
+    D --> E["5a. Fleet Dispatch Plan<br/>(LLM + uncertainty reserve + ETA-ranked assignment)"]
+    D --> E2["5b. Barricade Plan<br/>(3 rules engine + LLM explanation)"]
+    D --> E3["5c. Diversion Plan<br/>(graph-walk corridor rerouting + competing-event awareness)"]
+    E --> F["6. Advisory Gating<br/>(upstream signal timing recommendations)"]
+    F --> G["7. Pre-staging Timeline<br/>(T-60 to T+duration countdown)"]
+    G --> H["8. Persist all to PostgreSQL + WebSocket broadcast"]
+    H --> I["9. Schedule BullMQ propagation job (30s ticks)"]
 ```
 
-## 3. Database Schema (ERD)
+---
+
+## 5. Real-Time Propagation Engine
+
+Once an event is planned, a BullMQ background job fires every 30 seconds and updates the live congestion map.
+
+### What happens each tick
+```
+Every 30 seconds:
+  1. Read propagation state from Redis (current congestion nodes + intensities)
+  2. Fetch active interventions (barricades placed, fleet deployed)
+  3. Scan all other active events' propagation states → detect multi-event gridlock
+  4. Run simulationService.tick():
+
+     For each congested node:
+       ├── 5% spread chance × edge weight × current intensity
+       ├── Intensity decay = initialSeverity / (durationMins × 2) per tick
+       ├── Barricaded nodes: propagation blocked (BFS stops)
+       ├── Fleet-deployed nodes: decay accelerated 1.5×
+       ├── Intensity ≥ 1.0: guaranteed spread (queue spillback)
+       └── Multi-event collision: guaranteed spread + intensity spike
+
+  5. Publish propagation:tick → Redis Pub/Sub → WebSocket → frontend heatmap
+  6. Every 4th tick (≈2 min): generate ambient LLM situational report
+```
+
+### The Graph
+
+The road network is modeled as an adjacency list of **294 junctions**, with corridor cascade weights encoding the relative risk of congestion spreading along each edge. GraphService handles BFS traversal and is shared by the simulation, fleet dispatch, barricade, and diversion services.
+
+---
+
+## 6. ML Prediction Engine
+
+The ML service (FastAPI, Python) exposes 9 endpoints consumed by the backend.
+
+### Prediction Flow
+```mermaid
+---
+config:
+  theme: base
+  look: handDrawn
+  themeVariables:
+    primaryColor: "#F6F3D6"
+    primaryBorderColor: "#B8B25A"
+    primaryTextColor: "#222222"
+
+    secondaryColor: "#EEECC8"
+    secondaryBorderColor: "#B8B25A"
+
+    tertiaryColor: "#F9F8E8"
+
+    lineColor: "#555555"
+
+    fontFamily: "'Recursive Variable', sans-serif"
+---
+graph TD
+    A["Input Event"] --> B["Feature Engineering<br/>(Encoders + FeaturePipeline F4/F5)"]
+    B --> C{"Artifact Format?"}
+    C -- "Champion" --> D["Champion Model<br/>(any sklearn/LGB/XGB)"]
+    C -- "Legacy" --> E["LGB multi-seed + CatBoost<br/>blend_weight ensemble"]
+    D --> F{"Regime Models?"}
+    F -- "Enabled" --> G["Soft-blend: sigmoid routing<br/>short_model ↔ long_model"]
+    F -- "Disabled" --> H["Champion prediction only"]
+    G --> I["log1p → expm1 → duration_mins"]
+    H --> I
+    E --> I
+    I --> J["Severity Score Engineering"]
+    I --> K["Conformal Interval<br/>(corridor → severity → global fallback)"]
+    I --> L["Dynamic Confidence<br/>(ensemble variance penalty)"]
+    I --> M["Fingerprint Search<br/>(haversine + hour + cause similarity)"]
+```
+
+### ML Service Endpoints
+
+| Endpoint | Model / Algorithm | Output |
+|---|---|---|
+| `POST /api/ml/predict` | Champion ensemble + conformal intervals + fingerprinting | duration, severity, confidence, interval, similar events |
+| `POST /api/ml/repredict` | Live re-estimation using elapsed time + conformal interval | updated prediction for active events |
+| `POST /api/ml/queue-analysis` | M/M/c/K queueing + tandem corridor analysis | blocking_probability, risk_level, spillover_time |
+| `POST /api/ml/deployment` | Greedy knapsack resource allocation | optimized resource deployment plan |
+| `POST /api/ml/gating` | Advisory green-time reduction rules | signal timing recommendations |
+| `POST /api/ml/anomaly` | Prophet corridor baselines + adaptive thresholds | anomaly_score, anomaly_label |
+| `POST /api/ml/counterfactual` | What-if policy regret computation | counterfactual outcome estimates |
+| `POST /api/ml/accuracy` | Prediction accuracy tracking | historical accuracy metrics |
+| `POST /api/ml/train-baselines` | Retrain Prophet corridor models | training job trigger |
+---
+
+## 7. AI Decision Engines
+
+The backend hosts six core services that power the planning pipeline. Each runs deterministic rule logic first; the LLM only adds prose explanations or JSON structure on top.
+
+| Service | What it does | LLM role | Fallback |
+|---|---|---|---|
+| **GraphService** | 294-junction adjacency list, BFS, corridor cascade weights | None | — |
+| **SimulationService** | Tick-based BFS spread + decay + interventions | None | — |
+| **RecommendationService** | Fleet dispatch: ETA ranking + uncertainty reserve | Generates dispatch JSON | Escalation-tier rules + ETA ranking |
+| **BarricadeService** | 3 rule types: road closure / severity path / crowd perimeter | Writes placement explanations | Rule-based output only |
+| **DiversionService** | Graph-walk corridor rerouting, competing-event-aware | Writes route explanations | Graph-walk output only |
+| **ConflictService** | Spatio-temporal overlap detection within 1.5 km radius | None | — |
+| **AmbientService** | Radio-chatter situational updates every 2 minutes | Generates SITREP prose | Silently skipped |
+| **ChatService** | Context-aware AI chatbot | Full LLM response | Returns error message |
+| **QueueService** | BullMQ job scheduling, Redis pub/sub publishing | None | — |
+| **MapplsService** | Distance matrix API for real ETAs | None | — |
+
+**Design principle:** deterministic rule engines always compute the structural plan. The LLM adds prose, explanations, or formats the output into JSON — it never drives the safety-critical dispatch decision unilaterally.
+
+---
+
+## 8. LLM Integration Layer
+
+All LLM calls go through **Groq**. Each service has a hard deterministic fallback so LLM outages do not interrupt operations.
 
 ```mermaid
+---
+config:
+  theme: base
+  look: handDrawn
+  themeVariables:
+    primaryColor: "#F6F3D6"
+    primaryBorderColor: "#B8B25A"
+    primaryTextColor: "#222222"
+
+    secondaryColor: "#EEECC8"
+    secondaryBorderColor: "#B8B25A"
+
+    tertiaryColor: "#F9F8E8"
+
+    lineColor: "#555555"
+
+    fontFamily: "'Recursive Variable', sans-serif"
+---
+graph LR
+    GROQ(["Groq-hosted LLM"])
+
+    subgraph "Services using Groq"
+        RS2["RecommendationService<br/>Generate fleet dispatch plan JSON"]
+        BS2["BarricadeService<br/>Write barricade placement explanations"]
+        DS2["DiversionService<br/>Write diversion route explanations"]
+        AS2["AmbientService<br/>Radio-chatter situational updates"]
+        CHS2["ChatService<br/>Context-aware AI chatbot"]
+    end
+
+    subgraph "Deterministic Fallbacks"
+        F1["Escalation-tier rules +<br/>ETA-ranked assignment"]
+        F2["Rule-based: closure /<br/>severity / crowd"]
+        F3["Graph-walk corridor<br/>rerouting"]
+        F4["Skipped silently"]
+        F5["Returns error message"]
+    end
+
+    RS2 --> GROQ
+    BS2 --> GROQ
+    DS2 --> GROQ
+    AS2 --> GROQ
+    CHS2 --> GROQ
+
+    GROQ -.->|"on failure"| F1
+    GROQ -.->|"on failure"| F2
+    GROQ -.->|"on failure"| F3
+    GROQ -.->|"on failure"| F4
+    GROQ -.->|"on failure"| F5
+
+    F1 -.-> RS2
+    F2 -.-> BS2
+    F3 -.-> DS2
+    F4 -.-> AS2
+    F5 -.-> CHS2
+
+    NOTE["Design pattern: rules engines always run first<br/>to produce the structural plan.<br/>The LLM only adds prose/explanations."]
+```
+
+---
+
+## 9. Database Schema
+
+Four tables. Events carry the full planning output as JSONB columns so all pipeline stages are persisted in a single row update.
+
+```mermaid
+---
+config:
+  theme: base
+  look: handDrawn
+  themeVariables:
+    primaryColor: "#F6F3D6"
+    primaryBorderColor: "#B8B25A"
+    primaryTextColor: "#222222"
+
+    secondaryColor: "#EEECC8"
+    secondaryBorderColor: "#B8B25A"
+
+    tertiaryColor: "#F9F8E8"
+
+    lineColor: "#555555"
+
+    fontFamily: "'Recursive Variable', sans-serif"
+---
 erDiagram
     events ||--o{ fleet_assignments : "has"
     events ||--o{ barricades : "has"
@@ -189,145 +487,39 @@ erDiagram
 
 ---
 
-## 4. Backend Service Layer
+## 10. Frontend & User Roles
 
-```mermaid
-graph LR
-    subgraph "Core Simulation"
-        GS["GraphService<br/>294 junctions, adjacency list,<br/>BFS, corridor cascade weights"]
-        SS["SimulationService<br/>BFS propagation engine,<br/>tick-based spread + decay"]
-    end
+### User Roles
 
-    subgraph "AI Decision Engines"
-        RS["RecommendationService<br/>Fleet dispatch: LLM + fallback rules,<br/>uncertainty assessment, fleet allocation"]
-        BS["BarricadeService<br/>3 rule types + LLM explanation,<br/>road closure / severity / crowd"]
-        DS["DiversionService<br/>Graph-walk corridor rerouting,<br/>cascade-risk ranking + LLM prose"]
-    end
+**Controller** — command center operator
+- Plan and manage events
+- View live congestion heatmap with 30-second refresh
+- Review and confirm AI dispatch plans, barricade placements, and diversion routes
+- Interact with AI chatbot for scenario queries
+- Access analytics, historical event data, and performance reports
 
-    subgraph "Supporting Services"
-        QS["QueueService<br/>BullMQ job scheduling,<br/>Redis pub/sub publishing"]
-        CS["ConflictService<br/>Spatio-temporal overlap detection<br/>within 1.5km radius"]
-        AS["AmbientService<br/>LLM-generated radio chatter<br/>situational updates"]
-        CHS["ChatService<br/>Context-aware AI chatbot<br/>via Groq"]
-        MS["MapplsService<br/>Distance matrix API<br/>for ETA-based dispatch"]
-    end
+**Fleet Member** — on-ground personnel
+- View assigned junctions and dispatch instructions
+- Update task status (pending → en_route → on_site → completed)
+- Report road conditions and incidents in real time
+- Update barricade status
 
-    GS --> SS
-    GS --> RS
-    GS --> BS
-    GS --> DS
-    SS --> RS
-    SS --> BS
-    RS --> MS
-    QS --> SS
-    CS --> RS
+### Frontend Routing
+
 ```
+/                          → Landing Page (public)
+/login/controller          → Controller login
+/login/fleet               → Fleet login
 
----
+/dashboard/map             → Live Map (heatmap + event markers)
+/dashboard/overview        → Active events overview
+/dashboard/performance     → Prediction accuracy + intervention metrics
+/dashboard/history         → Historical event log
+/dashboard/reports         → Detailed event reports
+/dashboard/settings        → System settings
 
-## 5. The 9-Stage Planning Pipeline
-
-```mermaid
-graph TD
-    A["1. INSERT event (status='planned')"] --> B["2. ML Prediction<br/>(duration + severity + confidence + conformal interval)"]
-    B --> C["3a. Queue Analysis<br/>(M/M/c/K blocking probability + tandem spillback)"]
-    B --> C2["3b. Anomaly Detection<br/>(Prophet corridor baseline deviation)"]
-    C --> D["4. Propagation Forecast<br/>(BFS simulation at T+5, T+10, T+15, T+30)"]
-    D --> E["5a. Fleet Dispatch Plan<br/>(LLM + uncertainty reserve + ETA-ranked assignment)"]
-    D --> E2["5b. Barricade Plan<br/>(3 rules engine + LLM explanation)"]
-    D --> E3["5c. Diversion Plan<br/>(graph-walk corridor rerouting + competing-event awareness)"]
-    E --> F["6. Advisory Gating<br/>(upstream signal timing recommendations)"]
-    F --> G["7. Pre-staging Timeline<br/>(T-60 to T+duration countdown)"]
-    G --> H["8. Persist all to PostgreSQL + WebSocket broadcast"]
-    H --> I["9. Schedule BullMQ propagation job (30s ticks)"]
+/fleet                     → Fleet Member dashboard
 ```
-
----
-
-## 6. Real-Time Propagation Worker Logic
-
-*(Converted from the prose description in Section 3.6 of the source doc.)*
-
-```mermaid
-flowchart TD
-    START(["Every 30 seconds, per active event"]) --> READ["Read propagation state from Redis"]
-    READ --> FETCH["Fetch interventions<br/>(barricades + fleet deployments)"]
-    FETCH --> SCAN["Scan all other active events'<br/>propagation states (gridlock detection)"]
-    SCAN --> TICK["simulationService.tick()"]
-
-    subgraph "tick() logic"
-        T1["5% spread chance per tick<br/>× edge weight × intensity"]
-        T2["Intensity decay:<br/>initialSeverity / (durationMins × 2)"]
-        T3["Barricade blocking<br/>(stops propagation at barricaded nodes)"]
-        T4["Fleet acceleration<br/>(1.5× decay at deployed nodes)"]
-        T5["Queue spillback<br/>(guaranteed spread at intensity ≥ 1.0)"]
-        T6["Multi-event merge<br/>(guaranteed spread + intensity spike on collision)"]
-    end
-
-    TICK --> T1 --> T2 --> T3 --> T4 --> T5 --> T6
-    T6 --> PUB["Publish propagation:tick<br/>via Redis → WebSocket → frontend heatmap"]
-    PUB --> CHECK{"Every 4th tick<br/>(2 min)?"}
-    CHECK -- "Yes" --> SITREP["Generate ambient LLM SITREP"]
-    CHECK -- "No" --> END(["Wait for next tick"])
-    SITREP --> END
-```
-
----
-
-## 7. ML Prediction Engine
-
-```mermaid
-graph TD
-    A["Input Event"] --> B["Feature Engineering<br/>(Encoders + FeaturePipeline F4/F5)"]
-    B --> C{"Artifact Format?"}
-    C -- "Champion" --> D["Champion Model<br/>(any sklearn/LGB/XGB)"]
-    C -- "Legacy" --> E["LGB multi-seed + CatBoost<br/>blend_weight ensemble"]
-    D --> F{"Regime Models?"}
-    F -- "Enabled" --> G["Soft-blend: sigmoid routing<br/>short_model ↔ long_model"]
-    F -- "Disabled" --> H["Champion prediction only"]
-    G --> I["log1p → expm1 → duration_mins"]
-    H --> I
-    E --> I
-    I --> J["Severity Score Engineering"]
-    I --> K["Conformal Interval<br/>(corridor → severity → global fallback)"]
-    I --> L["Dynamic Confidence<br/>(ensemble variance penalty)"]
-    I --> M["Fingerprint Search<br/>(haversine + hour + cause similarity)"]
-```
-
----
-
-## 8. ML Service API Surface
-
-*(Converted from the endpoint table in Section 4.1 of the source doc.)*
-
-```mermaid
-graph LR
-    subgraph "FastAPI :8000"
-        PRED["POST /api/ml/predict<br/>predict.py"]
-        REPRED["POST /api/ml/repredict<br/>active.py"]
-        QUEUE["POST /api/ml/queue-analysis<br/>queue_model.py"]
-        DEPLOY["POST /api/ml/deployment<br/>queue_model.py"]
-        GATE["POST /api/ml/gating<br/>queue_model.py"]
-        ANOM["POST /api/ml/anomaly<br/>anomaly.py"]
-        CF["POST /api/ml/counterfactual<br/>counterfactual.py"]
-        ACC["POST /api/ml/accuracy<br/>service.py"]
-        TRAIN["POST /api/ml/train-baselines<br/>anomaly.py"]
-    end
-
-    PRED -->|"Ensemble (LightGBM/CatBoost/<br/>Stacking champion) + conformal +<br/>fingerprinting"| PREDALG["Ensemble model"]
-    REPRED -->|"Live re-estimation using<br/>elapsed time + conformal interval"| REPREDALG["Active re-prediction"]
-    QUEUE -->|"M/M/c/K queueing theory +<br/>tandem corridor analysis"| QUEUEALG["Queueing model"]
-    DEPLOY -->|"Greedy knapsack resource<br/>allocation"| DEPLOYALG["Knapsack optimizer"]
-    GATE -->|"Advisory green-time<br/>reduction"| GATEALG["Signal timing rules"]
-    ANOM -->|"Prophet corridor baselines +<br/>adaptive thresholds"| ANOMALG["Prophet model"]
-    CF -->|"What-if policy regret<br/>computation"| CFALG["Counterfactual engine"]
-    ACC -->|"Prediction accuracy<br/>tracking"| ACCALG["Accuracy tracker"]
-    TRAIN -->|"Retrain Prophet corridor<br/>models"| TRAINALG["Training job"]
-```
-
----
-
-## 9. Frontend Routing & Auth
 
 ```mermaid
 graph TD
@@ -348,9 +540,136 @@ graph TD
 
 ---
 
-## 10. Real-Time Data Flow (Sequence Diagram)
+## 11. Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React, Vite, TypeScript, WebSocket client |
+| Backend | Node.js, Express, TypeScript, BullMQ |
+| ML Service | Python, FastAPI, LightGBM, CatBoost, scikit-learn, Prophet, MLflow |
+| Database | PostgreSQL |
+| Cache / Queue / Pub-Sub | Redis 7 |
+| LLM Provider | Groq |
+| Maps / Routing | Mappls API (distance matrix) |
+| Containerization | Docker, Docker Compose |
+
+---
+
+## 12. Infrastructure & Deployment
+
+The full system runs as a single **Docker Compose** stack with five containers:
 
 ```mermaid
+---
+config:
+  theme: base
+  look: handDrawn
+  themeVariables:
+    primaryColor: "#F6F3D6"
+    primaryBorderColor: "#B8B25A"
+    primaryTextColor: "#222222"
+
+    secondaryColor: "#EEECC8"
+    secondaryBorderColor: "#B8B25A"
+
+    tertiaryColor: "#F9F8E8"
+
+    lineColor: "#555555"
+
+    fontFamily: "'Recursive Variable', sans-serif"
+---
+graph LR
+    subgraph "docker-compose"
+        REDIS["redis<br/>redis:7-alpine<br/>:6379<br/>Pub/Sub · BullMQ · State store"]
+        BACKEND["backend<br/>apps/backend<br/>:4000<br/>Express API + WS + BullMQ Worker"]
+        FRONTEND["frontend<br/>apps/frontend<br/>:5173<br/>Vite + React SPA"]
+        ML["ml<br/>apps/ml<br/>:8000<br/>FastAPI ML Service"]
+        MLFLOW["mlflow<br/>python:3.11-slim<br/>:5001<br/>MLflow Experiment Tracker"]
+    end
+
+    EXTPG[("External PostgreSQL<br/>via DATABASE_URL")]
+
+    FRONTEND -->|REST + WS| BACKEND
+    BACKEND -->|HTTP /api/ml/*| ML
+    BACKEND -->|Pub/Sub + Queue| REDIS
+    BACKEND -->|SQL| EXTPG
+    ML -.->|logs experiments| MLFLOW
+```
+
+Service dependencies:
+- `frontend` → `backend` (REST + WebSocket)
+- `backend` → `ml` (HTTP), `redis` (Pub/Sub + BullMQ), `PostgreSQL` (SQL)
+- `ml` → `mlflow` (experiment logging, optional)
+
+---
+
+## 13. Data Flow & Request Lifecycle
+
+### Planning an event (end-to-end)
+
+```
+1.  Controller submits event via form
+      │
+2.  POST /api/events/plan (JWT-authenticated)
+      │
+3.  INSERT into PostgreSQL → event_id returned
+      │
+4.  WebSocket broadcast: event:new → all controllers notified
+      │
+5.  9-stage pipeline runs (see Section 4)
+      │
+6.  UPDATE 17 columns in PostgreSQL with all pipeline outputs
+      │
+7.  WebSocket broadcast: recommendations:ready, barricades:ready
+      │
+8.  BullMQ job scheduled → propagation worker starts 30s ticks
+```
+
+### Live propagation (every 30 seconds)
+
+```
+BullMQ Worker
+  │
+  ├── Read state from Redis
+  ├── Run simulation tick (spread + decay + interventions)
+  ├── Write updated state to Redis
+  ├── Publish propagation:tick → Redis Pub/Sub
+  │                                     │
+  │                             WebSocket Gateway
+  │                                     │
+  │                             Frontend heatmap update
+  │
+  └── Every 4th tick: Groq generates ambient SITREP → broadcast
+```
+
+### Fleet location updates
+
+```
+Fleet member app → WebSocket: fleet:location_update
+  │
+Redis Pub/Sub: controller:fleet_locations
+  │
+WebSocket → Controller dashboard: fleet markers updated on map
+```
+```mermaid
+---
+config:
+  theme: base
+  look: handDrawn
+  themeVariables:
+    primaryColor: "#F6F3D6"
+    primaryBorderColor: "#B8B25A"
+    primaryTextColor: "#222222"
+
+    secondaryColor: "#EEECC8"
+    secondaryBorderColor: "#B8B25A"
+
+    tertiaryColor: "#F9F8E8"
+
+    lineColor: "#555555"
+
+    fontFamily: "'Recursive Variable', sans-serif"
+---
 sequenceDiagram
     participant FE as Frontend
     participant WS as WebSocket
@@ -382,422 +701,3 @@ sequenceDiagram
 ```
 
 ---
-
-## 11. LLM Integration Layer (Groq)
-
-*(Converted from the table in Section 6 of the source doc.)*
-
-```mermaid
-graph LR
-    GROQ(["Groq-hosted LLM"])
-
-    subgraph "Services using Groq"
-        RS2["RecommendationService<br/>Generate fleet dispatch plan JSON"]
-        BS2["BarricadeService<br/>Write barricade placement explanations"]
-        DS2["DiversionService<br/>Write diversion route explanations"]
-        AS2["AmbientService<br/>Radio-chatter situational updates"]
-        CHS2["ChatService<br/>Context-aware AI chatbot"]
-    end
-
-    subgraph "Deterministic Fallbacks"
-        F1["Escalation-tier rules +<br/>ETA-ranked assignment"]
-        F2["Rule-based: closure /<br/>severity / crowd"]
-        F3["Graph-walk corridor<br/>rerouting"]
-        F4["Skipped silently"]
-        F5["Returns error message"]
-    end
-
-    RS2 --> GROQ
-    BS2 --> GROQ
-    DS2 --> GROQ
-    AS2 --> GROQ
-    CHS2 --> GROQ
-
-    GROQ -.->|"on failure"| F1
-    GROQ -.->|"on failure"| F2
-    GROQ -.->|"on failure"| F3
-    GROQ -.->|"on failure"| F4
-    GROQ -.->|"on failure"| F5
-
-    F1 -.-> RS2
-    F2 -.-> BS2
-    F3 -.-> DS2
-    F4 -.-> AS2
-    F5 -.-> CHS2
-
-    NOTE["Design pattern: rules engines always run first<br/>to produce the structural plan.<br/>The LLM only adds prose/explanations."]
-```
-
----
-
-## 12. Complete Request Lifecycle
-
-*(Converted from the prose pipeline in Section 8 of the source doc.)*
-
-```mermaid
-flowchart TD
-    A["User submits event via PlanEventForm"] --> B["POST /api/events/plan<br/>(JWT-authenticated)"]
-    B --> C["INSERT into PostgreSQL → event_id"]
-    C --> D["WebSocket broadcast: event:new"]
-    D --> E["HTTP POST → ML Service /api/ml/predict"]
-
-    subgraph "Prediction"
-        E --> E1["Feature engineering<br/>(encoders + pipeline)"]
-        E1 --> E2["Champion model predict (log-space)"]
-        E2 --> E3["Conformal interval<br/>(corridor → severity → global)"]
-        E3 --> E4["Fingerprint search<br/>(k-NN on reference corpus)"]
-        E4 --> E5["Returns: duration, severity,<br/>confidence, interval, similar events"]
-    end
-
-    E5 --> F["HTTP POST → ML Service /api/ml/queue-analysis"]
-    F --> F1["M/M/c/K + tandem queue computation"]
-    F1 --> F2["Returns: blocking_probability,<br/>risk_level, spillover time"]
-
-    F2 --> G["HTTP POST → ML Service /api/ml/anomaly"]
-    G --> G1["Prophet baseline comparison"]
-    G1 --> G2["Returns: anomaly_score, anomaly_label"]
-
-    G2 --> H["SimulationService.getCongestionForecast()"]
-    H --> H1["BFS propagation at T+0/T+15/T+30<br/>(no interventions)"]
-
-    H1 --> I["RecommendationService.generateDispatchPlan()"]
-    I --> I1["MapplsService.getDistanceMatrix() for real ETAs"]
-    I1 --> I2["Groq LLM generates dispatch JSON (or fallback rules)"]
-    I2 --> I3["assignNearestFleet() with ETA-based ranking"]
-    I3 --> I4["assessUncertainty() → contingency reserve"]
-
-    I4 --> J["BarricadeService.generateBarricadePlan()"]
-    J --> J1["3 rules: road_closure + severity_path + crowd_perimeter"]
-    J1 --> J2["Groq LLM writes explanations (or fallback)"]
-
-    J2 --> K["DiversionService.generateDiversionPlan()"]
-    K --> K1["Graph-walk corridor X, find transfers to corridor Y"]
-    K1 --> K2["Avoid corridors used by competing events"]
-    K2 --> K3["Groq LLM writes explanations (or fallback)"]
-
-    K3 --> L["callGating() → ML Service /api/ml/gating"]
-    L --> L1["Green-time reduction at upstream junctions"]
-
-    L1 --> M["buildPrestagingTimeline()"]
-    M --> M1["T-60 to T+duration operational countdown"]
-
-    M1 --> N["UPDATE 17 columns in PostgreSQL"]
-    N --> O["WebSocket broadcast:<br/>recommendations:ready, barricades:ready"]
-    O --> P["schedulePropagationJob() → BullMQ (30s recurring)"]
-
-    P --> Q["Worker reads state from Redis"]
-    Q --> R["Runs tick (spread + decay + interventions)"]
-    R --> S["Publishes propagation:tick →<br/>Redis → WebSocket → Map heatmap"]
-    S -.->|"loop every 30s"| Q
-```
-
----
-
-## 13. Key Algorithms Map
-
-*(Converted from the algorithm summary table in Section 7 of the source doc.)*
-
-```mermaid
-graph LR
-    subgraph "Backend (TypeScript)"
-        ALG1["BFS Congestion Propagation<br/>SimulationService.tick()"]
-        ALG2["Queue Spillback<br/>SimulationService.tick()"]
-        ALG3["Multi-Event Gridlock Merge<br/>propagation.worker.ts"]
-        ALG4["Severity-Weighted Fleet Allocation<br/>recommendation.service.ts"]
-        ALG5["Graph-Walk Diversion Routing<br/>diversion.service.ts"]
-    end
-
-    subgraph "ML Service (Python)"
-        ALG6["M/M/c/K Queueing<br/>queue_model.py"]
-        ALG7["Tandem Queue Spillback<br/>queue_model.py"]
-        ALG8["Conformal Prediction Intervals<br/>predict.py"]
-        ALG9["Prophet Anomaly Detection<br/>anomaly.py"]
-        ALG10["Haversine Fingerprinting<br/>fingerprint.py"]
-        ALG11["Greedy Knapsack Deployment<br/>queue_model.py"]
-    end
-```
-
-
----
-
-
-
-# Users
-
-## 1. Controller
-
-Traffic command center operators responsible for:
-
-* Monitoring traffic conditions
-* Managing events
-* Deploying fleet members
-* Placing barricades
-* Viewing congestion heatmaps
-* Interacting with the AI assistant
-
-## 2. Fleet Member
-
-On-ground personnel responsible for:
-
-* Receiving dispatch instructions
-* Viewing assigned routes
-* Reporting road conditions
-* Updating barricade status
-* Sending incident updates
-
----
-
-# Features
-
-## 1. Role-Based Access Control (RBAC)
-
-### Controller
-
-* Create and manage events
-* View analytics and predictions
-* Dispatch fleets
-* Place barricades
-* Access AI chatbot
-* View heatmaps and simulations
-
-### Fleet Member
-
-* View assignments
-* Update task status
-* Report incidents
-* Share real-time updates
-
----
-
-## 2. Ambient AI Engine
-
-Continuously processes:
-
-* Historical traffic data
-* Event information
-* Fleet updates
-* Real-time traffic signals
-* Incident reports
-
-Capabilities:
-
-* Background traffic monitoring
-* Dynamic congestion prediction
-* Automatic intervention recommendations
-* Continuous learning from new events
-
----
-
-## 3. Congestion Propagation Engine
-
-Simulates how traffic congestion spreads across the road network.
-
-### Heatmap Generation
-
-Displays:
-
-🟢 Low congestion
-
-🟡 Medium congestion
-
-🔴 Severe congestion
-
-Predictions for:
-
-* 5 minutes
-* 15 minutes
-* 30 minutes
-
----
-
-### Barricade Placement Optimizer
-
-Recommends:
-
-* Optimal barricade locations
-* Required number of barricades
-* Activation timings
-
-Objective:
-
-Reduce congestion spillover and improve traffic flow.
-
----
-
-### Fleet Dispatch Engine
-
-Recommends:
-
-* Number of fleet members required
-* Deployment locations
-* Priority intervention zones
-* Dynamic reassignment during incidents
-
----
-
-## 4. Planned and Unplanned Event Management
-
-### Planned Events
-
-* Festivals
-* Sports events
-* Political rallies
-* Concerts
-* Construction activities
-
-### Unplanned Events
-
-* Accidents
-* Sudden gatherings
-* Protests
-* Emergency road closures
-
-The system automatically adjusts recommendations based on event type and severity.
-
----
-
-## 5. Time-Based Forecasting
-
-Supports traffic forecasting at multiple horizons:
-
-* Real-time
-* +5 minutes
-* +15 minutes
-* +30 minutes
-* Event start and end windows
-
-Predictions include:
-
-* Congestion score
-* Expected delays
-* Affected roads
-* Resource requirements
-
----
-
-## 6. AI Chatbot for Planned Events
-
-Natural language interface for controllers.
-
-Examples:
-
-> How many fleet members are required for tomorrow's concert?
-
-> Which roads will be affected by the cricket match?
-
-> What happens if it starts raining during the event?
-
-> Suggest diversion plans for the festival.
-
-Capabilities:
-
-* Event analysis
-* Scenario simulation
-* Resource recommendations
-* Explainable predictions
-
----
-
-# Concise System Architecture
-
-```text
-                      ┌──────────────────────┐
-                      │   Controller UI      │
-                      └──────────┬───────────┘
-                                 │
-                      ┌──────────▼───────────┐
-                      │   React + Vite App   │
-                      └──────────┬───────────┘
-                                 │
-                   WebSocket (Real-Time Updates)
-                                 │
-              ┌──────────────────┴──────────────────┐
-              │                                     │
-   ┌──────────▼──────────┐              ┌──────────▼──────────┐
-   │   API Services      │              │   AI Chat Service   │
-   │      (TS)           │              │     LangChain       │
-   └──────────┬──────────┘              └──────────┬──────────┘
-              │                                     │
-              └──────────────┬──────────────────────┘
-                             │
-                  ┌──────────▼───────────┐
-                  │ Ambient AI Engine    │
-                  │ Congestion Engine    │
-                  │ Dispatch Engine      │
-                  │ Barricade Engine     │
-                  └──────────┬───────────┘
-                             │
-          ┌──────────────────┼──────────────────┐
-          │                  │                  │
- ┌────────▼───────┐  ┌────────▼───────┐  ┌──────▼───────┐
- │ PostgreSQL     │  │ Redis          │  │ PGVector     │
- │ Events         │  │ Cache          │  │ Embeddings   │
- │ Users          │  │ Sessions       │  │ Knowledge    │
- │ Traffic Data   │  │ Queues         │  │ Event Docs   │
- └────────┬────────┘  └────────┬───────┘  └──────────────┘
-          │                   │
-          │            ┌──────▼──────┐
-          │            │   BullMQ    │
-          │            │ Background  │
-          │            │ Predictions │
-          │            │ Simulations │
-          │            └─────────────┘
-```
-
----
-
-# Tech Stack
-
-## Frontend
-
-* React (Vite)
-* TypeScript
-* WebSockets
-
-## Backend
-
-* TypeScript APIs
-* Redis
-* BullMQ
-
-## Database
-
-* PostgreSQL
-* PGVector
-
-## AI & Intelligence
-
-* LangChain
-* Ambient AI Engine
-* Congestion Propagation Simulator
-* Recommendation Engine
-
----
-
-# Core Workflow
-
-```text
-Event Created
-      ↓
-Traffic Forecast Generated
-      ↓
-Congestion Propagation Simulation
-      ↓
-Heatmap Generation
-      ↓
-Barricade Recommendation
-      ↓
-Fleet Dispatch Recommendation
-      ↓
-Real-Time Monitoring
-      ↓
-AI Chat Assistance
-      ↓
-Post-Event Learning
-```
-
----
-
-# Vision
-
-GridLock aims to become an AI-powered traffic command platform capable of forecasting, simulating, and mitigating event-driven congestion through intelligent recommendations and real-time decision support.
