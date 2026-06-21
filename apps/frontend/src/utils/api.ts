@@ -191,7 +191,7 @@ export async function getEventBarricades(id: string): Promise<any[]> {
 }
 
 export function createWebSocket(): WebSocket {
-  const wsUrl = API_BASE.replace(/^http/, 'ws')
+  const wsUrl = `${API_BASE}/api`.replace(/^http/, 'ws')
   return new WebSocket(wsUrl)
 }
 
