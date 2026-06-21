@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { FileText } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import type { PlanEventPayload, PlannedEvent } from '../../types'
 import EventList from '../events/EventList'
 import PlanEventForm from '../events/PlanEventForm'
+import CircularPipeline from './CircularPipeline'
 
 interface ControlPanelProps {
   loading: boolean
@@ -30,6 +32,18 @@ export default function ControlPanel({
   onCloseEvent,
 }: ControlPanelProps) {
   const navigate = useNavigate()
+  const [showPipeline, setShowPipeline] = useState(false)
+  const [autoStartPipeline, setAutoStartPipeline] = useState(false)
+
+  useEffect(() => {
+    if (loading) {
+      const timer = setTimeout(() => {
+        setShowPipeline(true)
+        setAutoStartPipeline(true)
+      }, 0)
+      return () => clearTimeout(timer)
+    }
+  }, [loading])
 
   const handleEventSelect = (ev: PlannedEvent) => {
     onEventSelect(ev)
@@ -47,9 +61,24 @@ export default function ControlPanel({
       transition={{ duration: 0.4, ease: [0.25, 0.4, 0.25, 1], delay: 0.15 }}
       className="flex h-full w-[360px] shrink-0 flex-col overflow-hidden border-l border-border bg-card/50 backdrop-blur-sm"
     >
-      <div className="shrink-0 border-b border-border px-5 py-3.5">
-        <h2 className="text-sm font-bold tracking-tight text-foreground">Control Panel</h2>
-        <p className="text-[11px] text-muted-foreground mt-0.5">Plan events & dispatch resources</p>
+      <div className="shrink-0 border-b border-border px-5 py-3.5 flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-bold tracking-tight text-foreground">Control Panel</h2>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Plan events & dispatch resources
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 text-[10px] px-2 bg-sky-950/30 text-sky-400 border-sky-800/50 hover:bg-sky-900/50"
+          onClick={() => {
+            setAutoStartPipeline(false)
+            setShowPipeline(true)
+          }}
+        >
+          View Pipeline
+        </Button>
       </div>
 
       <ScrollArea className="flex-1 h-full">
@@ -108,6 +137,12 @@ export default function ControlPanel({
           </motion.section>
         </div>
       </ScrollArea>
+
+      <CircularPipeline
+        isOpen={showPipeline}
+        onClose={() => setShowPipeline(false)}
+        autoStart={autoStartPipeline}
+      />
     </motion.aside>
   )
 }
