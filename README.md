@@ -265,25 +265,14 @@ graph TD
 
 Rather than a simple training loop, the GridLock ML prediction engine executes a highly sophisticated, multi-stage pipeline for every incoming event. 
 
-| Stage | Component | Description | Key Details |
-|:---|:---|:---|:---|
-| **1** | **Feature Engineering** | Transforms raw event data into a standardized feature matrix. | Spatial `Encoders`, Target & WOE Encoding, PCA, Interaction terms. |
-| **2** | **Model Selection & Inference** | Evaluates artifact format and routes to the appropriate model. | **Tournament**: Tuned RandomForest<br>**Legacy**: LGB + CatBoost blend. |
-| **3** | **Inverse Transformation** | Translates stable logarithmic predictions back to real minutes. | `log1p` → `expm1` → `duration_mins`. |
-| **4** | **Severity & Confidence** | Synthesizes an index and penalizes uncertainty. | **Severity**: Normalizes event/network stats.<br>**Confidence**: Ensemble variance penalty. |
-| **5** | **Uncertainty Calibration** | Computes rigorous prediction bounds via Conformal Intervals. | Cascades: Corridor → Severity → Global fallback. |
-| **6** | **Explainability** | Retrieves statistically similar historical precedents via KNN. | Matches on haversine distance, hour of day, and cause. |
-
-### Pipeline Outputs & Metrics
-
-| Stage | Metric / Output Generated |
-|---|---|
-| **1. Feature Engineering** | `X_full` (Standardized Feature Matrix) |
-| **2. Core Inference** | `log_duration` (Raw ensemble prediction) |
-| **3. Inverse Transformation**| `duration_mins` (Predicted event duration in minutes) |
-| **4. Severity & Confidence** | `severity_score` (0-100 index), `confidence` (Percentage %) |
-| **5. Uncertainty Calibration** | `lower_bound_mins`, `upper_bound_mins` (Rigorous confidence interval) |
-| **6. Explainability** | `similar_events` (Array of K-nearest historical precedents) |
+| Stage | Component | Description | Key Details | Output / Metric |
+|:---|:---|:---|:---|:---|
+| **1** | **Feature Engineering** | Transforms raw event data into a standardized feature matrix. | Spatial `Encoders`, Target & WOE Encoding, PCA, Interaction terms. | `X_full` (Standardized Feature Matrix) |
+| **2** | **Model Selection & Inference** | Evaluates artifact format and routes to the appropriate model. | **Tournament**: Tuned RandomForest<br>**Legacy**: LGB + CatBoost blend. | `log_duration` (Raw ensemble prediction) |
+| **3** | **Inverse Transformation** | Translates stable logarithmic predictions back to real minutes. | `log1p` → `expm1` → `duration_mins`. | `duration_mins` (Predicted event duration in minutes) |
+| **4** | **Severity & Confidence** | Synthesizes an index and penalizes uncertainty. | **Severity**: Normalizes event/network stats.<br>**Confidence**: Ensemble variance penalty. | `severity_score` (0-100 index), `confidence` (Percentage %) |
+| **5** | **Uncertainty Calibration** | Computes rigorous prediction bounds via Conformal Intervals. | Cascades: Corridor → Severity → Global fallback. | `lower_bound_mins`, `upper_bound_mins` (Rigorous confidence interval) |
+| **6** | **Explainability** | Retrieves statistically similar historical precedents via KNN. | Matches on haversine distance, hour of day, and cause. | `similar_events` (Array of K-nearest precedents) |
 
 ### ML Service Endpoints
 
