@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 
+import { generateAmbientUpdate } from '../services/ambient.service'
 import { generateBarricadePlan } from '../services/barricade.service'
 import { findConflicts } from '../services/conflict.service'
 import { generateDiversionPlan } from '../services/diversion.service'
@@ -395,6 +396,9 @@ export const planEvent = async (req: Request, res: Response) => {
     const eventId = insertResult.rows[0].id
     console.log(`[Plan] Created planned event ${eventId}: ${category} on ${corridor}`)
 
+    await publishWsEvent('event:new', { eventId, type, category, name, lat, lon })
+    generateAmbientUpdate('new_incident', { eventId, type, category, name, lat, lon })
+
     // 2. ML Prediction
     const mlResult = await callMLPredict({
       start_datetime,
@@ -435,6 +439,17 @@ export const planEvent = async (req: Request, res: Response) => {
     console.log(
       `[Plan] Anomaly: score=${anomalyResult.anomaly_score}, label=${anomalyResult.anomaly_label}`,
     )
+
+    if (anomalyResult.anomaly_label === 'severe') {
+      await publishWsEvent('event:anomaly', { eventId, anomaly_score: anomalyResult.anomaly_score })
+      generateAmbientUpdate('severe_anomaly', {
+        eventId,
+        name,
+        corridor,
+        anomaly_score: anomalyResult.anomaly_score,
+        duration: mlResult.duration_mins,
+      })
+    }
 
     // 4. Propagation Forecast
     const propagationForecast = runPropagationForecast(
@@ -614,7 +629,7 @@ export const planEvent = async (req: Request, res: Response) => {
 
     const plannedEvent = updateResult.rows[0]
 
-    // Note: Fleet Assignments are no longer auto-persisted here. 
+    // Note: Fleet Assignments are no longer auto-persisted here.
     // They are proposed in the fleetPlan and the controller must manually dispatch them.
 
     // 8c. Persist Barricades
@@ -636,6 +651,18 @@ export const planEvent = async (req: Request, res: Response) => {
         ],
       )
     }
+
+    await publishWsEvent('recommendations:ready', {
+      eventId,
+      event: plannedEvent,
+      recommendation: fleetPlan,
+    })
+
+    await publishWsEvent('barricades:ready', {
+      eventId,
+      barricades: barricadePlan.barricades,
+      rationale: barricadePlan.rationale,
+    })
 
     // 9. Schedule propagation simulation (runs on future timestamp)
     await schedulePropagationSafe(
@@ -723,6 +750,9 @@ export const createEvent = async (req: Request, res: Response) => {
     const result = await query(insertQuery, insertValues)
     const eventId = result.rows[0].id
 
+    await publishWsEvent('event:new', { eventId, type, category, name, lat, lon })
+    generateAmbientUpdate('new_incident', { eventId, type, category, name, lat, lon })
+
     // 2. Call ML Endpoint
     const mlResults = await callMLPredict(req.body)
 
@@ -789,6 +819,12 @@ export const createEvent = async (req: Request, res: Response) => {
         eventName: activeEvent.name,
         conflicts,
         fleetReallocation: { claimed: fairCount, pool: availableFleet.length },
+      })
+      generateAmbientUpdate('resource_conflict', {
+        eventName: activeEvent.name,
+        conflictCount: conflicts.length,
+        claimedFleet: fairCount,
+        availablePool: availableFleet.length,
       })
     }
 
@@ -938,6 +974,9 @@ export const updateEvent = async (req: Request, res: Response) => {
 
     // If event is resolved or closed, free up personnel and assignments
     if (status === 'resolved' || status === 'closed') {
+      await publishWsEvent('event:resolved', { eventId: id, status, name: updatedEvent.name })
+      generateAmbientUpdate('incident_resolved', { eventId: id, status, name: updatedEvent.name })
+
       // Free up personnel
       await query(
         `UPDATE users 
@@ -1123,12 +1162,18 @@ export const updateAssignmentStatus = async (req: Request, res: Response) => {
       }
     }
 
+    const userResult = await query(`SELECT name FROM users WHERE id = $1`, [
+      updatedAssignment.user_id,
+    ])
+    const userName = userResult.rows[0]?.name || 'Officer'
+
     // Broadcast update over WebSockets
     await publishWsEvent('fleet:status_updated', {
       eventId,
       assignmentId,
       status,
       junctionName: updatedAssignment.junction_name,
+      user_name: userName,
     })
 
     res.json({

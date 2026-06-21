@@ -116,10 +116,15 @@ export const updateMyAssignmentStatus = async (req: AuthRequest, res: Response) 
       status === 'en_route' ? 'dispatched' : status === 'on_site' ? 'on_site' : 'available'
     await query(`UPDATE users SET status = $1 WHERE id = $2`, [userStatus, userId])
 
+    const userResult = await query(`SELECT name FROM users WHERE id = $1`, [userId])
+    const userName = userResult.rows[0]?.name || 'Officer'
+
     // Broadcast status update
     await publishWsEvent('fleet:status_updated', {
       assignment_id: id,
       user_id: userId,
+      user_name: userName,
+      junctionName: updateResult.rows[0]?.junction_name,
       status,
     })
 

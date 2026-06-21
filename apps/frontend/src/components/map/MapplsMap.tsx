@@ -72,15 +72,60 @@ const getFleetMarkerHtml = (status: string) => {
   `
 }
 
-const getBarricadeMarkerHtml = (status: string) => {
+const getBarricadeMarkerHtml = (
+  status: string,
+  type: string = 'hard_closure',
+  purpose: string = '',
+  activate_at: string = '',
+) => {
   const isConfirmed = status === 'confirmed'
-  const color = isConfirmed ? '#f97316' : '#6b7280'
-  const shadow = isConfirmed ? 'box-shadow: 0 0 10px #f97316;' : ''
-  const border = isConfirmed ? 'border: 2px solid white;' : 'border: 2px dashed #9ca3af;'
-  const opacity = isConfirmed ? '1.0' : '0.85'
+  const isDemobilized = status === 'demobilized'
+
+  const color = isDemobilized
+    ? '#22c55e'
+    : isConfirmed
+      ? type === 'hard_closure'
+        ? '#ef4444'
+        : '#3b82f6'
+      : '#6b7280'
+  const shadow = isDemobilized
+    ? 'box-shadow: 0 0 10px #22c55e;'
+    : isConfirmed
+      ? `box-shadow: 0 0 10px ${color};`
+      : ''
+  const border =
+    isDemobilized || isConfirmed ? 'border: 2px solid white;' : 'border: 2px dashed #9ca3af;'
+  const opacity = isDemobilized ? '0.85' : isConfirmed ? '1.0' : '0.85'
+
+  const getIcon = () => {
+    if (isDemobilized) {
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
+    }
+    if (type === 'hard_closure') {
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/><path d="M2 6v4a2 2 0 0 0 2 2h4"/></svg>`
+  }
+
+  const tooltipHtml = purpose
+    ? `
+    <div class="absolute bottom-full mb-2 hidden group-hover:block w-48 bg-card border border-border p-2.5 rounded-lg shadow-xl z-50 text-left pointer-events-none">
+      <div class="text-[10px] font-bold text-foreground capitalize mb-1 flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full" style="background-color: ${color}"></span>
+        ${type.replace(/_/g, ' ')}
+      </div>
+      <div class="text-[9px] text-muted-foreground font-mono mb-1.5">
+        ${isDemobilized ? 'Safe to Lift' : `Activate: ${activate_at}`}
+      </div>
+      <div class="text-[10px] text-muted-foreground leading-snug">
+        ${purpose}
+      </div>
+    </div>
+  `
+    : ''
 
   return `
-    <div style="
+    <div class="group relative" style="
       display: flex; 
       align-items: center; 
       justify-content: center; 
@@ -92,8 +137,10 @@ const getBarricadeMarkerHtml = (status: string) => {
       ${shadow}
       opacity: ${opacity};
       color: white;
+      cursor: help;
     ">
-      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l4 10H2z"/><path d="M6 22H18l-2-10H8z"/><path d="M12 2v20"/></svg>
+      ${getIcon()}
+      ${tooltipHtml}
     </div>
   `
 }
@@ -290,7 +337,7 @@ export default function MapplsMap({
       const isRecovered = ev.status === 'resolved' || ev.status === 'closed'
       const isMissionAccomplished = assignments?.some((a) => a.status === 'completed')
       const isSelected = selectedEvent?.id === ev.id
-      const evColor = isMissionAccomplished ? '#10b981' : isRecovered ? '#6b7280' : getEventColor(ev)
+      const evColor = isRecovered ? '#6b7280' : getEventColor(ev)
       const categoryIcon = getCategoryIconSvg(ev.category || '')
 
       const size = isSelected ? 42 : 34
@@ -376,7 +423,7 @@ export default function MapplsMap({
         ? maxNodeIntensity
         : (selectedEvent?.severity_score ?? pipeline?.prediction?.severity_score ?? 0.5)
 
-    const impactColor = isMissionAccomplished ? '#10b981' : isRecovered ? '#6b7280' : getScoreColor(currentSeverity)
+    const impactColor = isRecovered ? '#6b7280' : getScoreColor(currentSeverity)
 
     if (isRecovered && !isMissionAccomplished) {
       if (map.getSource(sourceId)) {
@@ -546,8 +593,14 @@ export default function MapplsMap({
     if (barricades && barricades.length > 0) {
       barricades.forEach((barricade) => {
         if (barricade.lat && barricade.lon) {
+          const status = isRecovered ? 'demobilized' : barricade.status
           const barMarker = addMarker(barricade.lat, barricade.lon, {
-            html: getBarricadeMarkerHtml(barricade.status),
+            html: getBarricadeMarkerHtml(
+              status,
+              barricade.type,
+              barricade.purpose,
+              barricade.activate_at,
+            ),
           })
           if (barMarker) dispatchOverlaysRef.current.push(barMarker)
         }
@@ -555,8 +608,14 @@ export default function MapplsMap({
     } else if (pipeline?.barricade_plan?.barricades) {
       pipeline.barricade_plan.barricades.forEach((barricade) => {
         if (barricade.lat && barricade.lon) {
+          const status = isRecovered ? 'demobilized' : 'recommended'
           const barMarker = addMarker(barricade.lat, barricade.lon, {
-            html: getBarricadeMarkerHtml('recommended'),
+            html: getBarricadeMarkerHtml(
+              status,
+              barricade.type,
+              barricade.purpose,
+              barricade.activate_at,
+            ),
           })
           if (barMarker) dispatchOverlaysRef.current.push(barMarker)
         }
