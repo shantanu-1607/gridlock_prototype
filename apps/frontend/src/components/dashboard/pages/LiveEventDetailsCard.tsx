@@ -79,7 +79,15 @@ const getFleetStatusBadge = (status: string) => {
   }
 }
 
-const getBarricadeStatusBadge = (status: string) => {
+const getBarricadeStatusBadge = (status: string, isDemobilized?: boolean) => {
+  if (isDemobilized) {
+    return (
+      <span className="flex items-center gap-1 text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded-md border border-green-500/25">
+        SAFE TO DEMOBILIZE
+      </span>
+    )
+  }
+
   switch (status) {
     case 'confirmed':
       return (
@@ -459,7 +467,9 @@ export default function LiveEventDetailsCard({
                       {barricade.rule_source.replace(/_/g, ' ')}
                     </span>
                   </div>
-                  <div className="shrink-0 ml-2">{getBarricadeStatusBadge(barricade.status)}</div>
+                  <div className="shrink-0 ml-2">
+                    {getBarricadeStatusBadge(barricade.status, isRecovered)}
+                  </div>
                 </div>
               ))}
             </div>

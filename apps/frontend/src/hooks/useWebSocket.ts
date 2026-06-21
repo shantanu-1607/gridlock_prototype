@@ -10,6 +10,7 @@ export function useWebSocket() {
   const [connected, setConnected] = useState(false)
   const [lastTick, setLastTick] = useState<PropagationTick | null>(null)
   const [lastFleetLocation, setLastFleetLocation] = useState<any>(null)
+  const warnedNodesRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null
@@ -36,6 +37,15 @@ export function useWebSocket() {
             const msg = JSON.parse(event.data)
             if (msg.event === 'propagation:tick') {
               setLastTick(msg.data)
+              const activeNodes = msg.data.activeNodes || {}
+              Object.entries(activeNodes).forEach(([nodeId, data]: [string, any]) => {
+                if (data.intensity >= 1.0 && !warnedNodesRef.current.has(nodeId)) {
+                  warnedNodesRef.current.add(nodeId)
+                  toast.error('🚨 Spillover Alert: A junction queue has breached capacity.', {
+                    duration: 8000,
+                  })
+                }
+              })
             } else if (msg.event === 'controller:fleet_locations') {
               setLastFleetLocation(msg.data)
             } else if (msg.event === 'fleet:status_updated') {
@@ -57,6 +67,26 @@ export function useWebSocket() {
                   },
                 )
               }
+            } else if (msg.event === 'event:conflict') {
+              toast.warning(`Resource Conflict Detected: ${msg.data.eventName}`, { duration: 6000 })
+            } else if (msg.event === 'recommendations:ready') {
+              toast.success(`AI Dispatch Plan Ready`, { duration: 5000 })
+            } else if (msg.event === 'barricades:ready') {
+              toast.success(`AI Barricade Plan Ready`, { duration: 5000 })
+            } else if (msg.event === 'fleet:dispatched') {
+              toast.info(`${msg.data.user_name || 'Officer'} dispatched to ${msg.data.junction}`, {
+                duration: 5000,
+              })
+            } else if (msg.event === 'barricade:status_updated') {
+              if (msg.data.status === 'confirmed') {
+                toast.success(`Barricade active at ${msg.data.junctionName}`, { duration: 5000 })
+              }
+            } else if (msg.event === 'ambient:update') {
+              toast(msg.data.message, {
+                icon: '✨',
+                description: 'Ambient Intel',
+                duration: 8000,
+              })
             }
           } catch {
             /* ignore parse errors */

@@ -2,8 +2,10 @@ import { Worker } from 'bullmq'
 import dotenv from 'dotenv'
 import Redis from 'ioredis'
 
+import { generateAmbientUpdate } from '../services/ambient.service'
 import { graphService } from '../services/graph.service'
 import { Interventions, PropagationState, simulationService } from '../services/simulation.service'
+import { query } from '../utils/db'
 
 dotenv.config()
 
@@ -132,6 +134,26 @@ export const propagationWorker = new Worker(
     })
 
     await pubSubRedis.publish('gridlock:events', payload)
+
+    // Send a periodic SITREP (ambient AI update) every 4 ticks (2 minutes)
+    if (state.currentTick > 0 && state.currentTick % 4 === 0) {
+      try {
+        const eventRes = await query('SELECT name, category FROM events WHERE id = $1', [eventId])
+        if (eventRes.rows.length > 0) {
+          const eventInfo = eventRes.rows[0]
+          const maxIntensity = Math.max(...Object.values(state.activeNodes).map((n) => n.intensity))
+          generateAmbientUpdate('periodic_sitrep', {
+            eventName: eventInfo.name,
+            category: eventInfo.category,
+            activeNodesCount: Object.keys(state.activeNodes).length,
+            maxIntensity: maxIntensity.toFixed(2),
+            timeActiveMins: state.currentTick * 0.5,
+          })
+        }
+      } catch (e) {
+        console.error('[Worker] Error fetching event for periodic update', e)
+      }
+    }
 
     return {
       success: true,
