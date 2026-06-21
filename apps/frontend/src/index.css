@@ -38,7 +38,6 @@
   --color-red: #ef4444;
   --color-critical: #dc2626;
 
-  /* Custom Animations */
   --animate-fade-in: fade-in 0.4s ease-out;
   --animate-slide-up: slide-up 0.5s ease-out;
   --animate-slide-in-left: slide-in-left 0.4s ease-out;
@@ -47,6 +46,7 @@
   --animate-shake: shake 0.5s cubic-bezier(.36,.07,.19,.97);
   --animate-scale-in: scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   --animate-float: float 6s ease-in-out infinite;
+  --animate-grid: grid 15s linear infinite;
 }
 
 /* Light theme variables (Professional SaaS Look) */
@@ -58,7 +58,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.45 0.15 250); /* Blue */
+  --primary: oklch(0.47 0.19 285); /* Purple/Violet */
   --primary-foreground: oklch(0.98 0 0);
   --secondary: oklch(0.95 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -80,8 +80,8 @@
   --card-foreground: oklch(0.98 0 0);
   --popover: oklch(0.15 0 0);
   --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.6 0.15 250);
-  --primary-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.65 0.2 285);
+  --primary-foreground: oklch(0.1 0 0);
   --secondary: oklch(0.2 0 0);
   --secondary-foreground: oklch(0.98 0 0);
   --muted: oklch(0.2 0 0);
@@ -107,8 +107,8 @@
 
 /* Base resets & animations */
 html, body, #root {
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 ::-webkit-scrollbar { width: 6px; }
@@ -131,3 +131,4 @@ html, body, #root {
 @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); } 20%, 40%, 60%, 80% { transform: translateX(4px); } }
 @keyframes scale-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
+@keyframes grid { 0% { transform: translateY(-50%); } 100% { transform: translateY(0); } }

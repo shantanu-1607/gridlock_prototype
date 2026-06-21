@@ -1,4 +1,5 @@
 /* eslint-disable no-console, react-hooks/set-state-in-effect */
+import { motion } from 'framer-motion'
 import { useCallback, useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 
@@ -292,7 +293,12 @@ export default function AppLayout() {
     <div className="flex h-screen flex-col bg-background">
       <Header wsConnected={connected} activeEvents={activeEvents.length} />
 
-      <div className="flex flex-1 overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+        className="flex flex-1 overflow-hidden"
+      >
         <AppSidebar chatOpen={chatOpen} onChatToggle={() => setChatOpen((prev) => !prev)} />
 
         <main className="relative flex-1 overflow-hidden">
@@ -309,7 +315,7 @@ export default function AppLayout() {
           onEventSelect={handleEventSelect}
           onCloseEvent={handleCloseEvent}
         />
-      </div>
+      </motion.div>
     </div>
   )
 }
