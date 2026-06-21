@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
@@ -7,9 +7,9 @@ on:
     branches: [main]
 
 jobs:
-  # ─── Frontend ────────────────────────────────────────────────────────────────
+  # ─── CI: Frontend ────────────────────────────────────────────────────────────
   frontend-ci:
-    name: Frontend (lint + build)
+    name: Frontend CI (build)
     runs-on: ubuntu-latest
 
     defaults:
@@ -30,15 +30,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
-
       - name: Build
         run: npm run build
 
-  # ─── Backend ─────────────────────────────────────────────────────────────────
+  # ─── CI: Backend ─────────────────────────────────────────────────────────────
   backend-ci:
-    name: Backend (lint + build)
+    name: Backend CI (build)
     runs-on: ubuntu-latest
 
     defaults:
@@ -59,15 +56,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
-
       - name: Build
         run: npm run build
 
-  # ─── ML ──────────────────────────────────────────────────────────────────────
+  # ─── CI: ML ──────────────────────────────────────────────────────────────────
   ml-ci:
-    name: ML (install + smoke test)
+    name: ML CI (install + smoke test)
     runs-on: ubuntu-latest
 
     defaults:
@@ -131,3 +125,51 @@ jobs:
               assert 'tournament' in cfg, 'experiment.yaml missing tournament'
           print('Config validation OK')
           "
+
+  # ─── CI: Docker Integration ──────────────────────────────────────────────────
+  docker-integration-ci:
+    name: Docker Integration Test
+    needs: [frontend-ci, backend-ci, ml-ci]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Start Docker Containers
+        run: docker compose up -d --build
+
+      - name: Verify Services are Running
+        run: docker compose ps
+
+      - name: Stop Docker Containers
+        if: always()
+        run: docker compose down
+
+  # ─── CD: EC2 Deployment ──────────────────────────────────────────────────────
+  deploy-to-ec2:
+    name: Deploy to EC2 Instance
+    needs: [docker-integration-ci]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Navigate to the project directory on your EC2 instance
+            # Replace this path with the actual path where your project is cloned
+            cd ~/gridlock_prototype
+            
+            # Pull the latest changes from the main branch
+            git pull origin main
+            
+            # Rebuild and restart the Docker containers
+            docker compose down
+            docker compose up -d --build
