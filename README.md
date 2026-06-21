@@ -251,13 +251,10 @@ The ML service (FastAPI, Python) exposes 9 endpoints consumed by the backend.
 graph TD
     A["Input Event"] --> B["Feature Engineering<br/>(Encoders + FeaturePipeline F4/F5)"]
     B --> C{"Artifact Format?"}
-    C -- "Champion" --> D["Champion Model<br/>(any sklearn/LGB/XGB)"]
+    C -- "Tournament Winner" --> D["Tuned RandomForest<br/>(selected via tournament)"]
     C -- "Legacy" --> E["LGB multi-seed + CatBoost<br/>blend_weight ensemble"]
-    D --> F{"Regime Models?"}
-    F -- "Enabled" --> G["Soft-blend: sigmoid routing<br/>short_model ↔ long_model"]
-    F -- "Disabled" --> H["Champion prediction only"]
-    G --> I["log1p → expm1 → duration_mins"]
-    H --> I
+    D --> I["log1p → expm1 → duration_mins"]
+    E --> I
     E --> I
     I --> J["Severity Score Engineering"]
     I --> K["Conformal Interval<br/>(corridor → severity → global fallback)"]
@@ -265,11 +262,50 @@ graph TD
     I --> M["Fingerprint Search<br/>(haversine + hour + cause similarity)"]
 ```
 
+### ML Prediction Pipeline Architecture
+
+Rather than a simple training loop, the GridLock ML prediction engine executes a highly sophisticated, multi-stage pipeline for every incoming event. This pipeline progresses from raw ingestion to calibrated uncertainty and explainable outputs:
+
+1. **Feature Engineering & Transformation**
+   - The raw event data is pushed through spatial `Encoders`. It leverages advanced Feature Sets such as **Smoothed Mean Target Encoding & WOE Encoding** alongside **Polynomial, PCA, and Interaction Terms** to capture complex data relationships.
+   - Generates derived topological features, road capacity indexes, and cyclical temporal encodings.
+
+2. **Model Selection & Core Inference**
+   - The pipeline checks the registered artifact format to route the request:
+     - **Tournament Winner Branch:** Utilizes the primary registered model (a tuned RandomForest, selected via a model tournament).
+     - **Legacy Branch:** Falls back to a heavily tested multi-seed LightGBM + CatBoost blended ensemble.
+
+3. **Target Inverse Transformation**
+   - The core models predict in a stabilized logarithmic space. The outputs are passed through an `expm1` (exponential minus 1) function to translate the `log1p` outputs back into real-world minutes (`duration_mins`).
+
+4. **Severity Engineering & Confidence Scoring**
+   - **Severity Score:** Synthesizes the predicted duration, event type, and the spatial properties of the network into a normalized severity index.
+   - **Dynamic Confidence:** Penalizes the certainty score based on the ensemble's internal variance; high disagreement among the underlying trees/models strictly reduces the reported confidence.
+
+5. **Uncertainty Calibration (Conformal Intervals)**
+   - Computes rigorous upper and lower prediction bounds to guarantee mathematical coverage limits.
+   - It uses a cascading fallback hierarchy: attempting granular corridor-level calibration first, falling back to severity-bucket calibration, and finally a global fallback if data is scarce.
+
+6. **Explainability (Spatial Fingerprinting)**
+   - Projects the active event into a multidimensional latent space utilizing haversine spatial distance, temporal proximity (hour of day), and cause similarity.
+   - Performs a K-Nearest Neighbors search to retrieve the most statistically similar historical events, providing human-readable context and precedent to traffic operators.
+
+### Pipeline Outputs & Metrics
+
+| Stage | Metric / Output Generated |
+|---|---|
+| **1. Feature Engineering** | `X_full` (Standardized Feature Matrix) |
+| **2. Core Inference** | `log_duration` (Raw ensemble prediction) |
+| **3. Inverse Transformation**| `duration_mins` (Predicted event duration in minutes) |
+| **4. Severity & Confidence** | `severity_score` (0-100 index), `confidence` (Percentage %) |
+| **5. Uncertainty Calibration** | `lower_bound_mins`, `upper_bound_mins` (Rigorous confidence interval) |
+| **6. Explainability** | `similar_events` (Array of K-nearest historical precedents) |
+
 ### ML Service Endpoints
 
 | Endpoint | Model / Algorithm | Output |
 |---|---|---|
-| `POST /api/ml/predict` | Champion ensemble + conformal intervals + fingerprinting | duration, severity, confidence, interval, similar events |
+| `POST /api/ml/predict` | A tuned RandomForest, selected via a model tournament + conformal intervals + fingerprinting | duration, severity, confidence, interval, similar events |
 | `POST /api/ml/repredict` | Live re-estimation using elapsed time + conformal interval | updated prediction for active events |
 | `POST /api/ml/queue-analysis` | M/M/c/K queueing + tandem corridor analysis | blocking_probability, risk_level, spillover_time |
 | `POST /api/ml/deployment` | Greedy knapsack resource allocation | optimized resource deployment plan |
