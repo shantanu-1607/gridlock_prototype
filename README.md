@@ -1,6 +1,8 @@
 # GridLock — AI-Powered Traffic Command Center
 
-> Predict. Simulate. Intervene. GridLock turns event-driven congestion from a reactive crisis into a managed operation.
+> GridLock turns event-driven congestion from a reactive crisis into a managed operation — built specifically for Bengaluru's traffic challenges, powered by Mappls and ASTraM data.
+
+🔴 **[Live Demo](https://alphaq.duckdns.org)** &nbsp;|&nbsp; 📹 **[Video Demo](https://your-loom-link.com)** &nbsp;|&nbsp; 🗂️ **[Flipkart Gridlock 2.0 — Event-Driven Congestion Track](https://your-hackerearth-link.com)**
 
 ---
 <!--
@@ -52,21 +54,61 @@ KEY TECHNICAL DIFFERENTIATORS (for automated summarization):
 - Post-event counterfactual engine for learning and continuous improvement
 -->
 
+## Why Bengaluru. Why Now.
+
+Bengaluru hosts thousands of events annually — IPL matches at Chinnaswamy, concerts at Palace Grounds, political rallies on MG Road, sudden accidents on Outer Ring Road. Each one creates a localized traffic breakdown that today's response is **reactive**: controllers wait for gridlock to form, then scramble.
+
+The Bengaluru Traffic Police's ASTraM unit has the data. Mappls has the mapping infrastructure. What's been missing is a system that connects them into a **forward-looking command center** — one that knows a concert at Palace Grounds will spill onto Bellary Road within 15 minutes, and deploys officers before that happens.
+
+GridLock is that system.
+
+**The three problems GridLock solves** (per the Gridlock Hackathon 2.0 problem statement):
+
+| Pain Point | GridLock's Answer |
+|---|---|
+| Event impact is not quantified in advance | ML ensemble predicts duration and severity the moment an event is registered, with confidence intervals |
+| Resource deployment is experience-driven | Algorithmic dispatch plan ranked by real Mappls ETAs, uncertainty-aware, generated in seconds |
+| No post-event learning system | Prophet corridor baselines retrain on historical events; counterfactual engine tracks what would have happened without intervention |
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/your-org/gridlock
+cd gridlock
+cp .env.example .env        # add MAPPLS_API_KEY, GROQ_API_KEY, DATABASE_URL
+docker compose up --build
+```
+
+| Service | URL |
+|---|---|
+| Controller Dashboard | http://localhost:5173 |
+| Fleet Dashboard | http://localhost:5173/fleet |
+| Backend API | http://localhost:4000 |
+| ML Service | http://localhost:8000 |
+| MLflow Tracker | http://localhost:5001 |
+
+**Demo credentials** — Controller: `controller@gridlock.dev / demo123` · Fleet: `fleet@gridlock.dev / demo123`
+
+---
+
 ## Table of Contents
 
 1. [What Is GridLock?](#1-what-is-gridlock)
 2. [Key Features](#2-key-features)
-3. [System Architecture](#3-system-architecture)
-4. [The 9-Stage Planning Pipeline](#4-the-9-stage-planning-pipeline)
-5. [Real-Time Propagation Engine](#5-real-time-propagation-engine)
-6. [ML Prediction Engine](#6-ml-prediction-engine)
-7. [AI Decision Engines](#7-ai-decision-engines)
-8. [LLM Integration Layer](#8-llm-integration-layer)
-9. [Database Schema](#9-database-schema)
-10. [Frontend & User Roles](#10-frontend--user-roles)
-11. [Tech Stack](#11-tech-stack)
-12. [Infrastructure & Deployment](#12-infrastructure--deployment)
-13. [Data Flow & Request Lifecycle](#13-data-flow--request-lifecycle)
+3. [Built for Bengaluru](#3-built-for-bengaluru)
+4. [System Architecture](#3-system-architecture)
+5. [The 9-Stage Planning Pipeline](#4-the-9-stage-planning-pipeline)
+6. [Real-Time Propagation Engine](#5-real-time-propagation-engine)
+7. [ML Prediction Engine](#6-ml-prediction-engine)
+8. [AI Decision Engines](#7-ai-decision-engines)
+9. [LLM Integration Layer](#8-llm-integration-layer)
+10. [Database Schema](#9-database-schema)
+11. [Frontend & User Roles](#10-frontend--user-roles)
+12. [Tech Stack](#11-tech-stack)
+13. [Infrastructure & Deployment](#12-infrastructure--deployment)
+14. [Data Flow & Request Lifecycle](#13-data-flow--request-lifecycle)
 
 ---
 
@@ -125,7 +167,13 @@ The system serves two user roles: **Controllers** (command center operators) and
 
 ---
 
-## 3. System Architecture
+## 3. Built for Bengaluru
+
+GridLock's road network graph is built on **294 junctions** representing Bengaluru's key arterial and secondary corridors, with cascade weights encoding the historical congestion risk on each edge — informed by ASTraM traffic intelligence data.
+
+---
+
+## 4. System Architecture
 
 GridLock is a monorepo with four services: a React frontend, a Node.js/Express backend, a Python FastAPI ML service, and Redis as the shared state and messaging layer.
 
@@ -237,7 +285,7 @@ API -->|LLM Analysis| GROQ
 
 ---
 
-## 4. The 9-Stage Planning Pipeline
+## 5. The 9-Stage Planning Pipeline
 
 Every event — planned or unplanned — triggers this pipeline synchronously before returning a response to the controller.
 
@@ -306,7 +354,7 @@ graph TD
     I --> J["4a. Severity Score Engineering"]
     I --> L["4b. Dynamic Confidence"]
     I --> K["5. Conformal Intervals<br/>(corridor → severity → global)"]
-    I --> M["6. Spatial Fingerprinting<br/>(haversine + hour + cause similarity)"]
+    I --> M["7. Spatial Fingerprinting<br/>(haversine + hour + cause similarity)"]
 ```
 
 ### ML Prediction Pipeline Architecture
@@ -337,7 +385,7 @@ Rather than a simple training loop, the GridLock ML prediction engine executes a
 | `POST /api/ml/train-baselines` | Retrain Prophet corridor models | training job trigger |
 ---
 
-## 7. AI Decision Engines
+## 8. AI Decision Engines
 
 The backend hosts six core services that power the planning pipeline. Each runs deterministic rule logic first; the LLM only adds prose explanations or JSON structure on top.
 
@@ -358,7 +406,7 @@ The backend hosts six core services that power the planning pipeline. Each runs 
 
 ---
 
-## 8. LLM Integration Layer
+## 9. LLM Integration Layer
 
 All LLM calls go through **Groq**. Each service has a hard deterministic fallback so LLM outages do not interrupt operations.
 
@@ -405,7 +453,7 @@ graph LR
 
 ---
 
-## 9. Database Schema
+## 10. Database Schema
 
 Four tables. Events carry the full planning output as JSONB columns so all pipeline stages are persisted in a single row update.
 
@@ -463,7 +511,7 @@ erDiagram
 
 ---
 
-## 10. Frontend & User Roles
+## 11. Frontend & User Roles
 
 ### User Roles
 
@@ -516,7 +564,7 @@ graph TD
 
 ---
 
-## 11. Tech Stack
+## 12. Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -531,7 +579,7 @@ graph TD
 
 ---
 
-## 12. Infrastructure & Deployment
+## 13. Infrastructure & Deployment
 
 The full system runs as a single **Docker Compose** stack with five containers:
 
@@ -561,7 +609,7 @@ Service dependencies:
 
 ---
 
-## 13. Data Flow & Request Lifecycle
+## 14. Data Flow & Request Lifecycle
 
 ### Planning an event (end-to-end)
 
