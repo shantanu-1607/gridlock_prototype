@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import {
   ArrowRight,
   Clock,
@@ -278,7 +279,22 @@ export default function LiveEventDetailsCard({
   const diversionRationale = event.diversion_plan?.rationale
 
   return (
-    <div className="absolute top-4 right-4 z-[1000] w-96 max-h-[85vh] flex flex-col rounded-2xl border border-border/80 bg-card/90 backdrop-blur-md shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        scale: 1,
+      }}
+      exit={{ opacity: 0, y: 20, scale: 0.95 }}
+      transition={{
+        type: 'spring',
+        stiffness: 300,
+        damping: 25,
+        duration: 0.3,
+      }}
+      className="absolute top-4 right-4 z-[1000] w-96 max-h-[85vh] flex flex-col rounded-2xl border border-border/80 bg-card/90 backdrop-blur-md shadow-2xl overflow-hidden"
+    >
       {/* Header */}
       <div className="p-4 border-b border-border/80 flex items-start justify-between bg-muted/40">
         <div>
@@ -587,6 +603,6 @@ export default function LiveEventDetailsCard({
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

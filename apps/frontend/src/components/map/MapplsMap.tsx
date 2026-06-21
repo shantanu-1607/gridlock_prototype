@@ -392,6 +392,10 @@ export default function MapplsMap({
           <div style="
             width: ${size}px; 
             height: ${size}px; 
+            min-width: ${size}px;
+            min-height: ${size}px;
+            flex-shrink: 0;
+            box-sizing: border-box;
             border-radius: 50%; 
             background-color: ${evColor}; 
             ${glow}

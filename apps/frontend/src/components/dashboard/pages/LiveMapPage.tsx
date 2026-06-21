@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 
@@ -43,17 +44,20 @@ export default function LiveMapPage() {
         liveFleetLocations={liveFleetLocations}
       />
 
-      {selectedEvent && (
-        <LiveEventDetailsCard
-          event={selectedEvent}
-          assignments={selectedEventAssignments}
-          barricades={selectedEventBarricades}
-          loading={loadingDetails}
-          lastTick={lastTick?.eventId === selectedEvent.id ? lastTick : undefined}
-          onClose={() => onEventSelect(null)}
-          onAssignFleet={refetchEventDetails}
-        />
-      )}
+      <AnimatePresence>
+        {selectedEvent && (
+          <LiveEventDetailsCard
+            key="live-event-details"
+            event={selectedEvent}
+            assignments={selectedEventAssignments}
+            barricades={selectedEventBarricades}
+            loading={loadingDetails}
+            lastTick={lastTick?.eventId === selectedEvent.id ? lastTick : undefined}
+            onClose={() => onEventSelect(null)}
+            onAssignFleet={refetchEventDetails}
+          />
+        )}
+      </AnimatePresence>
 
       <div className="absolute right-4 bottom-4 z-[1000] font-mono text-[28px] font-light tracking-wider text-muted-foreground opacity-60">
         {clock.toLocaleTimeString('en-IN', { hour12: false })}
