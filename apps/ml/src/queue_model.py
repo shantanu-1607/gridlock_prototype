@@ -15,8 +15,10 @@ from .logger import get_logger
 
 log = get_logger("gridlock.queue_model")
 
-# Corridor profiles: lanes, capacity (vehicles), baseline arrival rate (veh/min)
-# Derived from Bangalore Traffic Police data for major corridors
+# Corridor profiles: lanes, capacity (vehicles), baseline arrival/service rate (veh/min).
+# These are ILLUSTRATIVE / domain-estimated parameters — NOT derived from the Astram
+# dataset (which records incidents, not traffic-flow rates). Replace with measured flow
+# data per corridor if/when available.
 CORRIDOR_PROFILES = {
     "Mysore Road":       {"lanes": 3, "capacity": 180, "arrival_rate": 40, "service_rate": 45},
     "Tumkur Road":       {"lanes": 3, "capacity": 200, "arrival_rate": 38, "service_rate": 42},

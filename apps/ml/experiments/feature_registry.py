@@ -116,7 +116,12 @@ def _add_geospatial(df_raw, X, y_raw, is_train):
 
 
 def _add_advanced_encodings(df_raw, X, y_raw, is_train):
-    """F4: Advanced categorical encodings (K-fold target encoding, WOE)."""
+    """F4: Advanced categorical encodings (smoothed mean target encoding, WOE).
+
+    NOTE: column names are kept as ``{col}_kfold_target`` for backward compatibility with
+    the deployed champion's feature_names, but the encoder is category_encoders'
+    smoothed mean target encoder — NOT an out-of-fold/K-fold scheme.
+    """
     try:
         from category_encoders import TargetEncoder, WOEEncoder
     except ImportError:
@@ -130,7 +135,10 @@ def _add_advanced_encodings(df_raw, X, y_raw, is_train):
 
         if is_train and y_raw is not None:
             y_log = np.log1p(y_raw)
-            # K-fold target encoding (prevents leakage)
+            # Smoothed mean target encoding, fit on TRAIN only; at inference the test set
+            # uses this train-fit mapping (no test leakage). It is NOT out-of-fold, so it
+            # carries mild in-sample leakage that can widen the train/test gap — the
+            # chronological held-out metrics remain the honest measure.
             te = TargetEncoder(cols=[col], smoothing=10)
             encoded = te.fit_transform(s.to_frame(col), y_log)
             _fitted_state[f"te_{col}"] = te
@@ -264,7 +272,7 @@ FEATURE_SETS: dict[str, FeatureSet] = {
     ),
     "F4_advanced_enc": FeatureSet(
         name="F4_advanced_enc",
-        description="Baseline + K-fold target encoding, WOE encoding",
+        description="Baseline + smoothed mean target encoding, WOE encoding",
         extra_transforms=[_add_advanced_encodings],
     ),
     "F5_interactions": FeatureSet(

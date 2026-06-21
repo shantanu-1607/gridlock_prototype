@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 
+from ..logger import get_logger
 from ..predict import Predictor, find_latest_artifacts
 from ..queue_model import (
     compute_queue_metrics,
@@ -25,6 +27,8 @@ from .schemas import (
 )
 from .service import run_prediction, compute_accuracy
 
+log = get_logger("gridlock.api")
+
 _predictor: Predictor | None = None
 
 
@@ -41,6 +45,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="GridLock ML API", lifespan=lifespan)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Error boundary: log the traceback and return a clean 500 instead of leaking a
+    stack trace, so a malformed/unexpected payload can never crash the service.
+    (HTTPException and Pydantic 422 validation errors keep their own handlers.)"""
+    log.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error", "error": str(exc)},
+    )
 
 
 @app.get("/api/ml/health")
