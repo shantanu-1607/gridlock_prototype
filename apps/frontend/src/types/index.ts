@@ -31,7 +31,7 @@ export interface PipelinePrediction {
   duration_mins: number
   severity_score: number
   severity_label: string
-  confidence: number
+  confidence: number | null
   prediction_interval?: PredictionInterval | null
   confidence_factors?: ConfidenceFactors | null
 }

@@ -1,10 +1,12 @@
 {
   "base_confidence": 0.6302,
-  "residual_std": 93.74,
+  "residual_std": 97.11,
   "champion_model": "stacking_ridge",
   "champion_members": [
     "catboost",
     "random_forest",
     "extra_trees"
-  ]
+  ],
+  "ensemble_std_median": 0.0905,
+  "_note": "ensemble_std_median = median per-prediction std of champion members on held-out (drives dynamic confidence penalty in predict.py). Recompute if the champion changes."
 }

@@ -95,9 +95,13 @@ export default function AppLayout() {
       recommendations: rawGating.recommendations ?? [],
     }
 
+    // Prefer the full prediction detail persisted by migration 007 (real model output);
+    // fall back to scalar columns for events planned before the migration.
+    const confRaw = (ev as any).confidence
+    const durationVal = Number(ev.predicted_duration_mins || (ev as any).duration_mins) || 0
     setPipelineResult({
       prediction: {
-        duration_mins: Number(ev.predicted_duration_mins || (ev as any).duration_mins) || 0,
+        duration_mins: durationVal,
         severity_score: Number(ev.severity_score) || 0,
         severity_label:
           Number(ev.severity_score) > 0.85
@@ -107,11 +111,11 @@ export default function AppLayout() {
               : Number(ev.severity_score) > 0.3
                 ? 'Medium'
                 : 'Low',
-        confidence: 0.7,
-        prediction_interval: null,
-        confidence_factors: null,
+        confidence: confRaw === null || confRaw === undefined ? null : Number(confRaw),
+        prediction_interval: (ev as any).prediction_interval ?? null,
+        confidence_factors: (ev as any).confidence_factors ?? null,
       },
-      queue_analysis: {
+      queue_analysis: (ev as any).queue_analysis ?? {
         blocking_probability: Number(ev.blocking_probability) || 0,
         expected_queue_length: Number(ev.queue_length) || 0,
         expected_wait_time: 0,
@@ -133,13 +137,11 @@ export default function AppLayout() {
       fingerprint_summary: (ev as any).fingerprint_summary || undefined,
       propagation_forecast: (ev as any).propagation_forecast || {},
       prestaging_timeline: ev.prestaging_timeline || [],
-      anomaly_detection: {
+      anomaly_detection: (ev as any).anomaly_detection ?? {
         anomaly_score: Number(ev.anomaly_score) || 0,
         anomaly_label: ev.anomaly_label || 'unknown',
-        expected_duration_mins:
-          Number(ev.predicted_duration_mins || (ev as any).duration_mins) || 0,
-        predicted_duration_mins:
-          Number(ev.predicted_duration_mins || (ev as any).duration_mins) || 0,
+        expected_duration_mins: durationVal,
+        predicted_duration_mins: durationVal,
         deviation_pct: 0,
         model_source: 'stored',
         context: '',
