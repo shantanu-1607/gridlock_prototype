@@ -276,6 +276,24 @@ export default function CircularPipeline({
           // Determine label positioning based on angle
           // Right half: text on right. Left half: text on left.
           const isRight = node.x >= center
+          const isTopMost = node.id === 1
+          const isBottomMost = node.id === 6
+
+          let positioningClass = ''
+          let customStyle: React.CSSProperties = {}
+
+          if (isTopMost) {
+            positioningClass = 'bottom-full mb-3 items-center'
+            customStyle = { left: '50%', transform: 'translateX(-50%)' }
+          } else if (isBottomMost) {
+            positioningClass = 'top-full mt-3 items-center'
+            customStyle = { left: '50%', transform: 'translateX(-50%)' }
+          } else {
+            positioningClass = isRight ? 'left-full ml-5 items-start' : 'right-full mr-5 items-end'
+            customStyle = {
+              marginTop: node.y < center - 50 ? '-30px' : node.y > center + 50 ? '30px' : '0px',
+            }
+          }
 
           return (
             <div
@@ -330,13 +348,10 @@ export default function CircularPipeline({
                   className={`
                     absolute pointer-events-none whitespace-nowrap flex flex-col
                     transition-all duration-500
-                    ${isRight ? 'left-full ml-5 items-start' : 'right-full mr-5 items-end'}
+                    ${positioningClass}
                     ${isPending ? 'opacity-30' : 'opacity-100'}
                   `}
-                  style={{
-                    marginTop:
-                      node.y < center - 50 ? '-30px' : node.y > center + 50 ? '30px' : '0px',
-                  }}
+                  style={customStyle}
                 >
                   <span
                     className={`
