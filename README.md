@@ -6,6 +6,38 @@ An AI-powered Traffic Command Center for forecasting and managing event-driven c
 
 ---
 
+## Getting Started (first-time setup)
+
+**Prerequisites:** Node.js 18+, Python 3.11+, a PostgreSQL DB (Neon works), and Redis
+(or Docker: `docker run -d -p 6379:6379 redis:7-alpine`). The trained ML model artifacts
+are committed to the repo, so **no training is required** — the ML service runs out of the box.
+
+```bash
+git clone <repo> && cd gridlock_prototype
+cp .env.example apps/backend/.env      # fill DATABASE_URL, GROQ_API_KEY, MAPPLS_API_KEY, JWT_SECRET
+
+# 1) ML service (FastAPI, :8000)
+cd apps/ml && pip install -r requirements.txt
+PYTHONPATH=. python -m uvicorn src.api.main:app --port 8000
+
+# 2) Backend (Express, :4000) — in a new terminal
+cd apps/backend && npm install
+node database/migrate.mjs migrations/003_planning_pipeline.sql   # run each migration once
+node database/migrate.mjs migrations/007_prediction_detail.sql   # …including the latest
+npm run dev
+
+# 3) Frontend (Vite, :5173) — in a new terminal
+cd apps/frontend && npm install && npm run dev
+```
+
+Open http://localhost:5173. Demo logins (seeded in the DB): `controller1@gridlock.demo` /
+`gridlock` (controller) and `fleet1@gridlock.demo` / `gridlock` (fleet officer).
+
+> Migrations live in `apps/backend/database/migrations/` and are applied with
+> `node database/migrate.mjs migrations/<file>.sql` (idempotent — safe to re-run).
+
+---
+
 # Problem Statement
 
 Large-scale events such as festivals, concerts, political rallies, sports matches, accidents, and sudden gatherings create localized traffic breakdowns. Current traffic management systems are largely reactive, relying on manual monitoring and operator experience.
