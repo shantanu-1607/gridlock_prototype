@@ -586,8 +586,13 @@ export const planEvent = async (req: Request, res: Response) => {
         anomaly_label = $14,
         diversion_plan = $15,
         fingerprint_summary = $16,
+        confidence = $17,
+        prediction_interval = $18,
+        confidence_factors = $19,
+        queue_analysis = $20,
+        anomaly_detection = $21,
         status = 'planned'
-      WHERE id = $17
+      WHERE id = $22
       RETURNING *
     `
     const updateResult = await query(updateQuery, [
@@ -607,6 +612,11 @@ export const planEvent = async (req: Request, res: Response) => {
       anomalyResult.anomaly_label,
       JSON.stringify(diversionPlan),
       JSON.stringify({ aggregated: mlResult.aggregated, meta: mlResult.fingerprint_meta }),
+      mlResult.confidence,
+      JSON.stringify(mlResult.prediction_interval),
+      JSON.stringify(mlResult.confidence_factors),
+      JSON.stringify(queueResult),
+      JSON.stringify(anomalyResult),
       eventId,
     ])
 
@@ -759,14 +769,19 @@ export const createEvent = async (req: Request, res: Response) => {
     // 3. Update DB with ML Results
     const updateQuery = `
       UPDATE events 
-      SET duration_mins = $1, predicted_duration_mins = $2, severity_score = $3, status = 'active'
-      WHERE id = $4
+      SET duration_mins = $1, predicted_duration_mins = $2, severity_score = $3,
+          confidence = $4, prediction_interval = $5, confidence_factors = $6,
+          status = 'active'
+      WHERE id = $7
       RETURNING *
     `
     const updateResult = await query(updateQuery, [
       mlResults.duration_mins,
       mlResults.duration_mins,
       mlResults.severity_score,
+      mlResults.confidence,
+      JSON.stringify(mlResults.prediction_interval),
+      JSON.stringify(mlResults.confidence_factors),
       eventId,
     ])
 
