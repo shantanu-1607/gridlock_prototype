@@ -1,13 +1,13 @@
 {
   "routing": "soft_blend",
+  "enabled": false,
   "steepness": 0.045,
   "threshold_mins": 45.0,
-  "metrics": {
+  "note": "DISABLED and removed. The soft-blend regime layer did not generalize: with correctly-built features the champion alone scores held-out R2=0.094 vs R2=0.013 with the regime blend. It was also never reproducible from committed code (no generator existed for regime_models.pkl). The 67MB regime_models.pkl was deleted from the repo to shrink clone/image size; this config is kept only as provenance. predict.py guards on the pickle's existence, so the champion serves alone. To revive the experiment you would need to regenerate regime_models.pkl AND set 'enabled' true. The metrics under 'unreproducible_claimed_metrics' were NOT reproducible end-to-end through src.predict.Predictor.",
+  "unreproducible_claimed_metrics": {
     "log_rmse": 0.9295,
     "r2": 0.2208,
     "original_log_rmse": 1.0664,
-    "original_r2": 0.0141,
-    "improvement_log_rmse_pct": -12.8,
-    "improvement_r2_pct": 1466.0
+    "original_r2": 0.0141
   }
 }

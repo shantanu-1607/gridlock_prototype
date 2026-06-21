@@ -31,9 +31,10 @@ export interface PipelinePrediction {
   duration_mins: number
   severity_score: number
   severity_label: string
-  confidence: number
+  confidence: number | null
   prediction_interval?: PredictionInterval | null
   confidence_factors?: ConfidenceFactors | null
+  degraded?: boolean
 }
 
 export interface TandemStage {
@@ -156,6 +157,12 @@ export interface SimilarEvent {
   similarity_score: number
 }
 
+export interface SimilarAggregate {
+  avg_duration_mins: number
+  avg_severity_score: number
+  count: number
+}
+
 export interface CounterfactualScenario {
   scenario: string
   estimated_duration_mins: number
@@ -181,6 +188,7 @@ export interface PipelineResult {
   barricade_plan: BarricadePlan
   gating_plan: GatingPlan
   similar_incidents: SimilarEvent[]
+  similar_aggregate?: SimilarAggregate | null
   propagation_forecast: Record<string, unknown>
   prestaging_timeline: TimelineStep[]
   anomaly_detection: AnomalyResult
@@ -212,6 +220,13 @@ export interface PlannedEvent {
   anomaly_score: number
   anomaly_label: string
   counterfactual?: CounterfactualResult
+  // Persisted full prediction detail (migration 005) — present on events planned after
+  // the migration; used to reconstruct a faithful pipeline view on reload.
+  confidence?: number | null
+  prediction_interval?: PredictionInterval | null
+  confidence_factors?: ConfidenceFactors | null
+  queue_analysis?: QueueAnalysis | null
+  anomaly_detection?: AnomalyResult | null
 }
 
 export interface PropagationTick {

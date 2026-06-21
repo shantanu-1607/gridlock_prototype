@@ -50,6 +50,11 @@ export default function OverviewPage() {
 
       {pipelineResult ? (
         <div className="flex flex-col gap-6">
+          {pipelineResult.prediction.degraded && (
+            <div className="rounded-md border border-yellow/40 bg-yellow/10 px-3 py-2 text-xs text-yellow">
+              ML service was unavailable — showing a heuristic estimate, not a model prediction.
+            </div>
+          )}
           <div className="grid grid-cols-4 gap-4">
             <Card>
               <CardContent className="flex items-center gap-3">
@@ -104,7 +109,9 @@ export default function OverviewPage() {
                 <BarChart3 size={20} className="shrink-0 text-primary" />
                 <div>
                   <span className="block font-mono text-xl font-bold leading-tight">
-                    {(pipelineResult.prediction.confidence * 100).toFixed(0)}%
+                    {typeof pipelineResult.prediction.confidence === 'number'
+                      ? `${(pipelineResult.prediction.confidence * 100).toFixed(0)}%`
+                      : '—'}
                   </span>
                   <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
                     Confidence

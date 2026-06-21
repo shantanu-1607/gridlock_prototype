@@ -10,8 +10,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import type { PlannedEvent } from '../../../types'
-import type { PropagationTick } from '../AppLayout'
+import type { PlannedEvent, PropagationTick } from '../../../types'
 
 interface Props {
   event: PlannedEvent

@@ -7,6 +7,7 @@ import {
   getEventBarricades,
   getEventById,
   getEvents,
+  getMyAssignments,
   planEvent,
   updateAssignmentStatus,
   updateEvent,
@@ -24,6 +25,8 @@ router.post('/plan', planEvent)
 // Legacy CRUD endpoints
 router.post('/', createEvent)
 router.get('/', getEvents)
+// Authenticated fleet officer's own active assignments (must precede '/:id')
+router.get('/assignments/mine', getMyAssignments)
 router.get('/:id', getEventById)
 router.put('/:id', updateEvent)
 

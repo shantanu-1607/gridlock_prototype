@@ -9,7 +9,7 @@ import {
   Send,
   Shield,
 } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -17,10 +17,12 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 
 import { useAuth } from '../../hooks/useAuth'
+import { getMyAssignments, updateAssignmentStatus } from '../../utils/api'
 import MapplsMap from '../map/MapplsMap'
 
 interface Assignment {
   id: string
+  eventId?: string
   junction: string
   role: string
   deployBy: string
@@ -30,38 +32,34 @@ interface Assignment {
   lon: number
 }
 
-const MOCK_ASSIGNMENTS: Assignment[] = [
-  {
-    id: '1',
-    junction: 'JalahalliCross',
-    role: 'Traffic Direction',
-    deployBy: 'T-15 mins',
-    priority: 'Critical',
-    status: 'pending',
-    lat: 13.04,
-    lon: 77.518,
-  },
-  {
-    id: '2',
-    junction: 'SM Circle',
-    role: 'Incident Clearance',
-    deployBy: 'T-5 mins',
-    priority: 'High',
-    status: 'pending',
-    lat: 13.039,
-    lon: 77.519,
-  },
-  {
-    id: '3',
-    junction: 'Peenya Industrial',
-    role: 'Diversion Management',
-    deployBy: 'T+10 mins',
-    priority: 'Medium',
-    status: 'pending',
-    lat: 13.028,
-    lon: 77.522,
-  },
-]
+const ALLOWED_STATUS = ['pending', 'en_route', 'on_site', 'completed'] as const
+
+// Map a backend fleet_assignments row (joined with its event) into the view model.
+function toAssignment(r: any): Assignment {
+  const dt = r.deploy_by_time ? new Date(r.deploy_by_time) : null
+  let deployBy = '—'
+  if (dt && !Number.isNaN(dt.getTime())) {
+    const mins = Math.round((dt.getTime() - Date.now()) / 60000)
+    deployBy = mins >= 0 ? `T-${mins} min` : `T+${Math.abs(mins)} min`
+  }
+  const rawP = String(r.priority || 'Medium')
+  const cap = rawP.charAt(0).toUpperCase() + rawP.slice(1).toLowerCase()
+  const priority = (['Critical', 'High', 'Medium', 'Low'].includes(cap)
+    ? cap
+    : 'Medium') as Assignment['priority']
+  const status = (ALLOWED_STATUS.includes(r.status) ? r.status : 'pending') as Assignment['status']
+  return {
+    id: String(r.id),
+    eventId: r.event_id,
+    junction: r.junction_name || r.event_name || 'Assignment',
+    role: r.role || 'Field Operations',
+    deployBy,
+    priority,
+    status,
+    lat: Number(r.lat) || 0,
+    lon: Number(r.lon) || 0,
+  }
+}
 
 const PRIORITY_STYLES: Record<string, string> = {
   Critical: 'bg-destructive text-destructive-foreground',
@@ -74,24 +72,47 @@ const STATUS_FLOW = ['pending', 'en_route', 'on_site', 'completed'] as const
 
 export default function FleetDashboard() {
   const { user, logout } = useAuth()
-  const [assignments, setAssignments] = useState(MOCK_ASSIGNMENTS)
+  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [loadFailed, setLoadFailed] = useState(false)
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null)
   const [showReport, setShowReport] = useState(false)
   const [reportType, setReportType] = useState('vehicle_breakdown')
   const [reportDesc, setReportDesc] = useState('')
 
-  const updateStatus = (id: string, e: React.MouseEvent) => {
+  const loadAssignments = useCallback(async () => {
+    try {
+      const rows = await getMyAssignments()
+      setAssignments(rows.map(toAssignment))
+      setLoadFailed(false)
+    } catch {
+      // Never fall back to fabricated data — show an honest empty/offline state instead.
+      setAssignments([])
+      setLoadFailed(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadAssignments()
+    const t = setInterval(loadAssignments, 15000)
+    return () => clearInterval(t)
+  }, [loadAssignments])
+
+  const updateStatus = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    setAssignments((prev) =>
-      prev.map((a) => {
-        if (a.id !== id) return a
-        const currentIdx = STATUS_FLOW.indexOf(a.status as (typeof STATUS_FLOW)[number])
-        if (currentIdx < STATUS_FLOW.length - 1) {
-          return { ...a, status: STATUS_FLOW[currentIdx + 1] }
-        }
-        return a
-      }),
-    )
+    const current = assignments.find((a) => a.id === id)
+    if (!current) return
+    const idx = STATUS_FLOW.indexOf(current.status as (typeof STATUS_FLOW)[number])
+    if (idx >= STATUS_FLOW.length - 1) return
+    const next = STATUS_FLOW[idx + 1]
+    // Optimistic update; persist to the backend best-effort (a later poll reconciles).
+    setAssignments((prev) => prev.map((a) => (a.id === id ? { ...a, status: next } : a)))
+    if (current.eventId) {
+      try {
+        await updateAssignmentStatus(current.eventId, id, next)
+      } catch {
+        // keep optimistic state
+      }
+    }
   }
 
   const getStatusLabel = (status: string) => {
@@ -171,6 +192,13 @@ export default function FleetDashboard() {
 
               {/* Assignment Cards */}
               <div className="flex flex-col gap-4">
+                {assignments.length === 0 && (
+                  <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+                    {loadFailed
+                      ? 'Could not reach the dispatch service. Retrying…'
+                      : 'No active assignments. Dispatches from the command center will appear here.'}
+                  </div>
+                )}
                 {assignments.map((assignment) => (
                   <Card
                     key={assignment.id}

@@ -30,7 +30,7 @@ export default function DetailedReportsPage() {
     )
   }
 
-  const { similar_incidents, prestaging_timeline } = pipelineResult
+  const { similar_incidents, similar_aggregate, prestaging_timeline } = pipelineResult
 
   return (
     <div className="h-full overflow-y-auto p-8">
@@ -47,6 +47,12 @@ export default function DetailedReportsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Fingerprint size={16} /> Historical Precedents
+                {similar_aggregate && similar_aggregate.count > 0 && (
+                  <span className="ml-auto font-mono text-[10px] font-normal text-muted-foreground">
+                    avg {Math.round(similar_aggregate.avg_duration_mins)} min · sev{' '}
+                    {similar_aggregate.avg_severity_score.toFixed(2)} · n={similar_aggregate.count}
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>

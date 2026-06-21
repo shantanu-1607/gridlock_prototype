@@ -46,6 +46,7 @@ class Predictor:
         self._champion_model = None  # Generic champion model (any type)
         self._regime_models = None   # Soft-blend regime models
         self._regime_config = None   # Regime routing config
+        self.feature_pipeline = None # Fitted engineered-feature pipeline (F4/F5)
 
         # Detect artifact format: champion (generic) vs legacy (lgb+cat)
         if (artifacts_dir / "champion_model.pkl").exists():
@@ -92,16 +93,37 @@ class Predictor:
         self.cat_model = None
         self._load_conformal_calibration(artifacts_dir)
 
-        # Load regime models for soft-blend routing if available
+        # Fitted feature pipeline: reproduces the engineered F4/F5 features the champion
+        # was trained on. Without it, serving zero-fills ~31% of the champion's inputs
+        # (training/serving skew that silently degraded deployed predictions).
+        fp_path = artifacts_dir / "feature_pipeline.pkl"
+        if fp_path.exists():
+            from .feature_pipeline import FeaturePipeline  # noqa: F401 (needed to unpickle)
+            with open(fp_path, "rb") as f:
+                self.feature_pipeline = pickle.load(f)
+            log.info("Loaded feature pipeline (%d feature sets: %s)",
+                     len(self.feature_pipeline.feature_sets), self.feature_pipeline.feature_sets)
+        else:
+            log.warning("No feature_pipeline.pkl — falling back to base encoder "
+                        "(engineered features will be zero-filled; predictions degraded)")
+
+        # Regime soft-blend is DISABLED by default: it did not generalize (it hurt
+        # held-out R²) and was never reproducible from committed code. Opt in only via
+        # regime_config.json {"enabled": true}.
         regime_path = artifacts_dir / "regime_models.pkl"
         regime_cfg_path = artifacts_dir / "regime_config.json"
         if regime_path.exists() and regime_cfg_path.exists():
-            with open(regime_path, "rb") as f:
-                self._regime_models = pickle.load(f)
             with open(regime_cfg_path) as f:
-                self._regime_config = json.load(f)
-            log.info("Loaded regime models (soft-blend, threshold=%.0f min, steepness=%.3f)",
-                     self._regime_config["threshold_mins"], self._regime_config["steepness"])
+                regime_cfg = json.load(f)
+            if regime_cfg.get("enabled", False):
+                with open(regime_path, "rb") as f:
+                    self._regime_models = pickle.load(f)
+                self._regime_config = regime_cfg
+                log.info("Loaded regime models (soft-blend, threshold=%.0f min, steepness=%.3f)",
+                         regime_cfg["threshold_mins"], regime_cfg["steepness"])
+            else:
+                log.info("Regime soft-blend disabled (regime_config.enabled is false); "
+                         "serving champion only")
 
         log.info("Loaded champion model: %s", self._conf.get("champion_model", "unknown"))
 
@@ -191,23 +213,32 @@ class Predictor:
             "source": source,
         }
 
-    def _predict_regime_model(self, regime_models: dict, df: pd.DataFrame) -> float:
-        """Predict using a single regime model (short or long)."""
+    def _predict_regime_model(self, regime_models: dict, X_full: pd.DataFrame) -> float:
+        """Predict with one regime ensemble (short or long) from the engineered matrix.
+
+        Uses the shared engineered feature matrix (same as the champion) rather than the
+        regime's own bare base encoder, so members receive the F4/F5 columns they were
+        trained on instead of zero-fills.
+        """
         members = regime_models['members']
         meta = regime_models['meta_model']
-        enc = regime_models['encoder']
-        X_enc = enc.transform(df.copy())
         member_preds = []
         for model, feat_set_name, feat_names_m in members:
-            X_m = X_enc.reindex(columns=feat_names_m, fill_value=0)
+            X_m = X_full.reindex(columns=feat_names_m, fill_value=0)
             member_preds.append(float(model.predict(X_m)[0]))
-        meta_X = np.array([member_preds])
-        return float(meta.predict(meta_X)[0])
+        return float(meta.predict(np.array([member_preds]))[0])
 
     def predict(self, event: dict) -> dict:
         df = pd.DataFrame([event])
 
-        X = self.encoders.transform(df)
+        # Build features. With a fitted pipeline we reproduce the engineered F4/F5
+        # columns the champion was trained on; otherwise fall back to the base encoder
+        # (legacy artifacts), zero-filling whatever is missing.
+        if self.feature_pipeline is not None:
+            X_full = self.feature_pipeline.transform(df)
+        else:
+            X_full = self.encoders.transform(df)
+        X = X_full.copy()
         for col in self.feature_names:
             if col not in X.columns:
                 X[col] = 0
@@ -223,8 +254,8 @@ class Predictor:
                 steepness = self._regime_config["steepness"]
                 champion_pred_mins = float(np.expm1(champion_pred_log))
 
-                short_pred = self._predict_regime_model(self._regime_models['short_models'], df)
-                long_pred = self._predict_regime_model(self._regime_models['long_models'], df)
+                short_pred = self._predict_regime_model(self._regime_models['short_models'], X_full)
+                long_pred = self._predict_regime_model(self._regime_models['long_models'], X_full)
 
                 prob_long = float(expit((champion_pred_mins - threshold) * steepness))
                 pred_log = (1 - prob_long) * short_pred + prob_long * long_pred
@@ -262,10 +293,11 @@ class Predictor:
         base_conf = self._conf["base_confidence"]
         if len(individual_preds) > 1:
             ensemble_std = float(np.std(individual_preds))
-            # Higher disagreement → lower confidence
-            # Calibrated: median ensemble std (~0.37) yields no penalty,
-            # std > 2x median → significant penalty, std > 3x → max penalty
-            median_std = 0.37  # empirical from test set
+            # Higher disagreement → lower confidence. The median member-disagreement on
+            # held-out is a calibrated artifact (confidence.json::ensemble_std_median) so
+            # the penalty actually fires for the deployed model; events at the median get
+            # no penalty, std > 2x median → significant penalty, capped at 0.35.
+            median_std = self._conf.get("ensemble_std_median", 0.37)
             excess_std = max(0.0, ensemble_std - median_std)
             variance_penalty = min(excess_std / (2 * median_std) * 0.3, 0.35)
             confidence = max(0.3, min(0.95, base_conf - variance_penalty))

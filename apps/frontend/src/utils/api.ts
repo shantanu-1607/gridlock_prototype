@@ -177,6 +177,26 @@ export async function getEventAssignments(id: string): Promise<any[]> {
   return data.assignments
 }
 
+export async function getMyAssignments(): Promise<any[]> {
+  const res = await fetchWithAuth(`${API_BASE}/api/events/assignments/mine`)
+  if (!res.ok) throw new Error(`Fetch my assignments failed: ${res.statusText}`)
+  const data = await res.json()
+  return data.assignments
+}
+
+export async function updateAssignmentStatus(
+  eventId: string,
+  assignmentId: string,
+  status: string,
+): Promise<any> {
+  const res = await fetchWithAuth(
+    `${API_BASE}/api/events/${eventId}/assignments/${assignmentId}`,
+    { method: 'PUT', body: JSON.stringify({ status }) },
+  )
+  if (!res.ok) throw new Error(`Update assignment failed: ${res.statusText}`)
+  return res.json()
+}
+
 export async function getEventBarricades(id: string): Promise<any[]> {
   const res = await fetchWithAuth(`${API_BASE}/api/events/${id}/barricades`)
   if (!res.ok) throw new Error(`Fetch barricades failed: ${res.statusText}`)

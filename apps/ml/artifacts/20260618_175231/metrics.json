@@ -1,10 +1,16 @@
 {
-  "oof_log_rmse": 0.9841142078343919,
-  "test_log_rmse": 1.066444692721031,
-  "test_mae": 93.73543770560771,
+  "served_pipeline": "stacking_champion (regime disabled; feature_pipeline.pkl ON)",
+  "test_r2": 0.0941,
+  "test_log_r2": 0.1028,
+  "test_log_rmse": 1.0886,
+  "test_mae": 97.11,
+  "test_median_ae": 30.52,
+  "test_mape_pct": 168.9,
+  "n_test": 500,
   "meta_weights": [
     -0.17763982032609785,
     0.8169995521186917,
     0.47161431607986853
-  ]
+  ],
+  "note": "Honest held-out metrics measured end-to-end through src.predict.Predictor with the feature pipeline ON and the regime blend OFF. Supersedes the prior values (test_mae 93.74) which came from the buggy serving path that zero-filled ~31% of the champion's features. Re-measure with scripts/verify after any champion re-promote or feature-pipeline rebuild."
 }

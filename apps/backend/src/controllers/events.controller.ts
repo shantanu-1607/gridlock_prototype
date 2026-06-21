@@ -33,7 +33,7 @@ async function callMLPredict(eventData: any) {
     if (response.ok) {
       const data = await response.json()
       return {
-        duration_mins: 3, // HARDCODED for testing
+        duration_mins: data.predicted_duration_mins,
         severity_score: data.severity_score,
         severity_label: data.severity_label,
         confidence: data.confidence,
@@ -41,20 +41,25 @@ async function callMLPredict(eventData: any) {
         aggregated: data.aggregated || null,
         prediction_interval: data.prediction_interval || null,
         confidence_factors: data.confidence_factors || null,
+        degraded: false,
       }
     }
   } catch (error) {
-    console.log('[ML] Predict endpoint not reachable, using stubbed values.')
+    console.log('[ML] Predict endpoint not reachable, using degraded heuristic estimate.')
   }
+  // ML service unreachable: return a clearly-flagged heuristic estimate so the pipeline
+  // can still run, but the frontend can mark it "degraded" rather than present it as a
+  // real model prediction. These are NOT model outputs.
   return {
-    duration_mins: 3, // HARDCODED for testing
-    severity_score: 0.8,
-    severity_label: 'High',
-    confidence: 0.5,
+    duration_mins: 30,
+    severity_score: 0.5,
+    severity_label: 'Medium',
+    confidence: 0,
     similar_events: [],
     aggregated: null,
     prediction_interval: null,
     confidence_factors: null,
+    degraded: true,
   }
 }
 
@@ -553,6 +558,34 @@ export const planEvent = async (req: Request, res: Response) => {
 
     const plannedEvent = updateResult.rows[0]
 
+    // 8a. Persist full prediction detail so re-selecting a saved event shows the model's
+    // REAL output instead of fabricated/degraded values. Guarded: if migration 005 has
+    // not been applied yet, this logs a warning and planEvent still succeeds.
+    try {
+      await query(
+        `UPDATE events SET
+           confidence = $1,
+           prediction_interval = $2,
+           confidence_factors = $3,
+           queue_analysis = $4,
+           anomaly_detection = $5
+         WHERE id = $6`,
+        [
+          mlResult.confidence,
+          JSON.stringify(mlResult.prediction_interval),
+          JSON.stringify(mlResult.confidence_factors),
+          JSON.stringify(queueResult),
+          JSON.stringify(anomalyResult),
+          eventId,
+        ],
+      )
+    } catch (e) {
+      console.warn(
+        '[Plan] Could not persist prediction detail (run migration 005_prediction_details.sql):',
+        (e as Error).message,
+      )
+    }
+
     // 8b. Persist Fleet Assignments
     for (const deployment of fleetPlan.deployments) {
       const deployByTime = new Date(Date.now() + deployment.deployByMins * 60000)
@@ -616,12 +649,14 @@ export const planEvent = async (req: Request, res: Response) => {
           confidence: mlResult.confidence,
           prediction_interval: mlResult.prediction_interval,
           confidence_factors: mlResult.confidence_factors,
+          degraded: mlResult.degraded,
         },
         queue_analysis: queueResult,
         fleet_plan: fleetPlan,
         barricade_plan: barricadePlan,
         gating_plan: gatingPlan,
         similar_incidents: mlResult.similar_events.slice(0, 3),
+        similar_aggregate: mlResult.aggregated,
         propagation_forecast: propagationForecast,
         prestaging_timeline: prestagingTimeline,
         anomaly_detection: anomalyResult,
@@ -1012,6 +1047,28 @@ export const getEventAssignments = async (req: Request, res: Response) => {
     res.json({ assignments: result.rows })
   } catch (error) {
     console.error('Error fetching event assignments:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+// Active assignments for the authenticated fleet officer — drives the real field-ops view
+// (replaces the previously hardcoded MOCK_ASSIGNMENTS in the frontend).
+export const getMyAssignments = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id
+    if (!userId) return res.json({ assignments: [] })
+    const result = await query(
+      `SELECT fa.id, fa.event_id, fa.junction_name, fa.role, fa.deploy_by_time,
+              fa.priority, fa.status, e.name AS event_name, e.lat, e.lon
+       FROM fleet_assignments fa
+       JOIN events e ON e.id = fa.event_id
+       WHERE fa.user_id = $1 AND fa.status != 'completed'
+       ORDER BY fa.deploy_by_time ASC`,
+      [userId],
+    )
+    res.json({ assignments: result.rows })
+  } catch (error) {
+    console.error('Error fetching my assignments:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 }

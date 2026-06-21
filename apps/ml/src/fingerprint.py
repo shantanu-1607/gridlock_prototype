@@ -83,11 +83,8 @@ class Fingerprinter:
                 "hour": int(row.get("hour", 0)),
                 "duration_mins": round(float(row.get("duration_mins", 0)), 1),
                 "severity_score": round(float(row.get("severity_score", 0)), 4),
-                "similarity_score": round(float(similarity[order[results.__len__() - len(results) + len(results) - 1]]), 4) if len(results) < len(order) else 0,
+                "similarity_score": round(float(similarity[idx]), 4),
             })
-
-        for i, idx in enumerate(order):
-            results[i]["similarity_score"] = round(float(similarity[idx]), 4)
 
         return results
 
@@ -95,7 +92,7 @@ class Fingerprinter:
         if not similar_events:
             return None
         return {
-            "avg_duration_mins": round(np.mean([e["duration_mins"] for e in similar_events]), 1),
-            "avg_severity_score": round(np.mean([e["severity_score"] for e in similar_events]), 4),
+            "avg_duration_mins": round(float(np.mean([e["duration_mins"] for e in similar_events])), 1),
+            "avg_severity_score": round(float(np.mean([e["severity_score"] for e in similar_events])), 4),
             "count": len(similar_events),
         }
