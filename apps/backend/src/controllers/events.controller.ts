@@ -610,9 +610,37 @@ export const planEvent = async (req: Request, res: Response) => {
       eventId,
     ])
 
+    // 8a. Persist full prediction detail so re-selecting / syncing a saved event shows the
+    // model's REAL confidence + interval + queue + anomaly (not "—" or scalar fallbacks).
+    // Guarded: if migration 007 has not been applied, this warns and planEvent still succeeds.
+    try {
+      await query(
+        `UPDATE events SET
+           confidence = $1,
+           prediction_interval = $2,
+           confidence_factors = $3,
+           queue_analysis = $4,
+           anomaly_detection = $5
+         WHERE id = $6`,
+        [
+          mlResult.confidence,
+          JSON.stringify(mlResult.prediction_interval),
+          JSON.stringify(mlResult.confidence_factors),
+          JSON.stringify(queueResult),
+          JSON.stringify(anomalyResult),
+          eventId,
+        ],
+      )
+    } catch (e) {
+      console.warn(
+        '[Plan] Could not persist prediction detail (run migration 007_prediction_detail.sql):',
+        (e as Error).message,
+      )
+    }
+
     await query(
-      `UPDATE events SET 
-        recommendation_status = 'completed', 
+      `UPDATE events SET
+        recommendation_status = 'completed',
         recommendation_rationale = $1, 
         total_fleet_required = $2,
         barricade_rationale = $3, 
