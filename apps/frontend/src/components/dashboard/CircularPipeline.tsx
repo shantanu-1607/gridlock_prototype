@@ -6,7 +6,6 @@ import {
   Database,
   Hexagon,
   Package,
-  Play,
   Route,
   ShieldCheck,
   TrafficCone,
@@ -85,19 +84,25 @@ export default function CircularPipeline({
     if (!isPlaying) return
 
     if (currentStep >= PIPELINE_STEPS.length) {
-      const timer = setTimeout(() => setIsPlaying(false), 0)
+      const timer = setTimeout(() => {
+        if (autoStart) {
+          setCurrentStep(0)
+        } else {
+          setIsPlaying(false)
+        }
+      }, 1500)
       return () => clearTimeout(timer)
     }
 
-    // Processing delay between 800ms and 1500ms for realism
-    const delay = Math.random() * 700 + 800
+    // Faster processing delay
+    const delay = Math.random() * 200 + 400
 
     const timer = setTimeout(() => {
       setCurrentStep((prev) => prev + 1)
     }, delay)
 
     return () => clearTimeout(timer)
-  }, [currentStep, isPlaying])
+  }, [currentStep, isPlaying, autoStart])
 
   useEffect(() => {
     if (isOpen && isInView && autoStart && !isPlaying && currentStep === -1) {
@@ -108,16 +113,6 @@ export default function CircularPipeline({
       return () => clearTimeout(timer)
     }
   }, [isOpen, isInView, autoStart, isPlaying, currentStep])
-
-  const handleSimulate = () => {
-    setCurrentStep(0)
-    setIsPlaying(true)
-  }
-
-  const handleReset = () => {
-    setCurrentStep(-1)
-    setIsPlaying(false)
-  }
 
   const content = (
     <div
@@ -251,22 +246,8 @@ export default function CircularPipeline({
             className={`absolute inset-6 border border-dashed rounded-full transition-all duration-1000 ${isPlaying && currentStep < 10 ? 'border-amber-500/30 animate-[spin_15s_linear_infinite_reverse]' : 'border-slate-200 dark:border-slate-800 opacity-30'}`}
           />
 
-          <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold mb-1 z-10">
+          <div className="text-2xl font-mono font-bold tracking-[0.2em] text-slate-900 dark:text-white z-10 mt-1">
             GRIDLOCK AI
-          </span>
-
-          <div className="text-xl font-mono font-bold tracking-tight text-slate-900 dark:text-white z-10">
-            {currentStep === -1 ? 'READY' : currentStep >= 10 ? 'ACTIVE' : 'PREDICTING'}
-          </div>
-
-          <div
-            className={`text-[10px] mt-1 font-mono transition-colors duration-500 text-center px-4 z-10 ${currentStep >= 10 ? 'text-emerald-600 dark:text-emerald-400' : isPlaying ? 'text-sky-600 dark:text-sky-400' : 'text-slate-500 dark:text-slate-400'}`}
-          >
-            {currentStep === -1
-              ? 'Predictive Engine Online'
-              : currentStep >= 10
-                ? 'Optimization Complete'
-                : `[SEQ_0${currentStep + 1} // PROCESSING]`}
           </div>
 
           {currentStep >= 10 && (
@@ -367,27 +348,6 @@ export default function CircularPipeline({
             </div>
           )
         })}
-      </div>
-
-      {/* Control Panel */}
-      <div className="absolute bottom-8 flex gap-4 z-20">
-        <button
-          onClick={handleSimulate}
-          disabled={isPlaying || currentStep >= 10}
-          className="flex items-center gap-2 px-6 py-2.5 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-semibold rounded-full shadow-[0_0_20px_rgba(2,132,199,0.3)] disabled:shadow-none transition-all duration-300"
-        >
-          <Play size={16} fill="currentColor" />
-          {isPlaying ? 'EXECUTING PIPELINE...' : 'SIMULATE EXECUTION'}
-        </button>
-
-        {currentStep > -1 && !isPlaying && (
-          <button
-            onClick={handleReset}
-            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-full transition-all duration-300 border border-slate-700"
-          >
-            RESET
-          </button>
-        )}
       </div>
     </div>
   )
