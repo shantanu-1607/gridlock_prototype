@@ -516,36 +516,6 @@ export default function LandingPage() {
             </motion.div>
           </HeroSection>
 
-          {/* ── Pipeline Visualizer Demo ──────────────────────────────────────── */}
-          <section className="relative py-16 px-6 z-10 bg-black/60 border-b border-border/50">
-            <div className="max-w-6xl mx-auto">
-              <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={fadeUp}
-                className="text-center mb-10"
-              >
-                <p className="text-sm font-semibold uppercase tracking-widest text-primary mb-3">
-                  Live Engine Demo
-                </p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-                  The GridLock Pipeline in Action
-                </h2>
-                <p className="text-muted-foreground max-w-xl mx-auto">
-                  Watch our 10-step sequence flow seamlessly from event ingestion through machine
-                  learning prediction and kinematic fluid dynamics.
-                </p>
-              </motion.div>
-
-              <div className="flex justify-center">
-                <div className="w-full max-w-5xl relative">
-                  <CircularPipeline isOpen={true} inline={true} autoStart={false} />
-                </div>
-              </div>
-            </div>
-          </section>
-
           {/* ── Glowing Tech Stack Marquee ─────────────────────────────── */}
           <div className="relative flex overflow-hidden border-b border-border/50 bg-muted/10 py-5 z-10 hidden md:flex">
             {/* Glow effects on edges */}
@@ -706,6 +676,36 @@ export default function LandingPage() {
                   )
                 })}
               </motion.div>
+            </div>
+          </section>
+
+          {/* ── Pipeline Visualizer Demo ──────────────────────────────────────── */}
+          <section className="relative py-16 px-6 z-10 bg-muted/10 border-t border-b border-border/50">
+            <div className="max-w-6xl mx-auto">
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeUp}
+                className="text-center mb-10"
+              >
+                <p className="text-sm font-semibold uppercase tracking-widest text-primary mb-3">
+                  Live Engine Demo
+                </p>
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
+                  The GridLock Pipeline in Action
+                </h2>
+                <p className="text-muted-foreground max-w-xl mx-auto">
+                  Watch our 10-step sequence flow seamlessly from event ingestion through machine
+                  learning prediction and kinematic fluid dynamics.
+                </p>
+              </motion.div>
+
+              <div className="flex justify-center">
+                <div className="w-full max-w-5xl relative">
+                  <CircularPipeline isOpen={true} inline={true} autoStart={true} />
+                </div>
+              </div>
             </div>
           </section>
 

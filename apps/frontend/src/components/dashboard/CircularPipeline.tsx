@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useInView } from 'framer-motion'
 import {
   BarChart3,
   Clock,
@@ -12,7 +12,7 @@ import {
   TrafficCone,
   Waves,
 } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 const PIPELINE_STEPS = [
   { id: 1, title: 'Event Intake & DB Seeding', icon: Database, subtitle: 'PostgreSQL Insert' },
@@ -49,9 +49,11 @@ export default function CircularPipeline({
 }: CircularPipelineProps) {
   const [currentStep, setCurrentStep] = useState<number>(-1) // -1: idle, 0-9: processing, 10: completed
   const [isPlaying, setIsPlaying] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const isInView = useInView(containerRef, { margin: '-200px' })
 
-  const containerSize = 700
-  const radius = 260
+  const containerSize = 480
+  const radius = 170
   const center = containerSize / 2
   const circumference = 2 * Math.PI * radius
 
@@ -98,19 +100,14 @@ export default function CircularPipeline({
   }, [currentStep, isPlaying])
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && isInView && autoStart && !isPlaying && currentStep === -1) {
       const timer = setTimeout(() => {
-        if (autoStart) {
-          setCurrentStep(0)
-          setIsPlaying(true)
-        } else {
-          setCurrentStep(-1)
-          setIsPlaying(false)
-        }
-      }, 0)
+        setCurrentStep(0)
+        setIsPlaying(true)
+      }, 500)
       return () => clearTimeout(timer)
     }
-  }, [isOpen, autoStart])
+  }, [isOpen, isInView, autoStart, isPlaying, currentStep])
 
   const handleSimulate = () => {
     setCurrentStep(0)
@@ -123,12 +120,15 @@ export default function CircularPipeline({
   }
 
   const content = (
-    <div className="relative flex flex-col items-center justify-center min-h-[800px] w-full max-w-5xl bg-slate-950 font-sans text-slate-200 overflow-hidden rounded-xl border border-slate-800/50 shadow-2xl mx-auto">
+    <div
+      ref={containerRef}
+      className="relative flex flex-col items-center justify-center min-h-[600px] w-full max-w-4xl bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-200 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800/50 shadow-2xl mx-auto"
+    >
       {/* Close Button */}
       {!inline && onClose && (
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 p-2 rounded-full bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors z-50 border border-slate-800"
+          className="absolute top-6 right-6 p-2 rounded-full bg-slate-200 dark:bg-slate-900 hover:bg-slate-300 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors z-50 border border-slate-300 dark:border-slate-800"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -148,11 +148,11 @@ export default function CircularPipeline({
       )}
 
       {/* Background ambient gradient */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900/50 via-slate-950 to-slate-950 pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-100/50 via-slate-50 to-slate-50 dark:from-slate-900/50 dark:via-slate-950 dark:to-slate-950 pointer-events-none" />
 
       {/* Cyberpunk grid overlay */}
       <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        className="absolute inset-0 opacity-10 dark:opacity-[0.03] pointer-events-none"
         style={{
           backgroundImage:
             'linear-gradient(to right, #475569 1px, transparent 1px), linear-gradient(to bottom, #475569 1px, transparent 1px)',
@@ -233,41 +233,40 @@ export default function CircularPipeline({
 
         {/* Central Core Ambient Display */}
         <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full flex flex-col items-center justify-center border border-slate-800/50 backdrop-blur-sm z-0 transition-all duration-700"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full flex flex-col items-center justify-center border border-slate-300 dark:border-slate-800/50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm z-0 transition-all duration-700 shadow-xl"
           style={{
             boxShadow:
               currentStep >= PIPELINE_STEPS.length
-                ? '0 0 80px rgba(16, 185, 129, 0.15), inset 0 0 40px rgba(16, 185, 129, 0.1)'
+                ? '0 0 40px rgba(16, 185, 129, 0.2)'
                 : isPlaying
-                  ? '0 0 60px rgba(14, 165, 233, 0.15), inset 0 0 30px rgba(14, 165, 233, 0.1)'
-                  : 'inset 0 0 20px rgba(30, 41, 59, 0.5)',
-            background: 'radial-gradient(circle, rgba(15,23,42,0.8) 0%, rgba(2,6,23,0.9) 100%)',
+                  ? '0 0 30px rgba(14, 165, 233, 0.2)'
+                  : '0 0 15px rgba(30, 41, 59, 0.1)',
           }}
         >
           {/* Internal rotating rings for processing state */}
           <div
-            className={`absolute inset-4 border border-dashed rounded-full transition-all duration-1000 ${isPlaying && currentStep < 10 ? 'border-sky-500/30 animate-[spin_10s_linear_infinite]' : 'border-slate-800 opacity-50'}`}
+            className={`absolute inset-3 border border-dashed rounded-full transition-all duration-1000 ${isPlaying && currentStep < 10 ? 'border-sky-500/40 animate-[spin_10s_linear_infinite]' : 'border-slate-300 dark:border-slate-800 opacity-50'}`}
           />
           <div
-            className={`absolute inset-8 border border-dashed rounded-full transition-all duration-1000 ${isPlaying && currentStep < 10 ? 'border-amber-500/20 animate-[spin_15s_linear_infinite_reverse]' : 'border-slate-800 opacity-30'}`}
+            className={`absolute inset-6 border border-dashed rounded-full transition-all duration-1000 ${isPlaying && currentStep < 10 ? 'border-amber-500/30 animate-[spin_15s_linear_infinite_reverse]' : 'border-slate-200 dark:border-slate-800 opacity-30'}`}
           />
 
-          <span className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-bold mb-2">
-            Engine Core
+          <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold mb-1 z-10">
+            GRIDLOCK AI
           </span>
 
-          <div className="text-3xl font-mono font-bold tracking-tight">
-            {currentStep === -1 ? 'IDLE' : currentStep >= 10 ? 'ONLINE' : 'SYNCING'}
+          <div className="text-xl font-mono font-bold tracking-tight text-slate-900 dark:text-white z-10">
+            {currentStep === -1 ? 'READY' : currentStep >= 10 ? 'ACTIVE' : 'PREDICTING'}
           </div>
 
           <div
-            className={`text-xs mt-2 font-mono transition-colors duration-500 ${currentStep >= 10 ? 'text-emerald-400' : isPlaying ? 'text-sky-400' : 'text-slate-600'}`}
+            className={`text-[10px] mt-1 font-mono transition-colors duration-500 text-center px-4 z-10 ${currentStep >= 10 ? 'text-emerald-600 dark:text-emerald-400' : isPlaying ? 'text-sky-600 dark:text-sky-400' : 'text-slate-500 dark:text-slate-400'}`}
           >
             {currentStep === -1
-              ? 'Awaiting Event Input'
+              ? 'Predictive Engine Online'
               : currentStep >= 10
-                ? 'System Matrices Stable'
-                : `[SEQ_0${currentStep + 1} // ACTIVE]`}
+                ? 'Optimization Complete'
+                : `[SEQ_0${currentStep + 1} // PROCESSING]`}
           </div>
 
           {currentStep >= 10 && (
@@ -301,15 +300,15 @@ export default function CircularPipeline({
                 {/* Visual Ring System for Node */}
                 <div
                   className={`
-                    relative w-12 h-12 rounded-full flex items-center justify-center
-                    transition-all duration-500 border-2 bg-slate-950
-                    ${isPending ? 'border-slate-800 text-slate-600 shadow-none' : ''}
-                    ${isProcessing ? 'border-amber-500 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.4)] scale-110' : ''}
-                    ${isCompleted ? 'border-emerald-500 text-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.5)] bg-emerald-950/20' : ''}
+                    relative w-10 h-10 rounded-full flex items-center justify-center
+                    transition-all duration-500 border-2 bg-white dark:bg-slate-950
+                    ${isPending ? 'border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600 shadow-none' : ''}
+                    ${isProcessing ? 'border-amber-500 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] scale-110' : ''}
+                    ${isCompleted ? 'border-emerald-500 text-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)] bg-emerald-50 dark:bg-emerald-950/20' : ''}
                   `}
                 >
                   <Icon
-                    size={20}
+                    size={18}
                     className={`${isProcessing ? 'animate-pulse' : ''}`}
                     strokeWidth={2.5}
                   />
@@ -346,21 +345,23 @@ export default function CircularPipeline({
                 >
                   <span
                     className={`
-                    text-[10px] font-mono tracking-widest uppercase mb-0.5
-                    ${isCompleted ? 'text-emerald-500/70' : isProcessing ? 'text-amber-500' : 'text-slate-600'}
+                    text-[9px] font-mono tracking-widest uppercase mb-0.5
+                    ${isCompleted ? 'text-emerald-600 dark:text-emerald-500/70' : isProcessing ? 'text-amber-600 dark:text-amber-500' : 'text-slate-400 dark:text-slate-600'}
                   `}
                   >
                     STEP 0{node.id}
                   </span>
                   <span
                     className={`
-                    text-sm font-bold tracking-tight
-                    ${isCompleted ? 'text-emerald-50' : isProcessing ? 'text-white' : 'text-slate-400'}
+                    text-xs font-bold tracking-tight
+                    ${isCompleted ? 'text-slate-900 dark:text-emerald-50' : isProcessing ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}
                   `}
                   >
                     {node.title}
                   </span>
-                  <span className="text-xs text-slate-500 font-medium">{node.subtitle}</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                    {node.subtitle}
+                  </span>
                 </div>
               </div>
             </div>
