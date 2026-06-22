@@ -323,7 +323,17 @@ export default function MapplsMap({
   const dispatchOverlaysRef = useRef<any[]>([])
   const diversionOverlaysRef = useRef<any[]>([])
   const prevActiveNodesRef = useRef<Set<string>>(new Set())
+  // Tracks transient-marker removal timers so they can be cleared on unmount —
+  // otherwise a late removeLayer fires on a torn-down map after navigating away.
+  const transientTimersRef = useRef<number[]>([])
   const [isPropCardOpen, setIsPropCardOpen] = useState(true)
+
+  useEffect(() => {
+    return () => {
+      transientTimersRef.current.forEach((t) => clearTimeout(t))
+      transientTimersRef.current = []
+    }
+  }, [])
 
   // Inject stylesheet for animations
   useEffect(() => {
@@ -548,7 +558,7 @@ export default function MapplsMap({
             const m = addMarker(lat, lon, {
               html: '<div style="font-weight: 900; color: #ef4444; font-size: 16px; text-shadow: 0 0 6px rgba(0,0,0,0.8); animation: flash-stop 1s ease-out forwards; pointer-events: none; z-index: 9999;">STOP ✖</div>',
             })
-            if (m) setTimeout(() => removeLayer(m), 1000)
+            if (m) transientTimersRef.current.push(window.setTimeout(() => removeLayer(m), 1000))
           }
 
           const fleetList = assignments?.length
@@ -577,7 +587,7 @@ export default function MapplsMap({
             const m = addMarker(lat, lon, {
               html: '<div style="font-weight: 900; color: #60a5fa; font-size: 16px; text-shadow: 0 0 6px rgba(0,0,0,0.8); animation: float-up-fade 1.5s ease-out forwards; pointer-events: none; z-index: 9999;">▼ -20%</div>',
             })
-            if (m) setTimeout(() => removeLayer(m), 1500)
+            if (m) transientTimersRef.current.push(window.setTimeout(() => removeLayer(m), 1500))
           }
         })
 

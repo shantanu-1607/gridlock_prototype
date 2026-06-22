@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import InfoHint from '@/components/ui/info-hint'
 
 import RiskGauge from '../../analysis/RiskGauge'
+import SpatioTemporalContextCard from '../../analysis/SpatioTemporalContextCard'
 import PropagationForecastChart from '../../charts/PropagationForecastChart'
 import SimilarIncidentSeverityChart from '../../charts/SimilarIncidentSeverityChart'
 import type { DashboardOutletContext } from '../AppLayout'
@@ -47,7 +48,7 @@ const STAGE_BORDER: Record<string, string> = {
 }
 
 export default function OverviewPage() {
-  const { pipelineResult } = useOutletContext<DashboardOutletContext>()
+  const { pipelineResult, selectedEvent } = useOutletContext<DashboardOutletContext>()
 
   return (
     <div className="h-full overflow-y-auto p-8">
@@ -237,6 +238,8 @@ export default function OverviewPage() {
               </CardContent>
             </Card>
           </div>
+
+          <SpatioTemporalContextCard pipelineResult={pipelineResult} event={selectedEvent} />
 
           {pipelineResult.queue_analysis.tandem?.is_tandem && (
             <Card>

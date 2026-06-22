@@ -1,55 +1,15 @@
 import { AlertTriangle, Calendar, ChevronDown, Loader2, MapPin, Search, Send } from 'lucide-react'
 import { FormEvent, useEffect, useRef, useState } from 'react'
 
+import {
+  CATEGORIES,
+  CORRIDORS,
+  DEFAULT_CORRIDOR,
+  PRIORITIES,
+  PRIORITY_CLASSES,
+} from '../../config/planning'
 import type { PlanEventPayload } from '../../types'
 import { autosuggest, type MapplsSuggestion } from '../../utils/mappls'
-
-const CORRIDORS = [
-  'Outer Ring Road',
-  'Hosur Road',
-  'Bellary Road 1',
-  'Bellary Road 2',
-  'Old Madras Road',
-  'Mysore Road',
-  'Tumkur Road',
-  'Bannerghata Road',
-  'Magadi Road',
-  'Old Airport Road',
-  'Hennur Main Road',
-  'Varthur Road',
-  'West of Chord Road',
-  'ORR East 1',
-  'ORR East 2',
-  'ORR North 1',
-  'ORR North 2',
-  'ORR West 1',
-  'CBD 2',
-  'Non-corridor',
-]
-
-const CATEGORIES = [
-  'Accident',
-  'Protest',
-  'VIP Movement',
-  'Water Logging',
-  'Tree Fall',
-  'Public Event',
-  'Procession',
-  'Construction',
-  'Congestion',
-  'Vehicle Breakdown',
-  'Road Conditions',
-  'Others',
-]
-
-const PRIORITIES = ['Low', 'Medium', 'High', 'Critical']
-
-const PRIORITY_CLASSES: Record<string, string> = {
-  Low: 'border-green/40 bg-green/15 text-green',
-  Medium: 'border-yellow/40 bg-yellow/15 text-yellow',
-  High: 'border-orange/40 bg-orange/15 text-orange',
-  Critical: 'border-red/40 bg-red/15 text-red',
-}
 
 interface Props {
   onSubmit: (payload: PlanEventPayload) => void
@@ -63,7 +23,7 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
     description: '',
     lat: 12.9716,
     lon: 77.5946,
-    corridor: 'Outer Ring Road',
+    corridor: DEFAULT_CORRIDOR,
     start_datetime: '',
     priority: 'Medium',
     requires_road_closure: false,
@@ -102,8 +62,31 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const [validationError, setValidationError] = useState<string | null>(null)
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
+
+    // Field-level validation — guards against NaN/empty values reaching the pipeline.
+    const lat = Number(form.lat)
+    const lon = Number(form.lon)
+    if (!form.name.trim()) return setValidationError('Please enter an event name.')
+    if (!form.start_datetime) return setValidationError('Please set a start date and time.')
+    if (
+      Number.isNaN(lat) ||
+      Number.isNaN(lon) ||
+      (lat === 0 && lon === 0) ||
+      lat < -90 ||
+      lat > 90 ||
+      lon < -180 ||
+      lon > 180
+    ) {
+      return setValidationError('Please pick a valid location (search or tap the map).')
+    }
+    if (Number(form.expected_crowd_size) < 0) {
+      return setValidationError('Expected crowd size cannot be negative.')
+    }
+    setValidationError(null)
 
     // Ensure the date is sent with the correct absolute UTC offset
     const isoStartDateTime = form.start_datetime
@@ -343,6 +326,14 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
           className={`${inputClass} resize-y`}
         />
       </div>
+
+      {/* Validation message */}
+      {validationError && (
+        <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <AlertTriangle size={14} className="shrink-0" />
+          {validationError}
+        </div>
+      )}
 
       {/* Submit */}
       <button
