@@ -55,10 +55,14 @@ const features = [
   },
 ]
 
+// Fingerprint count is hydrated from the live ML corpus at runtime (see useEffect
+// below); 2.5 (≈2,497 reference incidents) is the build-time fallback. The 90%
+// "Forecast Coverage" is the model's conformal prediction-interval target coverage
+// — a real, calibrated metric, unlike the previous unmeasured "1s" latency claim.
 const stats = [
   { value: 30, suffix: 'm', label: 'Congestion Forecast', icon: Clock },
-  { value: 2.4, suffix: 'k+', label: 'Incident Fingerprints', icon: Brain },
-  { value: 1, suffix: 's', label: 'Dispatch Latency', icon: Zap },
+  { value: 2.5, suffix: 'k+', label: 'Incident Fingerprints', icon: Brain },
+  { value: 90, suffix: '%', label: 'Forecast Coverage', icon: Radar },
   { value: 1, suffix: '', label: 'Unified Mission', icon: Waypoints },
 ]
 
@@ -280,6 +284,28 @@ function SmoothScroll({ children }: { children: React.ReactNode }) {
 
 export default function LandingPage() {
   const navigate = useNavigate()
+
+  // Hydrate the "Incident Fingerprints" stat from the live ML corpus. Falls back to
+  // the build-time value in `stats` if the backend/ML service isn't reachable.
+  const [corpusSize, setCorpusSize] = useState<number | null>(null)
+  useEffect(() => {
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+    fetch(`${apiBase}/api/health/ml-stats`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const n = d?.fingerprint_corpus_size
+        if (typeof n === 'number' && n > 0) setCorpusSize(n)
+      })
+      .catch(() => {
+        /* offline — keep the fallback */
+      })
+  }, [])
+
+  const liveStats = stats.map((s) =>
+    s.label === 'Incident Fingerprints' && corpusSize
+      ? { ...s, value: Math.round((corpusSize / 1000) * 10) / 10, suffix: 'k+' }
+      : s,
+  )
 
   const scrollToSection = (e: React.MouseEvent<HTMLElement>, id: string) => {
     e.preventDefault()
@@ -592,7 +618,7 @@ export default function LandingPage() {
               variants={staggerContainer}
               className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8"
             >
-              {stats.map((s, i) => (
+              {liveStats.map((s, i) => (
                 <motion.div
                   key={i}
                   variants={fadeUp}

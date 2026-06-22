@@ -18,13 +18,38 @@ interface Props {
 }
 
 export default function SeverityTrendChart({ events }: Props) {
-  const recent = [...events]
-    .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
-    .slice(-12)
+  // A single incident's severity is fixed at the moment it occurs — it does not
+  // evolve over days. So we don't connect raw per-event points (that would imply a
+  // continuity that doesn't exist). Instead we aggregate by calendar day and plot
+  // the *mean* severity of all incidents that day — a real operational trend showing
+  // whether the city's incidents are getting more or less severe over time.
+  const byDay = new Map<string, { sum: number; count: number; ts: number }>()
+  for (const ev of events) {
+    const d = new Date(ev.start_datetime)
+    if (Number.isNaN(d.getTime())) continue
+    const key = d.toISOString().slice(0, 10) // YYYY-MM-DD
+    const dayStart = new Date(key).getTime()
+    const bucket = byDay.get(key) ?? { sum: 0, count: 0, ts: dayStart }
+    bucket.sum += (Number(ev.severity_score) || 0) * 100
+    bucket.count += 1
+    byDay.set(key, bucket)
+  }
 
-  const labels = recent.map((ev) =>
-    new Date(ev.start_datetime).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+  const days = [...byDay.entries()].sort((a, b) => a[1].ts - b[1].ts).slice(-14) // last 14 days that had incidents
+
+  const labels = days.map(([key]) =>
+    new Date(key).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
   )
+  const avgSeverity = days.map(([, b]) => Math.round(b.sum / b.count))
+  const counts = days.map(([, b]) => b.count)
+
+  if (days.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        No incident data yet
+      </div>
+    )
+  }
 
   return (
     <Line
@@ -32,8 +57,8 @@ export default function SeverityTrendChart({ events }: Props) {
         labels,
         datasets: [
           {
-            label: 'Severity Score',
-            data: recent.map((ev) => Math.round(ev.severity_score * 100)),
+            label: 'Avg Severity',
+            data: avgSeverity,
             borderColor: '#2563eb',
             backgroundColor: 'rgba(37, 99, 235, 0.12)',
             pointBackgroundColor: '#2563eb',
@@ -50,7 +75,11 @@ export default function SeverityTrendChart({ events }: Props) {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (ctx) => `Severity: ${ctx.parsed.y}%`,
+              title: (items) => `${items[0].label}`,
+              label: (ctx) => {
+                const n = counts[ctx.dataIndex]
+                return `Avg severity: ${ctx.parsed.y}%  ·  ${n} incident${n === 1 ? '' : 's'}`
+              },
             },
           },
         },

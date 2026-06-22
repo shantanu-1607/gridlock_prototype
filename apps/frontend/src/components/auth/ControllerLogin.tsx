@@ -1,5 +1,5 @@
 import { AlertCircle, Eye, EyeOff, Lock, Mail, Shield } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,21 @@ const ControllerLogin: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
+
+  // Live road-graph size for the "Intersections" stat (real count, not a marketing number).
+  const [junctionCount, setJunctionCount] = useState<number | null>(null)
+  useEffect(() => {
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+    fetch(`${apiBase}/api/health/ml-stats`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const n = d?.junction_count
+        if (typeof n === 'number' && n > 0) setJunctionCount(n)
+      })
+      .catch(() => {
+        /* offline — keep the fallback */
+      })
+  }, [])
 
   const validate = (): boolean => {
     const emailResult = validateEmail(email)
@@ -206,9 +221,9 @@ const ControllerLogin: React.FC = () => {
 
             <div className="grid grid-cols-3 gap-6 pt-8">
               <div className="space-y-2 bg-background/50 p-4 rounded-lg border border-border backdrop-blur-md">
-                <div className="text-2xl font-bold text-primary">99.9%</div>
+                <div className="text-2xl font-bold text-primary">90%</div>
                 <div className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">
-                  Uptime
+                  Forecast Coverage
                 </div>
               </div>
               <div className="space-y-2 bg-background/50 p-4 rounded-lg border border-border backdrop-blur-md">
@@ -218,7 +233,7 @@ const ControllerLogin: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-2 bg-background/50 p-4 rounded-lg border border-border backdrop-blur-md">
-                <div className="text-2xl font-bold text-primary">500+</div>
+                <div className="text-2xl font-bold text-primary">{junctionCount ?? 294}</div>
                 <div className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">
                   Intersections
                 </div>

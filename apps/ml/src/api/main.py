@@ -61,10 +61,13 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 @app.get("/api/ml/health")
 def health():
+    fingerprinter = getattr(_predictor, "fingerprinter", None) if _predictor else None
     return {
         "status": "ok",
         "model_loaded": _predictor is not None,
         "model_timestamp": _predictor.timestamp if _predictor else None,
+        # Real size of the fingerprint reference corpus (drives the landing-page stat).
+        "fingerprint_corpus_size": getattr(fingerprinter, "corpus_size", 0) if fingerprinter else 0,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 

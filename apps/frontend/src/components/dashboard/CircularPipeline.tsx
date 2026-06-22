@@ -15,7 +15,7 @@ import React, { useEffect, useRef, useState } from 'react'
 
 const PIPELINE_STEPS = [
   { id: 1, title: 'Event Intake & DB Seeding', icon: Database, subtitle: 'PostgreSQL Insert' },
-  { id: 2, title: 'ML Core Prediction', icon: Cpu, subtitle: 'CatBoost/LGBM Champion' },
+  { id: 2, title: 'ML Core Prediction', icon: Cpu, subtitle: 'Heterogeneous Stacked Ensemble' },
   {
     id: 3,
     title: 'Queueing Capacity Analysis',
