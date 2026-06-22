@@ -8,6 +8,11 @@ import type { DashboardOutletContext } from '../AppLayout'
 import LiveEventDetailsCard from './LiveEventDetailsCard'
 
 const CRITICAL_MERGE_FLASH_MS = 4500
+// Disabled: focusPoint below is a new object literal every render, and since
+// `clock` re-renders this component every second, the map re-flies to the
+// collision point on a 1s loop once lastCriticalMerge is set. Re-enable once
+// lastCriticalMerge is cleared after the flash and focusPoint is memoized.
+const CRITICAL_MERGE_ALERTS_ENABLED = false
 
 export default function LiveMapPage() {
   const {
@@ -34,7 +39,7 @@ export default function LiveMapPage() {
   }, [])
 
   useEffect(() => {
-    if (!lastCriticalMerge) return
+    if (!CRITICAL_MERGE_ALERTS_ENABLED || !lastCriticalMerge) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsFlashing(true)
     const timer = setTimeout(() => setIsFlashing(false), CRITICAL_MERGE_FLASH_MS)
@@ -56,7 +61,9 @@ export default function LiveMapPage() {
         barricades={selectedEventBarricades}
         liveFleetLocations={liveFleetLocations}
         focusPoint={
-          lastCriticalMerge ? { lat: lastCriticalMerge.lat, lon: lastCriticalMerge.lon } : null
+          CRITICAL_MERGE_ALERTS_ENABLED && lastCriticalMerge
+            ? { lat: lastCriticalMerge.lat, lon: lastCriticalMerge.lon }
+            : null
         }
       />
 
