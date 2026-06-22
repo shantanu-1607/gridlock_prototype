@@ -51,7 +51,6 @@ export default function PerformancePage() {
               <InfoHint
                 title="Deployment by Junction"
                 what="How many officers and barricades are recommended at each junction."
-                how="The plan concentrates resources at the junctions predicted to be most congested by this incident."
                 why="Helps you place limited staff where they will have the most impact."
               />
             </CardTitle>
@@ -74,7 +73,6 @@ export default function PerformancePage() {
               <InfoHint
                 title="Fleet Deployment Detail"
                 what="Which officers are being sent where, and the reasoning behind it."
-                how="Officers are assigned to the highest-priority junctions first. 'High Uncertainty' appears when the prediction is less confident or the duration range is wide, so extra contingency units are pre-staged."
                 why="Gives the on-ground reasoning behind each assignment, so commanders can trust or adjust it."
               />
             </CardTitle>
@@ -91,7 +89,6 @@ export default function PerformancePage() {
               <InfoHint
                 title="Barricade Plan"
                 what="Where to place barricades or road closures for this incident."
-                how="Recommends barricade points and the type of closure at key junctions that feed traffic into the affected area."
                 why="Stops more vehicles entering the jam while the incident is being cleared."
               />
             </CardTitle>
@@ -109,7 +106,6 @@ export default function PerformancePage() {
                 <InfoHint
                   title="Signal Gating Recommendations"
                   what="Suggested cuts to traffic-signal green time at junctions upstream of the incident."
-                  how="Reducing green time upstream slows how fast vehicles arrive at the blockage. Each row shows the current green time → the recommended green time."
                   why="Metering the inflow buys time for the incident to clear and keeps the backlog from growing."
                 />
               </CardTitle>
