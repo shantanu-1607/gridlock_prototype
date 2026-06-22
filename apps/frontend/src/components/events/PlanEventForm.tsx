@@ -1,5 +1,6 @@
 import { AlertTriangle, Calendar, ChevronDown, Loader2, MapPin, Search, Send } from 'lucide-react'
 import { FormEvent, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import {
   CATEGORIES,
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function PlanEventForm({ onSubmit, loading }: Props) {
+  const { t } = useTranslation()
   const [form, setForm] = useState({
     name: '',
     category: 'Accident',
@@ -70,8 +72,8 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
     // Field-level validation — guards against NaN/empty values reaching the pipeline.
     const lat = Number(form.lat)
     const lon = Number(form.lon)
-    if (!form.name.trim()) return setValidationError('Please enter an event name.')
-    if (!form.start_datetime) return setValidationError('Please set a start date and time.')
+    if (!form.name.trim()) return setValidationError(t('planEventForm.validationName'))
+    if (!form.start_datetime) return setValidationError(t('planEventForm.validationDate'))
     if (
       Number.isNaN(lat) ||
       Number.isNaN(lon) ||
@@ -81,10 +83,10 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
       lon < -180 ||
       lon > 180
     ) {
-      return setValidationError('Please pick a valid location (search or tap the map).')
+      return setValidationError(t('planEventForm.validationLocation'))
     }
     if (Number(form.expected_crowd_size) < 0) {
-      return setValidationError('Expected crowd size cannot be negative.')
+      return setValidationError(t('planEventForm.validationCrowd'))
     }
     setValidationError(null)
 
@@ -120,14 +122,14 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
       {/* Incident Details */}
       <div className="rounded-lg border border-border bg-card p-3.5">
         <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-foreground uppercase">
-          <AlertTriangle size={14} /> Incident Details
+          <AlertTriangle size={14} /> {t('planEventForm.incidentDetails')}
         </h3>
 
         <div className="mb-2.5">
-          <label className={labelClass}>Event Name</label>
+          <label className={labelClass}>{t('planEventForm.eventName')}</label>
           <input
             type="text"
-            placeholder="e.g. Pipeline burst near Silk Board"
+            placeholder={t('planEventForm.eventNamePlaceholder')}
             value={form.name}
             onChange={(e) => update('name', e.target.value)}
             required
@@ -137,7 +139,7 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
 
         <div className="mb-2.5 grid grid-cols-2 gap-2.5">
           <div>
-            <label className={labelClass}>Category</label>
+            <label className={labelClass}>{t('planEventForm.category')}</label>
             <div className="relative">
               <select
                 value={form.category}
@@ -157,15 +159,15 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
             </div>
           </div>
           <div>
-            <label className={labelClass}>Type</label>
+            <label className={labelClass}>{t('planEventForm.type')}</label>
             <div className="relative">
               <select
                 value={form.type}
                 onChange={(e) => update('type', e.target.value)}
                 className={`${inputClass} appearance-none pr-7`}
               >
-                <option value="unplanned">Unplanned</option>
-                <option value="planned">Planned</option>
+                <option value="unplanned">{t('planEventForm.unplanned')}</option>
+                <option value="planned">{t('planEventForm.planned')}</option>
               </select>
               <ChevronDown
                 size={14}
@@ -177,7 +179,7 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
 
         <div className="grid grid-rows-2">
           <div>
-            <label className={labelClass}>Priority</label>
+            <label className={labelClass}>{t('planEventForm.priority')}</label>
             <div className="flex gap-1.5">
               {PRIORITIES.map((p) => (
                 <button
@@ -190,7 +192,7 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
                   }`}
                   onClick={() => update('priority', p)}
                 >
-                  {p}
+                  {t(`planEventForm.priority${p}`)}
                 </button>
               ))}
             </div>
@@ -203,7 +205,9 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
                 onChange={(e) => update('requires_road_closure', e.target.checked)}
                 className="h-4 w-4 accent-accent"
               />
-              <span className="text-xs text-muted-foreground">Requires Road Closure</span>
+              <span className="text-xs text-muted-foreground">
+                {t('planEventForm.requiresRoadClosure')}
+              </span>
             </label>
           </div>
         </div>
@@ -212,11 +216,11 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
       {/* Location */}
       <div className="rounded-lg border border-border bg-card p-3.5">
         <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-foreground uppercase">
-          <MapPin size={14} /> Location
+          <MapPin size={14} /> {t('planEventForm.location')}
         </h3>
 
         <div className="mb-2.5">
-          <label className={labelClass}>Corridor</label>
+          <label className={labelClass}>{t('planEventForm.corridor')}</label>
           <div className="relative">
             <select
               value={form.corridor}
@@ -237,7 +241,7 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
         </div>
 
         <div className="relative" ref={searchContainerRef}>
-          <label className={labelClass}>Search Location</label>
+          <label className={labelClass}>{t('planEventForm.searchLocation')}</label>
           <div className="relative">
             <Search
               size={14}
@@ -245,7 +249,7 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
             />
             <input
               type="text"
-              placeholder="e.g. M. Chinnaswamy Stadium"
+              placeholder={t('planEventForm.searchLocationPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={`${inputClass} pl-8`}
@@ -289,7 +293,7 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
           {/* Selected coordinates preview */}
           <div className="mt-2 flex items-center justify-between rounded-md bg-muted/50 px-2.5 py-1.5">
             <span className="text-[10px] font-medium text-muted-foreground uppercase">
-              Coordinates
+              {t('planEventForm.coordinates')}
             </span>
             <span className="font-mono text-[11px] font-semibold text-foreground">
               {form.lat.toFixed(4)}, {form.lon.toFixed(4)}
@@ -301,10 +305,10 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
       {/* Timing */}
       <div className="rounded-lg border border-border bg-card p-3.5">
         <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-foreground uppercase">
-          <Calendar size={14} /> Timing
+          <Calendar size={14} /> {t('planEventForm.timing')}
         </h3>
         <div>
-          <label className={labelClass}>Start Date & Time</label>
+          <label className={labelClass}>{t('planEventForm.startDateTime')}</label>
           <input
             type="datetime-local"
             value={form.start_datetime}
@@ -317,9 +321,9 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
 
       {/* Description */}
       <div>
-        <label className={labelClass}>Description (optional)</label>
+        <label className={labelClass}>{t('planEventForm.description')}</label>
         <textarea
-          placeholder="Additional context for the command team..."
+          placeholder={t('planEventForm.descriptionPlaceholder')}
           value={form.description}
           onChange={(e) => update('description', e.target.value)}
           rows={2}
@@ -347,7 +351,7 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
         ) : (
           <>
             <Send size={16} />
-            Run Predictive Pipeline
+            {t('planEventForm.runPredictivePipeline')}
           </>
         )}
       </button>
