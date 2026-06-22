@@ -54,7 +54,7 @@ export default function DetailedReportsPage() {
 
   if (!pipelineResult) {
     return (
-      <div className="h-full overflow-y-auto p-8">
+      <div className="h-full overflow-y-auto p-4 md:p-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold tracking-tight">Detailed Reports</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -116,7 +116,7 @@ export default function DetailedReportsPage() {
   const visibleMatches = showAllMatches ? matches : matches.slice(0, 3)
 
   return (
-    <div className="h-full overflow-y-auto p-8">
+    <div className="h-full overflow-y-auto p-4 md:p-8">
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -133,10 +133,10 @@ export default function DetailedReportsPage() {
         variants={staggerContainer}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-2 gap-4"
+        className="grid grid-cols-1 md:grid-cols-2 gap-4"
       >
         {/* ── Event Fingerprint (hero) ─────────────────────────────── */}
-        <motion.div variants={cardVariants} className="col-span-2">
+        <motion.div variants={cardVariants} className="col-span-1 md:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -177,7 +177,7 @@ export default function DetailedReportsPage() {
                   {/* Forecast anchor */}
                   {agg && (
                     <div className="rounded-md border border-border bg-muted/50 p-4">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div className="flex flex-col gap-1">
                           <span className="text-xs uppercase tracking-wider text-muted-foreground">
                             Model forecast
@@ -322,7 +322,7 @@ export default function DetailedReportsPage() {
         </motion.div>
 
         {/* ── Pre-staging Timeline ─────────────────────────────────── */}
-        <motion.div variants={cardVariants} className="col-span-2">
+        <motion.div variants={cardVariants} className="col-span-1 md:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -342,7 +342,7 @@ export default function DetailedReportsPage() {
 
         {/* ── Diversion Routes ─────────────────────────────────────── */}
         {diversionRoutes.length > 0 && (
-          <motion.div variants={cardVariants} className="col-span-2">
+          <motion.div variants={cardVariants} className="col-span-1 md:col-span-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -397,7 +397,7 @@ export default function DetailedReportsPage() {
 
         {/* ── Post-Event Analysis ──────────────────────────────────── */}
         {counterfactual && counterfactual.prediction_accuracy_pct !== undefined && (
-          <motion.div variants={cardVariants} className="col-span-2">
+          <motion.div variants={cardVariants} className="col-span-1 md:col-span-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -411,7 +411,7 @@ export default function DetailedReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-2.5">
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="flex flex-col items-center rounded-md border border-border bg-muted p-4">
                       <span className="font-mono text-2xl font-bold text-primary">
                         {counterfactual.prediction_accuracy_pct.toFixed(0)}%

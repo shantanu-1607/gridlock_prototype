@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bell, LogOut, Waypoints, WifiOff } from 'lucide-react'
+import { Bell, LogOut, Plus, Waypoints, WifiOff } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -14,6 +14,8 @@ interface HeaderProps {
   wsConnected: boolean
   activeEvents: PlannedEvent[]
   onEventSelect?: (ev: PlannedEvent) => void
+  isControlPanelOpen?: boolean
+  onControlPanelToggle?: () => void
 }
 
 function formatTimeAgo(dateString: string) {
@@ -27,7 +29,13 @@ function formatTimeAgo(dateString: string) {
   return `${days}d ago`
 }
 
-export default function Header({ wsConnected, activeEvents, onEventSelect }: HeaderProps) {
+export default function Header({
+  wsConnected,
+  activeEvents,
+  onEventSelect,
+  isControlPanelOpen,
+  onControlPanelToggle,
+}: HeaderProps) {
   const { user, logout } = useAuth()
   const { t } = useTranslation()
   const [showNotifications, setShowNotifications] = useState(false)
@@ -48,7 +56,7 @@ export default function Header({ wsConnected, activeEvents, onEventSelect }: Hea
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.25, 0.4, 0.25, 1] }}
-      className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card/80 backdrop-blur-xl px-6 z-20"
+      className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card/80 backdrop-blur-xl px-4 md:px-6 z-20"
     >
       {/* Brand */}
       <div className="flex items-center gap-2.5">
@@ -68,7 +76,7 @@ export default function Header({ wsConnected, activeEvents, onEventSelect }: Hea
       </div>
 
       {/* Right Side */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 md:gap-3">
         {/* Connection Status */}
         {wsConnected ? (
           <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
@@ -164,7 +172,22 @@ export default function Header({ wsConnected, activeEvents, onEventSelect }: Hea
         </div>
 
         {/* Theme Toggle */}
-        <ThemeToggle />
+        <div className="hidden md:block">
+          <ThemeToggle />
+        </div>
+
+        {/* Mobile Plan Button */}
+        <div className="block md:hidden">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onControlPanelToggle}
+            className="h-7 px-2 text-[11px] gap-1"
+          >
+            <Plus size={12} />
+            {isControlPanelOpen ? 'Close' : 'Plan'}
+          </Button>
+        </div>
 
         {/* Separator */}
         <div className="h-6 w-px bg-border" />

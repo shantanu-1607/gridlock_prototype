@@ -128,7 +128,7 @@ export default function CircularPipeline({
   const content = (
     <div
       ref={containerRef}
-      className="relative flex flex-col items-center justify-center min-h-[600px] w-full max-w-4xl bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-200 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800/50 shadow-2xl mx-auto"
+      className="relative flex flex-col items-center justify-center min-h-[450px] md:min-h-[600px] w-full max-w-4xl bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-200 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800/50 shadow-2xl mx-auto"
     >
       {/* Close Button */}
       {!inline && onClose && (
@@ -166,7 +166,10 @@ export default function CircularPipeline({
         }}
       />
 
-      <div className="relative" style={{ width: containerSize, height: containerSize }}>
+      <div
+        className="relative transform scale-[0.6] sm:scale-75 md:scale-100 origin-center"
+        style={{ width: containerSize, height: containerSize }}
+      >
         {/* SVG Track Layer */}
         <svg
           width={containerSize}

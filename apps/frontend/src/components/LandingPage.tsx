@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Clock,
   MapPin,
+  Menu,
   Navigation,
   Radar,
   Send,
@@ -290,6 +291,7 @@ export default function LandingPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // Hydrate the "Incident Fingerprints" stat from the live ML corpus. Falls back to
   // the build-time value in `stats` if the backend/ML service isn't reachable.
@@ -315,6 +317,7 @@ export default function LandingPage() {
 
   const scrollToSection = (e: React.MouseEvent<HTMLElement>, id: string) => {
     e.preventDefault()
+    setIsMobileMenuOpen(false)
     const element = document.getElementById(id)
     if (element) {
       let top = 0
@@ -338,31 +341,73 @@ export default function LandingPage() {
           <span className="text-xl font-bold tracking-tight text-foreground">GridLock</span>
         </div>
         <div className="flex items-center gap-4">
-          <a
-            href="#features"
-            onClick={(e) => scrollToSection(e, 'features')}
-            className="hidden md:inline-block text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {t('nav.features')}
-          </a>
-          <a
-            href="#how-it-works"
-            onClick={(e) => scrollToSection(e, 'how-it-works')}
-            className="hidden md:inline-block text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {t('nav.howItWorks')}
-          </a>
-          <a
-            href="#roles-section"
-            onClick={(e) => scrollToSection(e, 'roles-section')}
-            className="hidden md:inline-block text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {t('nav.getStarted')}
-          </a>
-          <div className="w-px h-5 bg-border hidden md:block" />
+          <div className="hidden md:flex items-center gap-4">
+            <a
+              href="#features"
+              onClick={(e) => scrollToSection(e, 'features')}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t('nav.features')}
+            </a>
+            <a
+              href="#how-it-works"
+              onClick={(e) => scrollToSection(e, 'how-it-works')}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t('nav.howItWorks')}
+            </a>
+            <a
+              href="#roles-section"
+              onClick={(e) => scrollToSection(e, 'roles-section')}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t('nav.getStarted')}
+            </a>
+            <div className="w-px h-5 bg-border" />
+          </div>
           <LanguageSwitcher />
+          <button
+            className="md:hidden p-2 -mr-2 text-muted-foreground hover:text-foreground"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
       </nav>
+
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed inset-0 z-40 bg-background/95 backdrop-blur-xl pt-24 px-6 flex flex-col gap-6 md:hidden"
+          >
+            <a
+              href="#features"
+              onClick={(e) => scrollToSection(e, 'features')}
+              className="text-2xl font-bold text-foreground"
+            >
+              {t('nav.features')}
+            </a>
+            <a
+              href="#how-it-works"
+              onClick={(e) => scrollToSection(e, 'how-it-works')}
+              className="text-2xl font-bold text-foreground"
+            >
+              {t('nav.howItWorks')}
+            </a>
+            <a
+              href="#roles-section"
+              onClick={(e) => scrollToSection(e, 'roles-section')}
+              className="text-2xl font-bold text-foreground"
+            >
+              {t('nav.getStarted')}
+            </a>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <SmoothScroll>
         <div className="relative flex flex-col bg-black/40 font-sans">
@@ -721,7 +766,7 @@ export default function LandingPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="absolute inset-0 z-40 bg-background/60 backdrop-blur-md rounded-3xl"
+                      className="fixed inset-0 z-40 bg-background/60 backdrop-blur-md"
                       onClick={() => setExpandedFeature(null)}
                     />
                   )}
@@ -731,7 +776,7 @@ export default function LandingPage() {
                       <motion.div
                         layoutId={`feature-${f.id}`}
                         key={`expanded-${f.id}`}
-                        className="absolute inset-0 z-50 bg-card p-8 md:p-12 flex flex-col gap-6 rounded-3xl border border-primary/50 shadow-2xl overflow-hidden pointer-events-auto"
+                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-2xl max-h-[85vh] bg-card p-6 md:p-12 flex flex-col gap-4 md:gap-6 rounded-3xl border border-primary/50 shadow-2xl overflow-y-auto pointer-events-auto"
                       >
                         <motion.button
                           initial={{ opacity: 0 }}
@@ -838,14 +883,14 @@ export default function LandingPage() {
 
               <div className="relative max-w-2xl mx-auto mt-12">
                 {/* Background track */}
-                <div className="absolute left-8 top-6 bottom-0 w-px bg-border/50" />
+                <div className="absolute left-4 md:left-8 top-6 bottom-0 w-px bg-border/50" />
 
                 {steps.map((s, i) => (
-                  <div key={i} className="relative pl-20 pb-12 last:pb-0">
+                  <div key={i} className="relative pl-12 md:pl-20 pb-12 last:pb-0">
                     {/* The vertical segment that lights up */}
                     {i < steps.length - 1 && (
                       <motion.div
-                        className="absolute left-8 top-6 h-full w-px bg-primary origin-top z-10"
+                        className="absolute left-4 md:left-8 top-6 h-full w-px bg-primary origin-top z-10"
                         initial={{ scaleY: 0 }}
                         whileInView={{ scaleY: 1 }}
                         viewport={{ once: true, margin: '-20%' }}
@@ -854,11 +899,11 @@ export default function LandingPage() {
                     )}
 
                     {/* Dot background */}
-                    <div className="absolute left-[27px] top-6 h-3.5 w-3.5 rounded-full bg-background border-2 border-border z-10" />
+                    <div className="absolute left-[11px] md:left-[27px] top-6 h-3.5 w-3.5 rounded-full bg-background border-2 border-border z-10" />
 
                     {/* Dot active state */}
                     <motion.div
-                      className="absolute left-[27px] top-6 h-3.5 w-3.5 rounded-full bg-primary z-20"
+                      className="absolute left-[11px] md:left-[27px] top-6 h-3.5 w-3.5 rounded-full bg-primary z-20"
                       initial={{ scale: 0, opacity: 0 }}
                       whileInView={{ scale: 1, opacity: 1 }}
                       viewport={{ once: true, margin: '-20%' }}
@@ -866,7 +911,7 @@ export default function LandingPage() {
                     />
 
                     <motion.div
-                      className="absolute left-[23px] top-[20px] h-[22px] w-[22px] rounded-full bg-primary/30 blur-sm z-0"
+                      className="absolute left-[7px] md:left-[23px] top-[20px] h-[22px] w-[22px] rounded-full bg-primary/30 blur-sm z-0"
                       initial={{ scale: 0, opacity: 0 }}
                       whileInView={{ scale: 1, opacity: 1 }}
                       viewport={{ once: true, margin: '-20%' }}
@@ -1038,7 +1083,7 @@ export default function LandingPage() {
           </section>
 
           {/* ── CTA Banner ─────────────────────────────────────────────── */}
-          <section className="relative z-10 py-16 px-6">
+          <section className="relative z-10 py-12 md:py-16 px-6">
             <motion.div
               initial="hidden"
               whileInView="visible"
@@ -1050,7 +1095,7 @@ export default function LandingPage() {
               <div className="absolute top-0 left-0 w-72 h-72 bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
               <div className="absolute bottom-0 right-0 w-72 h-72 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-              <div className="relative z-10 text-center py-16 px-8">
+              <div className="relative z-10 text-center py-12 px-6 md:py-16 md:px-8">
                 <motion.div
                   initial={{ scale: 0 }}
                   whileInView={{ scale: 1 }}

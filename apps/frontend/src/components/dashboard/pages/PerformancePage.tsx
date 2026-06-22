@@ -16,7 +16,7 @@ export default function PerformancePage() {
 
   if (!pipelineResult) {
     return (
-      <div className="h-full overflow-y-auto p-8">
+      <div className="h-full overflow-y-auto p-4 md:p-8">
         <div className="mb-6">
           <h1 className="text-3xl font-extrabold tracking-tight">{t('performancePage.title')}</h1>
           <p className="text-base text-muted-foreground mt-1">{t('performancePage.subtitle')}</p>
@@ -87,13 +87,13 @@ export default function PerformancePage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-8">
+    <div className="h-full overflow-y-auto p-4 md:p-8">
       <div className="mb-6">
         <h1 className="text-3xl font-extrabold tracking-tight">{t('performancePage.title')}</h1>
         <p className="text-base text-muted-foreground mt-1">{t('performancePage.subtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -132,7 +132,7 @@ export default function PerformancePage() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-2">
+        <Card className="col-span-1 md:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Construction size={20} /> {t('performancePage.barricadePlan')}
@@ -149,7 +149,7 @@ export default function PerformancePage() {
         </Card>
 
         {gating_plan.recommendations?.length ? (
-          <Card className="col-span-2">
+          <Card className="col-span-1 md:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <GitBranch size={20} /> {t('performancePage.signalGatingRecommendations')}

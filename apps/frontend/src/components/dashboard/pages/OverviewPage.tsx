@@ -83,7 +83,7 @@ export default function OverviewPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-8">
+    <div className="h-full overflow-y-auto p-4 md:p-8">
       <div className="mb-6">
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold tracking-tight">{t('overviewPage.title')}</h1>
@@ -103,7 +103,7 @@ export default function OverviewPage() {
 
       {pipelineResult ? (
         <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardContent className="flex items-center gap-3">
                 <Clock size={20} className="shrink-0 text-primary" />
@@ -214,7 +214,7 @@ export default function OverviewPage() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Card className="col-span-1">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
