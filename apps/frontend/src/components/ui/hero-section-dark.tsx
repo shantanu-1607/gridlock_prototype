@@ -76,10 +76,25 @@ const HeroSection = React.forwardRef<HTMLDivElement, HeroSectionProps>(
     ref,
   ) => {
     return (
-      <div className={cn('relative', className)} ref={ref} {...props}>
-        <div className="absolute top-0 z-[0] h-full w-full bg-primary/10 dark:bg-primary/10 bg-[radial-gradient(ellipse_20%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_20%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]" />
-        <section className="relative max-w-full mx-auto z-1">
-          <RetroGrid {...gridOptions} />
+      <div className={cn('relative overflow-hidden bg-background', className)} ref={ref} {...props}>
+        {/* Video Background */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          >
+            <source src="/bg-traffic.mp4" type="video/mp4" />
+          </video>
+          {/* Transparent overlay for text readability */}
+          <div className="absolute inset-0 bg-white/40 dark:bg-black/60" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_20%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_20%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]" />
+        </div>
+
+        <section className="relative max-w-full mx-auto z-10">
+          <RetroGrid {...gridOptions} opacity={0.3} />
           <div className="max-w-screen-xl z-10 mx-auto px-4 pt-32 pb-16 gap-12 md:px-8">
             <div className="space-y-5 max-w-3xl leading-0 lg:leading-5 mx-auto text-center">
               <h1 className="text-sm text-gray-600 dark:text-gray-400 group font-sans mx-auto px-5 py-2 bg-gradient-to-tr from-zinc-300/20 via-gray-400/20 to-transparent dark:from-zinc-300/5 dark:via-gray-400/5 border-[2px] border-black/5 dark:border-white/5 rounded-3xl w-fit">
