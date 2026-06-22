@@ -298,7 +298,11 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen flex-col bg-transparent">
-      <Header wsConnected={connected} activeEvents={activeEvents.length} />
+      <Header
+        wsConnected={connected}
+        activeEvents={activeEvents}
+        onEventSelect={handleEventSelect}
+      />
 
       <motion.div
         initial={{ opacity: 0 }}
