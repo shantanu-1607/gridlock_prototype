@@ -26,6 +26,7 @@ export interface DashboardOutletContext {
   activeEvents: PlannedEvent[]
   wsConnected: boolean
   lastTick: ReturnType<typeof useWebSocket>['lastTick']
+  lastCriticalMerge: any
   onEventSelect: (ev: PlannedEvent | null) => void
   selectedEventAssignments: any[]
   selectedEventBarricades: any[]
@@ -48,7 +49,7 @@ export default function AppLayout() {
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [liveFleetLocations, setLiveFleetLocations] = useState<Record<string, any>>({})
 
-  const { connected, lastTick, lastFleetLocation } = useWebSocket()
+  const { connected, lastTick, lastFleetLocation, lastCriticalMerge } = useWebSocket()
 
   useEffect(() => {
     if (lastFleetLocation) {
@@ -284,6 +285,7 @@ export default function AppLayout() {
     activeEvents,
     wsConnected: connected,
     lastTick,
+    lastCriticalMerge,
     onEventSelect: handleEventSelect,
     selectedEventAssignments,
     selectedEventBarricades,

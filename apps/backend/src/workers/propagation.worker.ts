@@ -135,6 +135,28 @@ export const propagationWorker = new Worker(
 
     await pubSubRedis.publish('gridlock:events', payload)
 
+    // Multi-event gridlock detection: publish a critical_merge event for each
+    // node where two congestion fronts collided this tick
+    if (state.merges && state.merges.length > 0) {
+      for (const nodeId of state.merges) {
+        const junction = graphService.junctions.get(nodeId)
+        if (!junction) continue
+
+        const mergePayload = JSON.stringify({
+          event: 'critical_merge',
+          data: {
+            eventId,
+            nodeId,
+            lat: junction.lat,
+            lon: junction.lon,
+            timestamp: new Date().toISOString(),
+          },
+        })
+
+        await pubSubRedis.publish('gridlock:events', mergePayload)
+      }
+    }
+
     // Send a periodic SITREP (ambient AI update) every 4 ticks (2 minutes)
     if (state.currentTick > 0 && state.currentTick % 4 === 0) {
       try {
