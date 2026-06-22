@@ -297,6 +297,7 @@ interface Props {
   barricades?: any[]
   liveFleetLocations?: Record<string, any>
   fleetRoute?: [number, number][] | null
+  focusPoint?: { lat: number; lon: number } | null
 }
 
 export default function MapplsMap({
@@ -312,6 +313,7 @@ export default function MapplsMap({
   barricades,
   liveFleetLocations,
   fleetRoute,
+  focusPoint,
 }: Props) {
   const { mapRef, map, isLoaded, error, flyTo, addMarker, removeLayer } = useMapplsMap()
 
@@ -445,12 +447,15 @@ export default function MapplsMap({
     }
   }, [isLoaded, map, activeEvents, selectedEvent, addMarker, removeLayer])
 
-  // Fly to event location
+  // Fly to event location, or to a critical merge collision point if one is active
   useEffect(() => {
-    if (isLoaded && eventLat && eventLon) {
+    if (!isLoaded) return
+    if (focusPoint) {
+      flyTo(focusPoint.lat, focusPoint.lon, 14)
+    } else if (eventLat && eventLon) {
       flyTo(eventLat, eventLon, 14)
     }
-  }, [isLoaded, eventLat, eventLon, flyTo])
+  }, [isLoaded, eventLat, eventLon, focusPoint, flyTo])
 
   // Render impact radius using native Mapbox layers for smooth blur and no duplication
   useEffect(() => {

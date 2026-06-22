@@ -13,6 +13,7 @@ export function useWebSocket() {
   const [connected, setConnected] = useState(false)
   const [lastTick, setLastTick] = useState<PropagationTick | null>(null)
   const [lastFleetLocation, setLastFleetLocation] = useState<any>(null)
+  const [lastCriticalMerge, setLastCriticalMerge] = useState<any>(null)
   const warnedNodesRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -90,6 +91,8 @@ export function useWebSocket() {
                 description: 'Ambient Intel',
                 duration: 8000,
               })
+            } else if (msg.event === 'critical_merge') {
+              setLastCriticalMerge({ ...msg.data, receivedAt: Date.now() })
             }
           } catch {
             /* ignore parse errors */
@@ -116,5 +119,5 @@ export function useWebSocket() {
     }
   }, [])
 
-  return { connected, lastTick, lastFleetLocation, sendMessage }
+  return { connected, lastTick, lastFleetLocation, lastCriticalMerge, sendMessage }
 }

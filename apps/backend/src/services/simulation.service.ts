@@ -9,6 +9,7 @@ export interface PropagationState {
     }
   >
   currentTick: number
+  merges?: string[]
 }
 
 export interface Interventions {
@@ -69,6 +70,7 @@ export class SimulationService {
     const newState: PropagationState = {
       activeNodes: { ...state.activeNodes },
       currentTick: state.currentTick + 1,
+      merges: [],
     }
 
     const nodesToPropagate = Object.keys(newState.activeNodes)
@@ -109,6 +111,7 @@ export class SimulationService {
           if (otherActiveNodes.includes(neighborId)) {
             spreadChance = 1.0 // guaranteed merge
             childIntensity = Math.min(1.0, childIntensity + 0.5) // GridLock condition spike
+            newState.merges!.push(neighborId)
             console.log(`[Simulation] GRIDLOCK MERGE at ${neighborId}`)
           }
 
