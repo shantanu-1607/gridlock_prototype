@@ -144,7 +144,6 @@ export default function DetailedReportsPage() {
                 <InfoHint
                   title="Event Fingerprint"
                   what="Compares this incident against similar real incidents from the past."
-                  how="It searches the historical records for incidents with the same cause, location and time of day, then shows their average and range. 'Consistent with historical precedent' means the model's forecast sits within what actually happened before."
                   why="A sanity check — it confirms the prediction is grounded in real past events, not guesswork."
                 />
               </CardTitle>
@@ -331,7 +330,6 @@ export default function DetailedReportsPage() {
                 <InfoHint
                   title="Pre-staging Timeline"
                   what="A countdown of the actions to take before the incident or event starts."
-                  how="It works backwards from the start time (T-0): command alert, barricade deployment, officer positioning and a final readiness check, ending at the expected clearance time."
                   why="Makes sure every unit is in position before traffic builds up."
                 />
               </CardTitle>
@@ -352,7 +350,6 @@ export default function DetailedReportsPage() {
                   <InfoHint
                     title="Diversion Routes"
                     what="Alternative routes to send traffic around the affected road."
-                    how="For each at-risk corridor, it suggests where to divert vehicles and which road to use instead, with a short reason for each."
                     why="Keeps traffic moving by steering it away from the blockage."
                   />
                 </CardTitle>
@@ -408,7 +405,6 @@ export default function DetailedReportsPage() {
                   <InfoHint
                     title="Post-Event Analysis"
                     what="After the incident is over, compares what the model predicted against what actually happened."
-                    how="'Accuracy' is how close the prediction was; 'Actual' is the real clearance time; 'Policy Regret' estimates how much better things could have gone with a different response. The scenarios show alternative actions and their likely time savings."
                     why="Helps learn from each incident and improve future responses."
                   />
                 </CardTitle>
