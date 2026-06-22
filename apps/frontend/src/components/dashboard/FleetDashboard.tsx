@@ -251,31 +251,31 @@ export default function FleetDashboard() {
   const pendingCount = assignments.filter((a) => a.status !== 'completed').length
 
   return (
-    <div className="flex h-screen flex-col bg-transparent">
+    <div className="flex h-[100dvh] flex-col bg-background w-full border-border relative overflow-hidden">
       {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.25, 0.4, 0.25, 1] }}
-        className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card/80 backdrop-blur-xl px-6 z-10"
+        className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card/90 backdrop-blur-xl px-4 z-20"
       >
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shrink-0">
             <Waypoints size={17} strokeWidth={2.4} />
           </div>
           <div>
-            <h1 className="text-sm font-bold tracking-tight text-foreground leading-none">
-              Field Operations
+            <h1 className="text-[13px] font-bold tracking-tight text-foreground leading-none">
+              Fleet Ops
             </h1>
-            <p className="text-[11px] text-muted-foreground mt-0.5 capitalize">
-              {user?.role || 'Fleet Officer'} · {user?.email}
+            <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">
+              {user?.role || 'Officer'}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {/* Connection */}
           {connected ? (
-            <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+            <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -283,24 +283,21 @@ export default function FleetDashboard() {
               Live
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 rounded-full border border-destructive/20 bg-destructive/10 px-2.5 py-1 text-[11px] font-medium text-destructive">
+            <div className="flex items-center gap-1.5 rounded-full border border-destructive/20 bg-destructive/10 px-2 py-1 text-[10px] font-medium text-destructive">
               Offline
             </div>
           )}
 
           <ThemeToggle />
 
-          <div className="h-6 w-px bg-border" />
-
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
               variant="ghost"
-              size="sm"
-              className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8"
               onClick={logout}
             >
-              <LogOut size={14} className="mr-1.5" />
-              Logout
+              <LogOut size={14} />
             </Button>
           </motion.div>
         </div>
@@ -311,14 +308,65 @@ export default function FleetDashboard() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4, delay: 0.1 }}
-        className="flex flex-1 overflow-hidden"
+        className="flex flex-col lg:flex-row-reverse flex-1 overflow-hidden"
       >
-        {/* Left Pane - Assignments */}
-        <aside className="flex h-full w-[420px] shrink-0 flex-col overflow-hidden border-r border-border bg-card/50 backdrop-blur-sm relative z-10">
-          <ScrollArea className="flex-1 h-full">
-            <div className="p-5">
+        {/* Top Pane - Map */}
+        <main className="relative h-[45vh] lg:h-auto lg:flex-1 shrink-0 overflow-hidden z-0">
+          <MapplsMap
+            eventLat={selectedAssignment?.event_lat || 12.9716}
+            eventLon={selectedAssignment?.event_lon || 77.5946}
+            riskLevel={
+              selectedAssignment?.priority === 'Critical'
+                ? 'critical'
+                : selectedAssignment?.priority === 'High'
+                  ? 'red'
+                  : 'yellow'
+            }
+            propagationTick={null}
+            pipeline={null}
+            selectedEvent={
+              selectedAssignment
+                ? ({
+                    id: selectedAssignment.event_id,
+                    lat: selectedAssignment.event_lat,
+                    lon: selectedAssignment.event_lon,
+                    category: 'Accident',
+                    severity_score: selectedAssignment.priority === 'Critical' ? 0.9 : 0.5,
+                    status: 'active',
+                  } as any)
+                : null
+            }
+            assignments={
+              selectedAssignment ? [{ ...selectedAssignment, user_id: (user as any).id || '' }] : []
+            }
+            liveFleetLocations={
+              liveLocation
+                ? {
+                    [(user as any).id || '']: {
+                      userId: (user as any).id || '',
+                      lat: liveLocation.lat,
+                      lon: liveLocation.lon,
+                    },
+                  }
+                : undefined
+            }
+            fleetRoute={
+              selectedAssignment &&
+              selectedAssignment.status !== 'completed' &&
+              selectedAssignment.status !== 'on_site'
+                ? routePath
+                : null
+            }
+          />
+        </main>
+
+        {/* Bottom Pane - Assignments */}
+        <aside className="flex flex-1 lg:flex-none lg:w-[400px] xl:w-[450px] flex-col overflow-hidden bg-card/95 backdrop-blur-md rounded-t-3xl lg:rounded-none border-t lg:border-t-0 lg:border-r border-border shadow-[0_-10px_40px_rgba(0,0,0,0.15)] lg:shadow-[10px_0_40px_rgba(0,0,0,0.05)] -mt-4 lg:mt-0 z-10 relative">
+          <div className="w-12 h-1.5 bg-muted rounded-full mx-auto my-3 shrink-0 lg:hidden" />
+          <ScrollArea className="flex-1 px-4 pb-4 lg:pt-6">
+            <div className="pb-6">
               {/* Heading */}
-              <div className="mb-5 flex items-center justify-between">
+              <div className="mb-4 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-bold tracking-tight text-foreground">
                   <Shield size={16} className="text-emerald-500" />
                   Assignments
@@ -348,7 +396,7 @@ export default function FleetDashboard() {
                       {/* Top row */}
                       <div className="mb-3 flex items-start justify-between">
                         <div>
-                          <h3 className="text-sm font-bold text-foreground">
+                          <h3 className="text-[13px] font-bold text-foreground">
                             {assignment.junction_name}
                           </h3>
                           <p className="text-[11px] text-muted-foreground capitalize mt-0.5">
@@ -448,7 +496,7 @@ export default function FleetDashboard() {
                 ))}
               </motion.div>
 
-              <Separator className="my-6" />
+              <Separator className="my-5" />
 
               {/* Report Incident */}
               <AnimatePresence mode="wait">
@@ -477,14 +525,14 @@ export default function FleetDashboard() {
                     exit={{ opacity: 0, y: -12 }}
                     transition={{ duration: 0.25 }}
                   >
-                    <Card className="p-5 border-orange-500/30">
-                      <h3 className="mb-4 text-sm font-bold text-foreground flex items-center">
+                    <Card className="p-4 border-orange-500/30">
+                      <h3 className="mb-3 text-[13px] font-bold text-foreground flex items-center">
                         <Activity className="mr-2 text-orange-500 animate-pulse" size={16} />
                         Live Field Report
                       </h3>
                       <div className="flex flex-col gap-3">
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                             Incident Type
                           </label>
                           <select
@@ -502,10 +550,10 @@ export default function FleetDashboard() {
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                             Severity Level
                           </label>
-                          <div className="flex gap-1.5 bg-muted/50 p-1 rounded-lg">
+                          <div className="flex gap-1 bg-muted/50 p-1 rounded-lg">
                             {['Critical', 'High', 'Medium', 'Low'].map((p) => (
                               <div
                                 key={p}
@@ -529,7 +577,7 @@ export default function FleetDashboard() {
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                             Description
                           </label>
                           <textarea
@@ -550,7 +598,7 @@ export default function FleetDashboard() {
                                 setShowCameraView(true)
                                 setTimeout(() => setShowCameraView(false), 800)
                               }}
-                              className={`h-8 px-2.5 ${showCameraView ? 'border-emerald-500 text-emerald-500' : 'text-muted-foreground'}`}
+                              className={`h-8 w-8 p-0 ${showCameraView ? 'border-emerald-500 text-emerald-500' : 'text-muted-foreground'}`}
                             >
                               <Camera
                                 size={14}
@@ -564,7 +612,7 @@ export default function FleetDashboard() {
                                 setIsRecordingVoice(true)
                                 setTimeout(() => setIsRecordingVoice(false), 2000)
                               }}
-                              className={`h-8 px-2.5 ${isRecordingVoice ? 'border-red-500 text-red-500 animate-pulse' : 'text-muted-foreground'}`}
+                              className={`h-8 w-8 p-0 ${isRecordingVoice ? 'border-red-500 text-red-500 animate-pulse' : 'text-muted-foreground'}`}
                             >
                               <Mic size={14} />
                             </Button>
@@ -578,8 +626,7 @@ export default function FleetDashboard() {
                               onClick={() => setRequiresBackup(!requiresBackup)}
                             >
                               <div
-                                className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${requiresBackup ? 'left-4.5 right-0.5' : 'left-0.5'}`}
-                                style={{ left: requiresBackup ? '18px' : '2px' }}
+                                className={`absolute top-[2px] w-3 h-3 rounded-full bg-white transition-all ${requiresBackup ? 'left-[18px]' : 'left-[2px]'}`}
                               />
                             </div>
                           </label>
@@ -602,7 +649,7 @@ export default function FleetDashboard() {
                             {isSubmitting ? (
                               <>
                                 <Loader2 size={13} className="mr-1.5 animate-spin" />
-                                AI Processing...
+                                Processing...
                               </>
                             ) : (
                               <>
@@ -620,56 +667,6 @@ export default function FleetDashboard() {
             </div>
           </ScrollArea>
         </aside>
-
-        {/* Right Pane - Map */}
-        <main className="relative flex-1 overflow-hidden z-0">
-          <MapplsMap
-            eventLat={selectedAssignment?.event_lat || 12.9716}
-            eventLon={selectedAssignment?.event_lon || 77.5946}
-            riskLevel={
-              selectedAssignment?.priority === 'Critical'
-                ? 'critical'
-                : selectedAssignment?.priority === 'High'
-                  ? 'red'
-                  : 'yellow'
-            }
-            propagationTick={null}
-            pipeline={null}
-            selectedEvent={
-              selectedAssignment
-                ? ({
-                    id: selectedAssignment.event_id,
-                    lat: selectedAssignment.event_lat,
-                    lon: selectedAssignment.event_lon,
-                    category: 'Accident',
-                    severity_score: selectedAssignment.priority === 'Critical' ? 0.9 : 0.5,
-                    status: 'active',
-                  } as any)
-                : null
-            }
-            assignments={
-              selectedAssignment ? [{ ...selectedAssignment, user_id: (user as any).id || '' }] : []
-            }
-            liveFleetLocations={
-              liveLocation
-                ? {
-                    [(user as any).id || '']: {
-                      userId: (user as any).id || '',
-                      lat: liveLocation.lat,
-                      lon: liveLocation.lon,
-                    },
-                  }
-                : undefined
-            }
-            fleetRoute={
-              selectedAssignment &&
-              selectedAssignment.status !== 'completed' &&
-              selectedAssignment.status !== 'on_site'
-                ? routePath
-                : null
-            }
-          />
-        </main>
       </motion.div>
     </div>
   )
