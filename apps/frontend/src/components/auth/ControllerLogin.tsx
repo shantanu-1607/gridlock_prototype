@@ -77,9 +77,9 @@ const ControllerLogin: React.FC = () => {
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
               <Shield className="w-8 h-8 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold text-foreground">Traffic Command Center</h1>
+            <h1 className="text-3xl font-bold text-foreground">AI-Powered Command Center</h1>
             <p className="text-muted-foreground text-sm">
-              Sign in to access the controller dashboard
+              Sign in to access the 9-stage planning pipeline
             </p>
           </div>
 
@@ -181,13 +181,6 @@ const ControllerLogin: React.FC = () => {
                 )}
               </Button>
             </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-xs text-muted-foreground">
-                Demo: <span className="font-mono">controller@gridlock.in</span> /{' '}
-                <span className="font-mono">gridlock</span>
-              </p>
-            </div>
           </Card>
 
           <div className="text-center mt-4">
@@ -212,30 +205,31 @@ const ControllerLogin: React.FC = () => {
               <Shield className="w-10 h-10 text-primary" />
             </div>
 
-            <h2 className="text-3xl font-bold text-foreground">Intelligent Traffic Management</h2>
+            <h2 className="text-3xl font-bold text-foreground">Event-Driven Congestion Control</h2>
 
             <p className="text-lg text-muted-foreground">
-              Monitor, analyze, and control traffic flow in real-time with GridLock's advanced AI
-              pipeline.
+              Built for Bengaluru. GridLock flips traffic management from reactive to predictive
+              using an ML ensemble, conformal prediction intervals, and a live BFS propagation
+              engine.
             </p>
 
             <div className="grid grid-cols-3 gap-6 pt-8">
               <div className="space-y-2 bg-background/50 p-4 rounded-lg border border-border backdrop-blur-md">
                 <div className="text-2xl font-bold text-primary">90%</div>
-                <div className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">
+                <div className="text-[10px] md:text-xs text-muted-foreground uppercase font-semibold tracking-wider">
                   Forecast Coverage
                 </div>
               </div>
               <div className="space-y-2 bg-background/50 p-4 rounded-lg border border-border backdrop-blur-md">
-                <div className="text-2xl font-bold text-primary">24/7</div>
-                <div className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">
-                  Monitoring
+                <div className="text-2xl font-bold text-primary">30s</div>
+                <div className="text-[10px] md:text-xs text-muted-foreground uppercase font-semibold tracking-wider">
+                  Simulation Ticks
                 </div>
               </div>
               <div className="space-y-2 bg-background/50 p-4 rounded-lg border border-border backdrop-blur-md">
                 <div className="text-2xl font-bold text-primary">{junctionCount ?? 294}</div>
-                <div className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">
-                  Intersections
+                <div className="text-[10px] md:text-xs text-muted-foreground uppercase font-semibold tracking-wider">
+                  Graph Junctions
                 </div>
               </div>
             </div>
