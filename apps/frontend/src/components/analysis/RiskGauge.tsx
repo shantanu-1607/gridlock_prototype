@@ -5,7 +5,9 @@ interface Props {
   spilloverTime: number
 }
 
+// Keyed to the queue model's risk_level vocabulary (green/yellow/red/critical).
 const RISK_COLORS: Record<string, string> = {
+  green: '#10b981',
   low: '#10b981',
   yellow: '#f59e0b',
   orange: '#f97316',
@@ -14,6 +16,7 @@ const RISK_COLORS: Record<string, string> = {
 }
 
 const RISK_BADGE_CLASSES: Record<string, string> = {
+  green: 'border-green/30 bg-green/15 text-green',
   low: 'border-green/30 bg-green/15 text-green',
   yellow: 'border-yellow/30 bg-yellow/15 text-yellow',
   orange: 'border-orange/30 bg-orange/15 text-orange',

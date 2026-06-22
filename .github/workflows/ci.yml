@@ -150,5 +150,5 @@ jobs:
 
             # Rebuild and restart the Docker containers
             docker compose down
-            add a npm install
+            npm install
             docker compose up -d --build

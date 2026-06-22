@@ -242,6 +242,10 @@ export interface CounterfactualResult {
 }
 
 export interface PipelineResult {
+  /** True when an ML service was unreachable and fallback estimates were used. */
+  degraded?: boolean
+  /** 'live' = fresh from the planning pipeline; 'stored' = rebuilt from a saved event. */
+  origin?: 'live' | 'stored'
   prediction: PipelinePrediction
   queue_analysis: QueueAnalysis
   fleet_plan: DispatchPlan

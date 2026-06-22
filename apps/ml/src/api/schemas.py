@@ -4,6 +4,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
+from .normalize import normalize_cause, normalize_corridor, normalize_priority
+
 
 class PredictRequest(BaseModel):
     start_datetime: str
@@ -41,6 +43,11 @@ class PredictRequest(BaseModel):
                 self.corridor = c[0]
             elif isinstance(c, str) and c:
                 self.corridor = c
+        # Canonicalize to the model's training vocabulary so unseen form labels
+        # don't push the event out-of-distribution (see normalize.py).
+        self.event_cause = normalize_cause(self.event_cause)
+        self.corridor = normalize_corridor(self.corridor)
+        self.priority = normalize_priority(self.priority)
         return self
 
 
@@ -124,6 +131,12 @@ class QueueAnalysisRequest(BaseModel):
     hour: int = 12
     requires_road_closure: bool = False
 
+    @model_validator(mode="after")
+    def _canonicalize(self):
+        self.event_cause = normalize_cause(self.event_cause)
+        self.corridor = normalize_corridor(self.corridor)
+        return self
+
 
 class QueueAnalysisResponse(BaseModel):
     blocking_probability: float
@@ -184,6 +197,12 @@ class GatingRequest(BaseModel):
     requires_road_closure: bool = False
     upstream_junctions: list[UpstreamJunction]
 
+    @model_validator(mode="after")
+    def _canonicalize(self):
+        self.event_cause = normalize_cause(self.event_cause)
+        self.corridor = normalize_corridor(self.corridor)
+        return self
+
 
 class GatingItem(BaseModel):
     junction_id: str
@@ -208,6 +227,12 @@ class AnomalyRequest(BaseModel):
     event_cause: str = ""
     start_datetime: str = ""
     predicted_duration_mins: float = 60.0
+
+    @model_validator(mode="after")
+    def _canonicalize(self):
+        self.event_cause = normalize_cause(self.event_cause)
+        self.corridor = normalize_corridor(self.corridor)
+        return self
 
 
 class AnomalyResponse(BaseModel):

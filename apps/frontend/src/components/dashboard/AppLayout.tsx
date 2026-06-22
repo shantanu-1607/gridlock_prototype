@@ -100,15 +100,18 @@ export default function AppLayout() {
     const confRaw = (ev as any).confidence
     const durationVal = Number(ev.predicted_duration_mins || (ev as any).duration_mins) || 0
     setPipelineResult({
+      origin: 'stored',
       prediction: {
         duration_mins: durationVal,
         severity_score: Number(ev.severity_score) || 0,
+        // Mirror the ML SEVERITY_THRESHOLDS (< semantics) so a stored event shows
+        // the same label the model assigned when it was first planned.
         severity_label:
-          Number(ev.severity_score) > 0.85
+          Number(ev.severity_score) >= 0.85
             ? 'Critical'
-            : Number(ev.severity_score) > 0.6
+            : Number(ev.severity_score) >= 0.6
               ? 'High'
-              : Number(ev.severity_score) > 0.3
+              : Number(ev.severity_score) >= 0.3
                 ? 'Medium'
                 : 'Low',
         confidence: confRaw === null || confRaw === undefined ? null : Number(confRaw),
@@ -230,7 +233,7 @@ export default function AppLayout() {
     setError(null)
     try {
       const { pipeline, event } = await planEvent(payload)
-      setPipelineResult(pipeline)
+      setPipelineResult({ ...pipeline, origin: 'live' })
       setEventLat(payload.lat)
       setEventLon(payload.lon)
       setSelectedEvent(event)
