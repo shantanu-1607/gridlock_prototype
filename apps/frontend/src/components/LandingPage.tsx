@@ -19,7 +19,6 @@ import {
   Navigation,
   Radar,
   Send,
-  Shield,
   Users,
   Waypoints,
   X,
@@ -179,47 +178,6 @@ function AnimatedCounter({ value, suffix }: { value: number; suffix: string }) {
       {display}
       {suffix}
     </span>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/*  System Chatter Component                                           */
-/* ------------------------------------------------------------------ */
-
-function SystemChatter() {
-  const { t } = useTranslation()
-  const [logIndices, setLogIndices] = useState<number[]>([])
-  useEffect(() => {
-    let i = 0
-    const interval = setInterval(() => {
-      setLogIndices((prev) => [...prev.slice(-3), (i % 6) + 1])
-      i++
-    }, 2500)
-    return () => clearInterval(interval)
-  }, [])
-
-  return (
-    <div className="absolute top-6 right-6 w-64 md:w-72 bg-black/80 border border-emerald-500/30 rounded-lg p-3 font-mono text-[10px] text-emerald-500 backdrop-blur-md shadow-2xl z-50 overflow-hidden">
-      <div className="flex items-center gap-1.5 mb-2 border-b border-emerald-500/30 pb-2">
-        <div className="w-2 h-2 rounded-full bg-red-500" />
-        <div className="w-2 h-2 rounded-full bg-yellow-500" />
-        <div className="w-2 h-2 rounded-full bg-green-500" />
-        <span className="ml-2 text-emerald-500/70 font-semibold tracking-wider">
-          {t('systemChatter.title')}
-        </span>
-      </div>
-      <div className="flex flex-col gap-1.5 min-h-[70px] justify-end">
-        {logIndices.map((logIdx, idx) => (
-          <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
-            <span className="text-emerald-500/50 mr-1">{'>'}</span>{' '}
-            {t(`systemChatter.log${logIdx}`)}
-          </motion.div>
-        ))}
-        <motion.div animate={{ opacity: [1, 0] }} transition={{ repeat: Infinity, duration: 0.8 }}>
-          <span className="text-emerald-500/50 mr-1">{'>'}</span> _
-        </motion.div>
-      </div>
-    </div>
   )
 }
 
@@ -431,171 +389,11 @@ export default function LandingPage() {
               lightLineColor: 'rgba(0,0,0,0.06)',
               darkLineColor: 'rgba(255,255,255,0.06)',
             }}
-          >
-            {/* CSS Mockup of Command Center */}
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="relative mt-16 max-w-5xl mx-auto rounded-xl border border-border/60 bg-background/50 backdrop-blur-2xl shadow-2xl overflow-hidden hidden md:block"
-            >
-              {/* Mac-like Window Header */}
-              <div className="flex items-center gap-2 px-4 py-3 bg-muted/30 border-b border-border/40">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-green-500/80" />
-                </div>
-                <div className="mx-auto flex items-center gap-2 px-3 py-1 bg-background/80 rounded-md border border-border/30 text-xs text-muted-foreground">
-                  <Shield size={12} className="text-primary" />
-                  {t('commandCenter.title')}
-                </div>
-                <div className="w-[42px]" /> {/* Spacer for symmetry */}
-              </div>
-
-              {/* App Body */}
-              <div className="flex h-[450px]">
-                {/* Sidebar */}
-                <div className="w-64 border-r border-border/40 bg-muted/10 p-4 flex flex-col gap-4">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      {t('commandCenter.liveMetrics')}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-background/80 border border-border/40 rounded-lg p-2">
-                        <p className="text-xs text-muted-foreground">{t('commandCenter.active')}</p>
-                        <p className="text-lg font-bold text-red-500">3</p>
-                      </div>
-                      <div className="bg-background/80 border border-border/40 rounded-lg p-2">
-                        <p className="text-xs text-muted-foreground">{t('commandCenter.fleet')}</p>
-                        <p className="text-lg font-bold text-emerald-500">12/15</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      {t('commandCenter.recentAlerts')}
-                    </p>
-                    {[
-                      {
-                        title: t('commandCenter.alert1Title'),
-                        loc: t('commandCenter.alert1Loc'),
-                        time: t('commandCenter.alert1Time'),
-                        color: 'bg-red-500',
-                      },
-                      {
-                        title: t('commandCenter.alert2Title'),
-                        loc: t('commandCenter.alert2Loc'),
-                        time: t('commandCenter.alert2Time'),
-                        color: 'bg-primary',
-                      },
-                      {
-                        title: t('commandCenter.alert3Title'),
-                        loc: t('commandCenter.alert3Loc'),
-                        time: t('commandCenter.alert3Time'),
-                        color: 'bg-emerald-500',
-                      },
-                    ].map((alert, i) => (
-                      <div
-                        key={i}
-                        className="bg-background/80 border border-border/40 rounded-lg p-2.5 flex gap-3 items-start"
-                      >
-                        <div className={`w-2 h-2 mt-1 rounded-full ${alert.color}`} />
-                        <div>
-                          <p className="text-xs font-medium text-foreground">{alert.title}</p>
-                          <p className="text-[10px] text-muted-foreground">{alert.loc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Map Area */}
-                <div className="flex-1 relative bg-[#0a0a0a] overflow-hidden">
-                  {/* Map Grid Pattern */}
-                  <div
-                    className="absolute inset-0 opacity-[0.03]"
-                    style={{
-                      backgroundImage:
-                        'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)',
-                      backgroundSize: '20px 20px',
-                    }}
-                  />
-
-                  {/* Simulated Map Elements */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full">
-                    {/* Arterial Road */}
-                    <div className="absolute top-[40%] left-0 w-full h-4 bg-muted/20 border-y border-border/10 transform -rotate-12" />
-                    <div className="absolute top-0 left-[60%] w-4 h-full bg-muted/20 border-x border-border/10 transform rotate-12" />
-
-                    {/* Heatmap Bloom */}
-                    <div className="absolute top-[35%] left-[55%] w-32 h-32 bg-red-500/20 rounded-full blur-2xl animate-pulse" />
-                    <div className="absolute top-[38%] left-[58%] w-16 h-16 bg-red-500/40 rounded-full blur-xl animate-pulse" />
-
-                    {/* Markers */}
-                    <div className="absolute top-[38%] left-[58%] flex items-center justify-center">
-                      <div className="absolute w-8 h-8 bg-red-500/30 rounded-full animate-ping" />
-                      <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-background shadow-lg z-10" />
-                    </div>
-
-                    <div className="absolute top-[60%] left-[30%]">
-                      <div className="flex items-center gap-1 bg-background/90 px-2 py-1 rounded-full border border-emerald-500/30 shadow-lg">
-                        <Navigation size={10} className="text-emerald-500" />
-                        <span className="text-[10px] font-medium text-emerald-500">
-                          {t('commandCenter.unit')}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="absolute top-[25%] left-[70%]">
-                      <div className="flex items-center gap-1 bg-background/90 px-2 py-1 rounded-full border border-primary/30 shadow-lg">
-                        <Shield size={10} className="text-primary" />
-                        <span className="text-[10px] font-medium text-primary">
-                          {t('commandCenter.barricade')}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Simulated Route Path */}
-                    <svg
-                      className="absolute inset-0 w-full h-full pointer-events-none"
-                      style={{ zIndex: 0 }}
-                    >
-                      <path
-                        d="M 280 270 Q 350 240 500 180"
-                        fill="none"
-                        stroke="rgba(16, 185, 129, 0.4)"
-                        strokeWidth="3"
-                        strokeDasharray="6 6"
-                      />
-                    </svg>
-                  </div>
-
-                  {/* Map Controls */}
-                  <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-                    <div className="bg-background/90 border border-border/40 rounded-lg p-1.5 text-muted-foreground">
-                      <div className="p-1 hover:bg-muted rounded">
-                        <ChevronRight size={14} className="-rotate-90" />
-                      </div>
-                      <div className="h-px bg-border/40 my-0.5" />
-                      <div className="p-1 hover:bg-muted rounded">
-                        <ChevronRight size={14} className="rotate-90" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="absolute bottom-4 left-4 bg-background/80 px-2 py-1 rounded-md border border-border/30 backdrop-blur-md">
-                    <span className="text-[9px] text-muted-foreground font-medium">
-                      {t('commandCenter.poweredBy')}
-                    </span>
-                  </div>
-
-                  {/* System Chatter Terminal */}
-                  <SystemChatter />
-                </div>
-              </div>
-            </motion.div>
-          </HeroSection>
+            bottomImage={{
+              light: '/dashboard-preview.png',
+              dark: '/dashboard-preview.png',
+            }}
+          />
 
           {/* ── Glowing Tech Stack Marquee ─────────────────────────────── */}
           <div className="relative flex overflow-hidden border-b border-border/50 bg-muted/10 py-5 z-10 hidden md:flex">
