@@ -1,11 +1,12 @@
-import { AlertTriangle, BarChart3, Clock, Gauge, Shield, Waypoints, Zap } from 'lucide-react'
+import { AlertTriangle, BarChart3, Clock, Gauge, Share2, Waypoints, Zap } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import InfoHint from '@/components/ui/info-hint'
 
-import RiskGauge from '../../analysis/RiskGauge'
+import PropagationForecastChart from '../../charts/PropagationForecastChart'
 import RiskDistributionChart from '../../charts/RiskDistributionChart'
-import SeverityTrendChart from '../../charts/SeverityTrendChart'
+import SimilarIncidentSeverityChart from '../../charts/SimilarIncidentSeverityChart'
 import type { DashboardOutletContext } from '../AppLayout'
 
 const SEVERITY_COLOR: Record<string, string> = {
@@ -70,8 +71,14 @@ export default function OverviewPage() {
                   <span className="block font-mono text-xl font-bold leading-tight">
                     {Math.round(pipelineResult.prediction.duration_mins)}
                   </span>
-                  <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
+                  <span className="flex items-center gap-1 text-[11px] tracking-wider text-muted-foreground uppercase">
                     Predicted Minutes
+                    <InfoHint
+                      title="Predicted Minutes"
+                      what="How long this incident is expected to keep the road blocked, in minutes."
+                      how="The model studies thousands of past incidents with a similar cause, location and time of day. The smaller range below (e.g. 7–257 min) is the 90% range — the real clearance time has about a 9-in-10 chance of falling inside it."
+                      why="Tells you how long to plan officers, barricades and diversions for."
+                    />
                   </span>
                   {typeof pipelineResult.prediction.prediction_interval?.lower_mins === 'number' &&
                     typeof pipelineResult.prediction.prediction_interval?.upper_mins ===
@@ -104,8 +111,14 @@ export default function OverviewPage() {
                   >
                     {pipelineResult.prediction.severity_label}
                   </span>
-                  <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
+                  <span className="flex items-center gap-1 text-[11px] tracking-wider text-muted-foreground uppercase">
                     Severity
+                    <InfoHint
+                      title="Severity"
+                      what="How serious this incident is for traffic — Low, Medium, High or Critical."
+                      how="Worked out from the predicted duration together with the incident's impact (lanes blocked, whether the road is closed, and where it is)."
+                      why="Higher severity means more officers and faster action are needed."
+                    />
                   </span>
                 </div>
               </CardContent>
@@ -120,8 +133,14 @@ export default function OverviewPage() {
                       ? `${(pipelineResult.prediction.confidence * 100).toFixed(0)}%`
                       : '—'}
                   </span>
-                  <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
+                  <span className="flex items-center gap-1 text-[11px] tracking-wider text-muted-foreground uppercase">
                     Confidence
+                    <InfoHint
+                      title="Confidence"
+                      what="How sure the model is about this prediction, as a percentage."
+                      how="Three separate models each make their own prediction. When they agree closely, confidence is high; when they disagree (shown as σ, the spread between them), confidence drops."
+                      why="Low confidence is a cue to keep extra units on standby in case the incident behaves unexpectedly."
+                    />
                   </span>
                   {pipelineResult.prediction.confidence_factors?.n_models ? (
                     <span className="block font-mono text-[10px] text-muted-foreground mt-0.5">
@@ -145,8 +164,14 @@ export default function OverviewPage() {
                   >
                     {pipelineResult.anomaly_detection.anomaly_label.replace('_', ' ')}
                   </span>
-                  <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
+                  <span className="flex items-center gap-1 text-[11px] tracking-wider text-muted-foreground uppercase">
                     Anomaly
+                    <InfoHint
+                      title="Anomaly"
+                      what="Whether this incident's predicted duration is normal or unusual for this road at this time of day."
+                      how="Compares the prediction against the typical (expected) duration learned for this corridor and hour. 'Unusually Low' or 'Unusually High' means it is well below or above normal."
+                      why="Flags incidents behaving differently from usual, so they get a closer look."
+                    />
                   </span>
                 </div>
               </CardContent>
@@ -157,33 +182,48 @@ export default function OverviewPage() {
             <Card className="col-span-1">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
-                  <Shield size={16} /> Congestion Risk
+                  <Share2 size={16} /> Congestion Spread
+                  <InfoHint
+                    title="Congestion Spread"
+                    what="How many junctions are predicted to be congested as this incident's backup spreads outward, at 5, 15 and 30 minutes."
+                    how="The Graph BFS Propagation Engine simulates the shockwave moving across the live road network from the incident point. Each step counts the junctions affected by then."
+                    why="Shows how far and how fast the jam will grow, so you can pre-position units ahead of the spread."
+                  />
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <RiskGauge
-                  riskLevel={pipelineResult.queue_analysis.risk_level}
-                  blockingProbability={pipelineResult.queue_analysis.blocking_probability}
-                  queueLength={pipelineResult.queue_analysis.expected_queue_length}
-                  spilloverTime={pipelineResult.queue_analysis.time_to_spillover}
-                />
+              <CardContent className="h-[220px]">
+                <PropagationForecastChart forecast={pipelineResult.propagation_forecast} />
               </CardContent>
             </Card>
 
             <Card className="col-span-1">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
-                  <Gauge size={16} /> Severity Trend
+                  <BarChart3 size={16} /> Similar Incidents
+                  <InfoHint
+                    title="Similar Incidents"
+                    what="How serious the most similar past incidents turned out to be, grouped by severity."
+                    how="Takes this event's closest historical matches (from the Event Fingerprint) and groups them into Low, Medium, High and Critical severity bands."
+                    why="Evidence the forecast is grounded in real precedent — and a quick read on how bad comparable incidents got."
+                  />
                 </CardTitle>
               </CardHeader>
               <CardContent className="h-[220px]">
-                <SeverityTrendChart events={events} />
+                <SimilarIncidentSeverityChart matches={pipelineResult.similar_incidents} />
               </CardContent>
             </Card>
 
             <Card className="col-span-1">
               <CardHeader>
-                <CardTitle className="text-sm">Risk Distribution</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  Risk Distribution
+                  <InfoHint
+                    title="Risk Distribution"
+                    what="A breakdown of recent incidents by their congestion risk level."
+                    how="Counts how many recent incidents fall into each risk band — Low, Elevated, Severe and Critical."
+                    why="Shows at a glance how much of the recent load is high-risk."
+                  />
+                </CardTitle>
               </CardHeader>
               <CardContent className="h-[220px]">
                 <RiskDistributionChart events={events} />
@@ -196,6 +236,12 @@ export default function OverviewPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <Waypoints size={16} /> Tandem Corridor Spillback
+                  <InfoHint
+                    title="Tandem Corridor Spillback"
+                    what="Shows how a backup on a long corridor spills back through connected road segments, one after another."
+                    how="The corridor is split into staged sub-segments. The model estimates when each upstream segment will reach gridlock as the queue grows backwards from the incident."
+                    why="Warns you which segments will choke next, so you can stage units ahead of the spread."
+                  />
                   {pipelineResult.queue_analysis.tandem.corridor_gridlock && (
                     <span className="ml-1 rounded bg-red/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-red">
                       Full-corridor gridlock
@@ -242,6 +288,12 @@ export default function OverviewPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <Zap size={16} /> Anomaly Detection
+                  <InfoHint
+                    title="Anomaly Detection"
+                    what="Compares this incident's predicted duration against what is normal for this road and time."
+                    how="'Expected min' is the typical duration learned for this corridor and hour; 'Deviation' is how far the prediction is from it; 'Normal range' is the usual spread. This baseline is built with Prophet, a time-series forecasting model."
+                    why="A large deviation means this incident is unusual and worth extra attention."
+                  />
                   <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
                     Prophet ·{' '}
                     {pipelineResult.anomaly_detection.model_source.startsWith('corridor')

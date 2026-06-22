@@ -37,7 +37,10 @@ export default function ControlPanel({
 
   const handlePlanSubmit = async (payload: PlanEventPayload) => {
     const success = await onPlanSubmit(payload)
-    if (success) navigate('/dashboard/overview')
+    // Land on the Live Map after a prediction — the incident, its propagation
+    // shockwave, fleet/barricade placements and diversions all render there, with
+    // the key prediction outputs in the event details card. Analytics are a click away.
+    if (success) navigate('/dashboard/map')
   }
 
   return (

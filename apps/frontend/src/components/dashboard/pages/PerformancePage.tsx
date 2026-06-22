@@ -2,6 +2,7 @@ import { Construction, GitBranch, Users } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import InfoHint from '@/components/ui/info-hint'
 
 import BarrierRecommendationCard from '../../analysis/BarrierRecommendationCard'
 import FleetRecommendationCard from '../../analysis/FleetRecommendationCard'
@@ -47,6 +48,12 @@ export default function PerformancePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Users size={20} /> Deployment by Junction
+              <InfoHint
+                title="Deployment by Junction"
+                what="How many officers and barricades are recommended at each junction."
+                how="The plan concentrates resources at the junctions predicted to be most congested by this incident."
+                why="Helps you place limited staff where they will have the most impact."
+              />
             </CardTitle>
           </CardHeader>
           <CardContent className="h-[280px]">
@@ -64,6 +71,12 @@ export default function PerformancePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Users size={20} /> Fleet Deployment Detail
+              <InfoHint
+                title="Fleet Deployment Detail"
+                what="Which officers are being sent where, and the reasoning behind it."
+                how="Officers are assigned to the highest-priority junctions first. 'High Uncertainty' appears when the prediction is less confident or the duration range is wide, so extra contingency units are pre-staged."
+                why="Gives the on-ground reasoning behind each assignment, so commanders can trust or adjust it."
+              />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -75,6 +88,12 @@ export default function PerformancePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Construction size={20} /> Barricade Plan
+              <InfoHint
+                title="Barricade Plan"
+                what="Where to place barricades or road closures for this incident."
+                how="Recommends barricade points and the type of closure at key junctions that feed traffic into the affected area."
+                why="Stops more vehicles entering the jam while the incident is being cleared."
+              />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -87,6 +106,12 @@ export default function PerformancePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <GitBranch size={20} /> Signal Gating Recommendations
+                <InfoHint
+                  title="Signal Gating Recommendations"
+                  what="Suggested cuts to traffic-signal green time at junctions upstream of the incident."
+                  how="Reducing green time upstream slows how fast vehicles arrive at the blockage. Each row shows the current green time → the recommended green time."
+                  why="Metering the inflow buys time for the incident to clear and keeps the backlog from growing."
+                />
               </CardTitle>
             </CardHeader>
             <CardContent>
