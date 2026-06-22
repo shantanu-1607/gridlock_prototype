@@ -107,7 +107,7 @@ export default function ControlPanel({
               </Button>
             </div>
             <EventList
-              events={events.slice(0, 10)}
+              events={events.filter((e) => e.status !== 'closed').slice(0, 10)}
               selectedId={selectedEvent?.id || null}
               onSelect={handleEventSelect}
               onClose={onCloseEvent}
