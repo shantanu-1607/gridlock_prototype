@@ -42,7 +42,19 @@ export default function OverviewPage() {
   return (
     <div className="h-full overflow-y-auto p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
+          {pipelineResult?.degraded && (
+            <span className="rounded border border-orange/40 bg-orange/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orange">
+              ML offline · estimated
+            </span>
+          )}
+          {pipelineResult?.origin === 'stored' && !pipelineResult?.degraded && (
+            <span className="rounded border border-border bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              Saved snapshot
+            </span>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground mt-1">
           Live snapshot of the most recently planned or selected event
         </p>

@@ -5,18 +5,18 @@ import type { PlannedEvent } from '../../types'
 
 ChartJS.register(ArcElement, Tooltip)
 
-const RISK_LEVELS = ['low', 'yellow', 'orange', 'red', 'critical'] as const
+// Must match the risk_level vocabulary the queue model emits (green/yellow/red/critical).
+// Mismatched buckets silently drop events — e.g. every 'green' low-risk event was uncounted.
+const RISK_LEVELS = ['green', 'yellow', 'red', 'critical'] as const
 const RISK_COLORS: Record<string, string> = {
-  low: '#10b981',
+  green: '#10b981',
   yellow: '#f59e0b',
-  orange: '#f97316',
   red: '#ef4444',
   critical: '#dc2626',
 }
 const RISK_LABELS: Record<string, string> = {
-  low: 'Low',
+  green: 'Low',
   yellow: 'Elevated',
-  orange: 'High',
   red: 'Severe',
   critical: 'Critical',
 }

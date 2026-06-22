@@ -70,13 +70,15 @@ async function callMLPredict(eventData: any) {
         fingerprint_meta: data.fingerprint_meta || null,
         prediction_interval: data.prediction_interval || null,
         confidence_factors: data.confidence_factors || null,
+        degraded: false,
       }
     }
   } catch (error) {
     console.log('[ML] Predict endpoint not reachable, using stubbed values.')
   }
   // Fallback only when the ML service is unreachable — 60 min is a neutral
-  // city-typical incident duration, not a real prediction.
+  // city-typical incident duration, not a real prediction. `degraded` lets the
+  // UI label these as estimates instead of passing them off as model output.
   return {
     duration_mins: 60,
     severity_score: 0.8,
@@ -87,6 +89,7 @@ async function callMLPredict(eventData: any) {
     fingerprint_meta: null,
     prediction_interval: null,
     confidence_factors: null,
+    degraded: true,
   }
 }
 
@@ -119,6 +122,7 @@ async function callQueueAnalysis(params: {
     utilization: 0.8,
     effective_service_rate: 20,
     effective_arrival_rate: 30,
+    degraded: true,
   }
 }
 
@@ -186,6 +190,7 @@ async function callAnomalyDetection(params: {
     deviation_pct: 0.0,
     model_source: 'none',
     context: 'Anomaly detection unavailable',
+    degraded: true,
   }
 }
 
@@ -687,6 +692,12 @@ export const planEvent = async (req: Request, res: Response) => {
       message: 'Event planned successfully',
       event: plannedEvent,
       pipeline: {
+        // True when any ML service was unreachable and a non-model fallback was used.
+        degraded: Boolean(
+          (mlResult as any).degraded ||
+          (queueResult as any).degraded ||
+          (anomalyResult as any).degraded,
+        ),
         prediction: {
           duration_mins: mlResult.duration_mins,
           severity_score: mlResult.severity_score,
