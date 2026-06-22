@@ -21,13 +21,17 @@
   },
   "featuresList": {
     "bfsTitle": "Graph BFS Propagation Engine",
-    "bfsDesc": "Simulates real-time queue spillback and congestion spread on a live road graph, mapping exactly where gridlock will hit next.",
-    "mlTitle": "ML Event Fingerprinting",
-    "mlDesc": "Pattern-matches live incidents against thousands of historical analogues to instantly predict severity, duration, and clearance times.",
-    "llmTitle": "LLM-Powered Interventions",
-    "llmDesc": "Large language models dynamically recommend optimal barricade placements and generate alternative routing strategies to choke off congestion.",
-    "mmiTitle": "Powered by MapMyIndia",
-    "mmiDesc": "Enterprise-grade geocoding and mapping infrastructure provides the highly accurate spatial context required for our AI simulations."
+    "bfsDesc": "Simulates congestion spread across 294 Bengaluru road junctions in real-time.",
+    "bfsDetails": "Our propagation engine runs every 30 seconds, using Breadth-First Search on a custom road graph. It predicts traffic impact at T+5, T+15, and T+30 minute horizons. It even features an M/M/c/K queue spillback model to detect when two independent congestion fronts will collide, automatically triggering multi-event gridlock alerts.",
+    "mlTitle": "ML Prediction Ensemble",
+    "mlDesc": "Quantifies event duration and severity with uncertainty-aware confidence intervals.",
+    "mlDetails": "When an event is registered, an advanced LightGBM + CatBoost ensemble immediately predicts how long the disruption will last and how severe it will be. We use conformal prediction intervals to calculate rigorous upper and lower bounds, allowing the system to reserve contingency fleet members if uncertainty is high.",
+    "llmTitle": "LLM Dispatch & Advisory",
+    "llmDesc": "Groq-powered AI generates intelligent dispatch instructions and ambient radio updates.",
+    "llmDetails": "While deterministic rule engines ensure absolute safety for all dispatch decisions, our Groq-backed LLM layer adds vital context. It generates clear, prose-based dispatch instructions, writes explanations for diversion routes, and acts as an ambient AI radio to broadcast situational reports to controllers every two minutes.",
+    "mmiTitle": "Real-world ETA Dispatch",
+    "mmiDesc": "Utilizes Mappls Distance Matrix API to deploy officers based on actual driving times.",
+    "mmiDetails": "Traditional dispatch relies on proximity. GridLock goes further by using the Mappls Distance Matrix API to rank available fleet members based on real-world, current-traffic ETAs. This ensures the fastest possible response times when placing barricades or managing emergency intersection closures."
   },
   "stats": {
     "forecast": "Congestion Forecast",
@@ -88,7 +92,7 @@
     "fleetDesc": "Mobile-first execution. Receive map-accurate dispatch orders and clear incidents on the ground."
   },
   "footer": {
-    "copyright": "© 2026 GridLock. The traffic bottleneck ends here.",
+    "poweredBy": "Powered by MapMyIndia.",
     "product": "Product",
     "features": "Features",
     "security": "Security",

@@ -1,4 +1,12 @@
-import { motion, useInView, useScroll, useSpring, useTransform, type Variants } from 'framer-motion'
+import {
+  AnimatePresence,
+  motion,
+  useInView,
+  useScroll,
+  useSpring,
+  useTransform,
+  type Variants,
+} from 'framer-motion'
 import {
   Activity,
   ArrowRight,
@@ -13,6 +21,7 @@ import {
   Shield,
   Users,
   Waypoints,
+  X,
   Zap,
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
@@ -22,7 +31,6 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { HeroSection } from '@/components/ui/hero-section-dark'
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 import CircularPipeline from './dashboard/CircularPipeline'
 
@@ -32,23 +40,31 @@ import CircularPipeline from './dashboard/CircularPipeline'
 
 const features = [
   {
+    id: 'bfs',
     titleKey: 'featuresList.bfsTitle',
-    descriptionKey: 'featuresList.bfsDesc',
+    descKey: 'featuresList.bfsDesc',
+    detailsKey: 'featuresList.bfsDetails',
     icon: Activity,
   },
   {
+    id: 'ml',
     titleKey: 'featuresList.mlTitle',
-    descriptionKey: 'featuresList.mlDesc',
+    descKey: 'featuresList.mlDesc',
+    detailsKey: 'featuresList.mlDetails',
     icon: Brain,
   },
   {
+    id: 'llm',
     titleKey: 'featuresList.llmTitle',
-    descriptionKey: 'featuresList.llmDesc',
+    descKey: 'featuresList.llmDesc',
+    detailsKey: 'featuresList.llmDetails',
     icon: Zap,
   },
   {
+    id: 'mmi',
     titleKey: 'featuresList.mmiTitle',
-    descriptionKey: 'featuresList.mmiDesc',
+    descKey: 'featuresList.mmiDesc',
+    detailsKey: 'featuresList.mmiDetails',
     icon: MapPin,
   },
 ]
@@ -273,6 +289,7 @@ function SmoothScroll({ children }: { children: React.ReactNode }) {
 export default function LandingPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const [expandedFeature, setExpandedFeature] = useState<string | null>(null)
 
   // Hydrate the "Incident Fingerprints" stat from the live ML corpus. Falls back to
   // the build-time value in `stats` if the backend/ML service isn't reachable.
@@ -344,7 +361,6 @@ export default function LandingPage() {
           </a>
           <div className="w-px h-5 bg-border hidden md:block" />
           <LanguageSwitcher />
-          <ThemeToggle />
         </div>
       </nav>
 
@@ -543,35 +559,30 @@ export default function LandingPage() {
             <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background to-transparent z-20 pointer-events-none" />
 
             <motion.div
-              className="flex items-center gap-16 px-8"
-              animate={{ x: [0, -1035] }}
-              transition={{ repeat: Infinity, ease: 'linear', duration: 25 }}
+              className="flex w-max"
+              animate={{ x: ['0%', '-50%'] }}
+              transition={{ repeat: Infinity, ease: 'linear', duration: 40 }}
             >
-              {[
-                'MapMyIndia Routing',
-                'Graph BFS Engine',
-                'Redis Pub/Sub',
-                'LLM Interventions',
-                'BullMQ Workers',
-                'React 18',
-                'WebSockets',
-                'Tailwind CSS',
-                // Duplicate for seamless scroll
-                'MapMyIndia Routing',
-                'Graph BFS Engine',
-                'Redis Pub/Sub',
-                'LLM Interventions',
-                'BullMQ Workers',
-                'React 18',
-                'WebSockets',
-                'Tailwind CSS',
-              ].map((tech, i) => (
-                <span
-                  key={i}
-                  className="text-sm font-mono font-medium text-primary/60 whitespace-nowrap"
-                >
-                  {tech}
-                </span>
+              {[0, 1].map((setIndex) => (
+                <div key={setIndex} className="flex items-center gap-16 px-8">
+                  {[
+                    'AI Predictions',
+                    'Traffic Simulation',
+                    'Smart Routing',
+                    'Live Heatmap',
+                    'Queue Analysis',
+                    'Fast Dispatch',
+                    'Live Updates',
+                    'Anomaly Detection',
+                  ].map((tech, i) => (
+                    <span
+                      key={i}
+                      className="text-sm font-mono font-medium text-primary/60 whitespace-nowrap"
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
               ))}
             </motion.div>
           </div>
@@ -651,53 +662,129 @@ export default function LandingPage() {
                 </p>
               </motion.div>
 
-              <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: '-80px' }}
-                variants={staggerContainer}
-                className="grid grid-cols-1 md:grid-cols-3 gap-4"
-              >
-                {features.map((f, i) => {
-                  // Bento Box logic: 1st and 4th items span 2 columns on desktop
-                  const isLarge = i === 0 || i === 3
-                  return (
-                    <motion.div
-                      key={i}
-                      variants={fadeUp}
-                      whileHover={{ y: -4, borderColor: 'hsl(var(--primary) / 0.5)' }}
-                      className={`group bg-card p-8 md:p-10 flex flex-col gap-4 rounded-3xl border border-border/60 transition-all duration-300 relative overflow-hidden ${
-                        isLarge ? 'md:col-span-2' : 'md:col-span-1'
-                      }`}
-                    >
-                      {/* Subtle background glow on hover */}
-                      <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
+              <div className="relative">
+                <motion.div
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: '-80px' }}
+                  variants={staggerContainer}
+                  className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                >
+                  {features.map((f, i) => {
+                    const isLarge = i === 0 || i === 3
+                    return (
                       <motion.div
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-                        className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center relative z-10"
+                        layoutId={`feature-${f.id}`}
+                        key={f.id}
+                        variants={fadeUp}
+                        whileHover={{ y: -4, borderColor: 'hsl(var(--primary) / 0.5)' }}
+                        onClick={() => setExpandedFeature(f.id)}
+                        className={`group bg-card p-8 md:p-10 flex flex-col gap-4 rounded-3xl border border-border/60 transition-colors duration-300 relative overflow-hidden cursor-pointer ${isLarge ? 'md:col-span-2' : 'md:col-span-1'}`}
                       >
-                        <f.icon size={24} strokeWidth={2} />
-                      </motion.div>
-                      <h3 className="text-xl font-bold text-foreground relative z-10">
-                        {t(f.titleKey)}
-                      </h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed relative z-10">
-                        {t(f.descriptionKey)}
-                      </p>
+                        <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
-                      <motion.span
-                        initial={{ x: 0 }}
-                        whileHover={{ x: 4 }}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-primary cursor-pointer mt-auto pt-4 relative z-10 uppercase tracking-wider"
+                        <motion.div
+                          layoutId={`feature-icon-${f.id}`}
+                          whileHover={{ scale: 1.1, rotate: 5 }}
+                          className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center relative z-10 shrink-0"
+                        >
+                          <f.icon size={24} strokeWidth={2} />
+                        </motion.div>
+                        <motion.h3
+                          layoutId={`feature-title-${f.id}`}
+                          className="text-xl font-bold text-foreground relative z-10"
+                        >
+                          {t(f.titleKey)}
+                        </motion.h3>
+                        <motion.p
+                          layoutId={`feature-desc-${f.id}`}
+                          className="text-sm text-muted-foreground leading-relaxed relative z-10"
+                        >
+                          {t(f.descKey)}
+                        </motion.p>
+
+                        <motion.span
+                          layoutId={`feature-learn-${f.id}`}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-primary mt-auto pt-4 relative z-10 uppercase tracking-wider"
+                        >
+                          {t('misc.learnMore')} <ChevronRight size={14} />
+                        </motion.span>
+                      </motion.div>
+                    )
+                  })}
+                </motion.div>
+
+                <AnimatePresence>
+                  {expandedFeature && (
+                    <motion.div
+                      key="backdrop"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 z-40 bg-background/60 backdrop-blur-md rounded-3xl"
+                      onClick={() => setExpandedFeature(null)}
+                    />
+                  )}
+
+                  {features.map((f) =>
+                    f.id === expandedFeature ? (
+                      <motion.div
+                        layoutId={`feature-${f.id}`}
+                        key={`expanded-${f.id}`}
+                        className="absolute inset-0 z-50 bg-card p-8 md:p-12 flex flex-col gap-6 rounded-3xl border border-primary/50 shadow-2xl overflow-hidden pointer-events-auto"
                       >
-                        {t('misc.learnMore')} <ChevronRight size={14} />
-                      </motion.span>
-                    </motion.div>
-                  )
-                })}
-              </motion.div>
+                        <motion.button
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          onClick={() => setExpandedFeature(null)}
+                          className="absolute top-6 right-6 p-2 rounded-full hover:bg-muted transition-colors z-20"
+                        >
+                          <X size={20} className="text-muted-foreground hover:text-foreground" />
+                        </motion.button>
+
+                        <motion.div
+                          layoutId={`feature-icon-${f.id}`}
+                          className="h-16 w-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center relative z-10 shrink-0"
+                        >
+                          <f.icon size={32} strokeWidth={2} />
+                        </motion.div>
+
+                        <motion.h3
+                          layoutId={`feature-title-${f.id}`}
+                          className="text-3xl font-bold text-foreground relative z-10"
+                        >
+                          {t(f.titleKey)}
+                        </motion.h3>
+
+                        <motion.p
+                          layoutId={`feature-desc-${f.id}`}
+                          className="text-lg font-medium text-primary/90 relative z-10"
+                        >
+                          {t(f.descKey)}
+                        </motion.p>
+
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          transition={{ duration: 0.2 }}
+                          className="text-base text-muted-foreground leading-relaxed relative z-10 mt-2"
+                        >
+                          {t(f.detailsKey)}
+                        </motion.div>
+
+                        <motion.span
+                          layoutId={`feature-learn-${f.id}`}
+                          className="block opacity-0 h-0 overflow-hidden"
+                        >
+                          Hidden learn more
+                        </motion.span>
+                      </motion.div>
+                    ) : null,
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </section>
 
@@ -880,13 +967,18 @@ export default function LandingPage() {
                       ))}
                     </div>
 
-                    <Button className="w-full justify-between bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-sm font-medium">
-                      Controller Login
-                      <ArrowRight
-                        size={16}
-                        className="group-hover:translate-x-1 transition-transform duration-200"
-                      />
-                    </Button>
+                    <button className="group/btn relative w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-sm transition-all duration-300 shadow-lg shadow-primary/20 hover:shadow-2xl hover:shadow-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] group-hover/btn:translate-x-[150%] transition-transform duration-1000 ease-in-out" />
+                      <div className="relative flex items-center justify-between px-6 h-full">
+                        <span className="tracking-wider uppercase text-xs">Controller Login</span>
+                        <div className="flex items-center justify-center h-6 w-6 rounded-full bg-background/20 backdrop-blur-sm group-hover/btn:scale-110 group-hover/btn:bg-background/30 transition-all">
+                          <ArrowRight
+                            size={14}
+                            className="group-hover/btn:translate-x-0.5 transition-transform"
+                          />
+                        </div>
+                      </div>
+                    </button>
                   </div>
                 </motion.div>
 
@@ -927,13 +1019,18 @@ export default function LandingPage() {
                       ))}
                     </div>
 
-                    <Button className="w-full justify-between bg-emerald-600 text-white hover:bg-emerald-600/90 h-12 text-sm font-medium">
-                      Fleet Login
-                      <ArrowRight
-                        size={16}
-                        className="group-hover:translate-x-1 transition-transform duration-200"
-                      />
-                    </Button>
+                    <button className="group/btn relative w-full h-12 rounded-xl bg-emerald-600 text-white font-semibold text-sm transition-all duration-300 shadow-lg shadow-emerald-600/20 hover:shadow-2xl hover:shadow-emerald-600/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] group-hover/btn:translate-x-[150%] transition-transform duration-1000 ease-in-out" />
+                      <div className="relative flex items-center justify-between px-6 h-full">
+                        <span className="tracking-wider uppercase text-xs">Fleet Login</span>
+                        <div className="flex items-center justify-center h-6 w-6 rounded-full bg-black/20 backdrop-blur-sm group-hover/btn:scale-110 group-hover/btn:bg-black/30 transition-all">
+                          <ArrowRight
+                            size={14}
+                            className="group-hover/btn:translate-x-0.5 transition-transform text-white"
+                          />
+                        </div>
+                      </div>
+                    </button>
                   </div>
                 </motion.div>
               </motion.div>
@@ -1015,7 +1112,10 @@ export default function LandingPage() {
                     Get Started
                   </a>
                 </div>
-                <p className="text-xs text-muted-foreground">{t('footer.copyright')}</p>
+                <p className="text-xs text-muted-foreground">
+                  © <strong className="font-bold text-foreground">Team AlphaQ</strong>.{' '}
+                  {t('footer.poweredBy')}
+                </p>
               </div>
             </div>
           </footer>
