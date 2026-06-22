@@ -1,4 +1,5 @@
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
+import { AlertTriangle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 
@@ -6,12 +7,15 @@ import MapplsMap from '../../map/MapplsMap'
 import type { DashboardOutletContext } from '../AppLayout'
 import LiveEventDetailsCard from './LiveEventDetailsCard'
 
+const CRITICAL_MERGE_FLASH_MS = 4500
+
 export default function LiveMapPage() {
   const {
     eventLat,
     eventLon,
     pipelineResult,
     lastTick,
+    lastCriticalMerge,
     activeEvents,
     selectedEvent,
     selectedEventAssignments,
@@ -22,11 +26,20 @@ export default function LiveMapPage() {
     liveFleetLocations,
   } = useOutletContext<DashboardOutletContext>()
   const [clock, setClock] = useState(new Date())
+  const [isFlashing, setIsFlashing] = useState(false)
 
   useEffect(() => {
     const interval = setInterval(() => setClock(new Date()), 1000)
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (!lastCriticalMerge) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsFlashing(true)
+    const timer = setTimeout(() => setIsFlashing(false), CRITICAL_MERGE_FLASH_MS)
+    return () => clearTimeout(timer)
+  }, [lastCriticalMerge])
 
   return (
     <div className="relative h-full w-full">
@@ -42,7 +55,36 @@ export default function LiveMapPage() {
         assignments={selectedEventAssignments}
         barricades={selectedEventBarricades}
         liveFleetLocations={liveFleetLocations}
+        focusPoint={
+          lastCriticalMerge ? { lat: lastCriticalMerge.lat, lon: lastCriticalMerge.lon } : null
+        }
       />
+
+      <AnimatePresence>
+        {isFlashing && (
+          <motion.div
+            key="critical-merge-flash"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="pointer-events-none fixed inset-0 z-[2000] border-[12px] border-red-500/80"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="absolute top-6 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-red-400 bg-red-600 px-5 py-2.5 shadow-2xl shadow-red-900/50"
+            >
+              <AlertTriangle className="h-5 w-5 animate-pulse text-white" />
+              <span className="font-mono text-sm font-bold tracking-widest text-white animate-pulse">
+                CRITICAL MERGE DETECTED
+              </span>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {selectedEvent && (
