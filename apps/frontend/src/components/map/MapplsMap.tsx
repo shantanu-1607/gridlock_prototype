@@ -173,6 +173,8 @@ const getDivertMarkerHtml = () => {
       font-weight: 700;
       letter-spacing: 0.5px;
       white-space: nowrap;
+      width: max-content !important;
+      height: auto !important;
     ">
       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/><path d="M2 6v4a2 2 0 0 0 2 2h4"/></svg>
       DIVERT
@@ -197,6 +199,8 @@ const getRejoinMarkerHtml = (rejoins: boolean) => {
       font-weight: 700;
       letter-spacing: 0.5px;
       white-space: nowrap;
+      width: max-content !important;
+      height: auto !important;
     ">
       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
       ${rejoins ? 'REJOIN' : 'HAND OFF'}

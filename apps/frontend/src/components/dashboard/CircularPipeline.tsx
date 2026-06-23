@@ -261,7 +261,7 @@ export default function CircularPipeline({
           />
 
           <div className="text-3xl font-mono font-bold tracking-[0.3em] text-slate-900 dark:text-white z-10 text-center pl-[0.3em]">
-            GRIDLOCK
+            NIYANTRAN
           </div>
 
           {currentStep >= 10 && (

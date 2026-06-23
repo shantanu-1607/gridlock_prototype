@@ -24,7 +24,7 @@ export default function FleetRecommendationCard({ plan }: Props) {
           <div className="flex items-baseline gap-2">
             <span className="font-mono text-2xl font-bold">{plan.total_fleet_required}</span>
             <span className="text-sm tracking-wider text-muted-foreground uppercase">
-              Officers Dispatched
+              Fleet Required
             </span>
           </div>
         </div>
