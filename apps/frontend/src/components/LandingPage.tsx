@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/button'
 import { HeroSection } from '@/components/ui/hero-section-dark'
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 
+import { useAuth } from '../hooks/useAuth'
 import CircularPipeline from './dashboard/CircularPipeline'
 
 /* ------------------------------------------------------------------ */
@@ -241,6 +242,7 @@ function SmoothScroll({ children }: { children: React.ReactNode }) {
 
 export default function LandingPage() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const { t } = useTranslation()
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -752,7 +754,11 @@ export default function LandingPage() {
                   variants={scaleIn}
                   whileHover={{ y: -6 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                  onClick={() => navigate('/login/controller')}
+                  onClick={() => {
+                    login({ email: 'controller1@gridlock.demo', password: 'gridlock' }).then(() => {
+                      navigate('/dashboard')
+                    })
+                  }}
                   className="group relative cursor-pointer rounded-2xl border border-border bg-card p-8 md:p-10 overflow-hidden transition-all duration-300 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5"
                 >
                   <div className="absolute -top-24 -right-24 h-52 w-52 rounded-full bg-primary/6 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
@@ -804,7 +810,11 @@ export default function LandingPage() {
                   variants={scaleIn}
                   whileHover={{ y: -6 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                  onClick={() => navigate('/login/fleet')}
+                  onClick={() => {
+                    login({ email: 'fleet3@gridlock.demo', password: 'gridlock' }).then(() => {
+                      navigate('/fleet')
+                    })
+                  }}
                   className="group relative cursor-pointer rounded-2xl border border-border bg-card p-8 md:p-10 overflow-hidden transition-all duration-300 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5"
                 >
                   <div className="absolute -top-24 -right-24 h-52 w-52 rounded-full bg-emerald-500/6 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
