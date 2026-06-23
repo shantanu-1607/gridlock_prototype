@@ -292,7 +292,7 @@ export default function LandingPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Waypoints size={20} strokeWidth={2.4} />
           </div>
-          <span className="text-xl font-bold tracking-tight text-foreground">GridLock</span>
+          <span className="text-xl font-bold tracking-tight text-foreground">Niyantran</span>
         </div>
         <div className="flex items-center gap-4">
           <div className="hidden md:flex items-center gap-4">
@@ -370,7 +370,7 @@ export default function LandingPage() {
             title={t('hero.title')}
             subtitle={{
               regular: t('hero.subtitle'),
-              gradient: 'GridLock.',
+              gradient: 'Niyantran.',
             }}
             description={t('hero.description')}
             ctaText={t('nav.getStarted')}
@@ -914,7 +914,7 @@ export default function LandingPage() {
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                     <Waypoints size={16} strokeWidth={2.4} />
                   </div>
-                  <span className="font-bold text-foreground">GridLock</span>
+                  <span className="font-bold text-foreground">Niyantran</span>
                 </div>
                 <div className="flex items-center gap-6 text-sm text-muted-foreground">
                   <a

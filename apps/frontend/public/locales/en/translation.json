@@ -7,7 +7,7 @@
   "hero": {
     "title": "The Traffic Bottleneck Ends Here",
     "subtitle": "Clear congestion before it happens with ",
-    "description": "Transform reactive traffic control into a proactive science. GridLock leverages graph simulation and ML fingerprinting to anticipate congestion spread, automatically dispatch fleets, and deploy barricades—all unified on MapMyIndia."
+    "description": "Transform reactive traffic control into a proactive science. Niyantran leverages graph simulation and ML fingerprinting to anticipate congestion spread, automatically dispatch fleets, and deploy barricades—all unified on MapMyIndia."
   },
   "features": {
     "sectionLabel": "Platform Capabilities",
@@ -16,7 +16,7 @@
   },
   "demo": {
     "sectionLabel": "Live Engine Demo",
-    "title": "The GridLock Pipeline in Action",
+    "title": "The Niyantran Pipeline in Action",
     "description": "Watch our 10-step sequence flow seamlessly from event ingestion through machine learning prediction and kinematic fluid dynamics."
   },
   "featuresList": {
@@ -31,7 +31,7 @@
     "llmDetails": "While deterministic rule engines ensure absolute safety for all dispatch decisions, our Groq-backed LLM layer adds vital context. It generates clear, prose-based dispatch instructions, writes explanations for diversion routes, and acts as an ambient AI radio to broadcast situational reports to controllers every two minutes.",
     "mmiTitle": "Real-world ETA Dispatch",
     "mmiDesc": "Utilizes Mappls Distance Matrix API to deploy officers based on actual driving times.",
-    "mmiDetails": "Traditional dispatch relies on proximity. GridLock goes further by using the Mappls Distance Matrix API to rank available fleet members based on real-world, current-traffic ETAs. This ensures the fastest possible response times when placing barricades or managing emergency intersection closures."
+    "mmiDetails": "Traditional dispatch relies on proximity. Niyantran goes further by using the Mappls Distance Matrix API to rank available fleet members based on real-world, current-traffic ETAs. This ensures the fastest possible response times when placing barricades or managing emergency intersection closures."
   },
   "stats": {
     "forecast": "Congestion Forecast",
@@ -52,7 +52,7 @@
   "howItWorks": {
     "sectionLabel": "How It Works",
     "title": "From raw data to resolved incidents",
-    "description": "Four seamless stages power the GridLock pipeline, end to end."
+    "description": "Four seamless stages power the Niyantran pipeline, end to end."
   },
   "systemChatter": {
     "title": "sys_chatter.log",
@@ -64,7 +64,7 @@
     "log6": "[SYS] Congestion decay accelerated by 1.5x."
   },
   "commandCenter": {
-    "title": "GridLock Command Center",
+    "title": "Niyantran Command Center",
     "liveMetrics": "Live Metrics",
     "active": "Active",
     "fleet": "Fleet",
@@ -106,7 +106,7 @@
   },
   "cta": {
     "title": "Ready to transform your city's traffic?",
-    "description": "Join the growing network of municipalities using GridLock to build safer, faster, and smarter transportation systems.",
+    "description": "Join the growing network of municipalities using Niyantran to build safer, faster, and smarter transportation systems.",
     "button": "Get Started Now"
   },
   "dashboard": {

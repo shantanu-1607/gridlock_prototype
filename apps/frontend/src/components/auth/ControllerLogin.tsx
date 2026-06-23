@@ -208,7 +208,7 @@ const ControllerLogin: React.FC = () => {
             <h2 className="text-3xl font-bold text-foreground">Event-Driven Congestion Control</h2>
 
             <p className="text-lg text-muted-foreground">
-              Built for Bengaluru. GridLock flips traffic management from reactive to predictive
+              Built for Bengaluru. Niyantran flips traffic management from reactive to predictive
               using an ML ensemble, conformal prediction intervals, and a live BFS propagation
               engine.
             </p>

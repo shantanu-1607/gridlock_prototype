@@ -96,7 +96,7 @@ export default function FleetDashboard() {
       setTimeout(() => {
         setIsSubmitting(false)
         setShowReport(false)
-        toast.success('Incident dispatched. GridLock AI is processing.')
+        toast.success('Incident dispatched. Niyantran AI is processing.')
         setReportDesc('')
         setPriority('Medium')
         setRequiresBackup(false)
@@ -404,7 +404,7 @@ export default function FleetDashboard() {
         {/* Bottom Pane - Assignments */}
         <aside className="flex flex-1 lg:flex-none lg:w-[400px] xl:w-[450px] flex-col overflow-hidden bg-card/95 backdrop-blur-md rounded-t-3xl lg:rounded-none border-t lg:border-t-0 lg:border-r border-border shadow-[0_-10px_40px_rgba(0,0,0,0.15)] lg:shadow-[10px_0_40px_rgba(0,0,0,0.05)] -mt-4 lg:mt-0 z-10 relative">
           <div className="w-12 h-1.5 bg-muted rounded-full mx-auto my-3 shrink-0 lg:hidden" />
-          <ScrollArea className="flex-1 px-4 pb-4 lg:pt-6">
+          <ScrollArea className="flex-1 min-h-0 px-4 pb-4 lg:pt-6">
             <div className="pb-6">
               {/* Heading */}
               <div className="mb-4 flex items-center justify-between">

@@ -65,7 +65,7 @@ export default function Header({
         </div>
         <div>
           <h1 className="text-sm font-bold tracking-tight text-foreground leading-none">
-            GridLock
+            Niyantran
           </h1>
           <p className="text-[11px] text-muted-foreground mt-0.5">
             {user?.role === 'controller'
