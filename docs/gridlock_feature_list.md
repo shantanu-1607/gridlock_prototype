@@ -135,7 +135,7 @@ Capped at 1440 mins (24 hours) to remove outliers.
   "predicted_duration_mins": 87,
   "severity_score": 0.74,
   "severity_label": "High",
-  "confidence": 0.81
+  "confidence": 0.45
 }
 ```
 
