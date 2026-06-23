@@ -108,13 +108,6 @@ const steps = [
   },
 ]
 
-const trustedBy = [
-  'Municipal Traffic Authority',
-  'Smart City Initiative',
-  'National Highway Dept.',
-  'Metro Transit Corp.',
-]
-
 /* ------------------------------------------------------------------ */
 /*  Animation variants                                                 */
 /* ------------------------------------------------------------------ */
@@ -430,33 +423,6 @@ export default function LandingPage() {
               ))}
             </motion.div>
           </div>
-
-          {/* ── Trusted By (marquee) ───────────────────────────────────── */}
-          {/* <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={fadeIn}
-        className="relative z-10 py-10 border-b border-border/50"
-      >
-        <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-6">
-          Trusted by leading agencies
-        </p>
-        <div className="flex items-center justify-center gap-12 flex-wrap px-6">
-          {trustedBy.map((name, i) => (
-            <motion.span
-              key={i}
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1, duration: 0.4 }}
-              className="text-sm font-medium text-muted-foreground/60 hover:text-foreground transition-colors cursor-default"
-            >
-              {name}
-            </motion.span>
-          ))}
-        </div>
-      </motion.section> */}
 
           {/* ── Stats ──────────────────────────────────────────────────── */}
           <section className="relative z-10 py-10 px-6">

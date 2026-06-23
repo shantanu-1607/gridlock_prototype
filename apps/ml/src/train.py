@@ -177,9 +177,15 @@ def run_training():
     log.info("--- Computing permutation importance (10 repeats) ---")
 
     class _LGBWrapper:
-        """Minimal wrapper so sklearn permutation_importance can call .predict()."""
+        """Minimal wrapper so sklearn permutation_importance can call .predict().
+
+        Newer sklearn validates the estimator exposes a ``fit`` method (it is never
+        actually called here — the booster is already trained), so provide a no-op.
+        """
         def __init__(self, booster):
             self._booster = booster
+        def fit(self, X, y=None):
+            return self
         def predict(self, X):
             return self._booster.predict(X)
 
@@ -294,8 +300,9 @@ def run_training():
             "n_samples": int(valid_oof.sum()),
         }
     }
-    # Per-corridor calibration
-    corridors_valid = train_df.loc[train_df.index[valid_oof], "corridor"].values
+    # Per-corridor calibration (coerce to str — the column has mixed str/NaN values
+    # which newer numpy refuses to sort in np.unique).
+    corridors_valid = train_df.loc[train_df.index[valid_oof], "corridor"].astype(str).values
     for corridor_name in np.unique(corridors_valid):
         mask = corridors_valid == corridor_name
         if mask.sum() >= 20:  # need enough samples for reliable quantiles

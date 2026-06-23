@@ -175,8 +175,8 @@ export default function OverviewPage() {
                     {t('overviewPage.confidence')}
                     <InfoHint
                       title="Confidence"
-                      what="How sure the model is about this prediction, as a percentage."
-                      why="Low confidence is a cue to keep extra units on standby in case the incident behaves unexpectedly."
+                      what="How much the model's sub-models agree on this prediction — shown as Low, Medium or High."
+                      why="It reflects model agreement, not a guaranteed chance of being right. Low agreement is a cue to keep extra units on standby."
                     />
                   </span>
                   {pipelineResult.prediction.confidence_factors?.n_models ? (

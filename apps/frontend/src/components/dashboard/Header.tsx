@@ -56,7 +56,7 @@ export default function Header({
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.25, 0.4, 0.25, 1] }}
-      className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card/80 backdrop-blur-xl px-4 md:px-6 z-20"
+      className="relative flex h-14 shrink-0 items-center justify-between border-b border-border bg-card/80 backdrop-blur-xl px-4 md:px-6 z-50"
     >
       {/* Brand */}
       <div className="flex items-center gap-2.5">
