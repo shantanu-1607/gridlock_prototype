@@ -303,7 +303,16 @@ function buildPrestagingTimeline(
 /**
  * Run forward propagation simulation for T+5, T+15, T+30 minute forecasts.
  */
-function runPropagationForecast(lat: number, lon: number, severity: number, durationMins: number) {
+function runPropagationForecast(
+  lat: number,
+  lon: number,
+  severity: number,
+  durationMins: number,
+  interventions: { barricades: string[]; fleetDeployments: string[] } = {
+    barricades: [],
+    fleetDeployments: [],
+  },
+) {
   const state = simulationService.initializeState(lat, lon, severity)
   const forecasts: Record<string, any> = {}
 
@@ -321,7 +330,7 @@ function runPropagationForecast(lat: number, lon: number, severity: number, dura
     for (let i = 0; i < ticksNeeded; i++) {
       currentState = simulationService.tick(
         currentState,
-        { barricades: [], fleetDeployments: [] },
+        interventions,
         '12:00',
         [],
         true,
@@ -519,6 +528,45 @@ export const planEvent = async (req: Request, res: Response) => {
       forecast: congestionForecast,
     })
     console.log(`[Plan] Barricades: ${barricadePlan.barricades.length} recommended`)
+
+    // 5b-i. Intervention impact — re-run the propagation forecast WITH the recommended
+    // barricades applied and compare spread to the do-nothing forecast. Fully isolated:
+    // any failure leaves intervention_impact null (the UI simply hides the card) and can
+    // never break the planning response.
+    let interventionImpact: {
+      without_junctions: number
+      with_junctions: number
+      junctions_prevented: number
+      reduction_pct: number
+    } | null = null
+    try {
+      const barricadeNodeIds: string[] = (barricadePlan.barricades || [])
+        .map((b: any) => b.junction_id)
+        .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
+      const t30Count = (fc: any): number => {
+        const nodes = fc?.['T+30min']?.activeNodes
+        return nodes && typeof nodes === 'object' ? Object.keys(nodes).length : 0
+      }
+      if (barricadeNodeIds.length > 0) {
+        const withPlanForecast = runPropagationForecast(
+          lat,
+          lon,
+          mlResult.severity_score,
+          mlResult.duration_mins,
+          { barricades: barricadeNodeIds, fleetDeployments: [] },
+        )
+        const without = t30Count(propagationForecast)
+        const withPlan = t30Count(withPlanForecast)
+        interventionImpact = {
+          without_junctions: without,
+          with_junctions: withPlan,
+          junctions_prevented: Math.max(0, without - withPlan),
+          reduction_pct: without > 0 ? Math.round(((without - withPlan) / without) * 100) : 0,
+        }
+      }
+    } catch (err) {
+      console.warn('[Plan] Intervention-impact comparison skipped:', (err as Error).message)
+    }
 
     // 5c. Diversion Recommendation Engine — reroute traffic off the at-risk
     // corridor onto a lower-spillover alternate. Avoid corridors already taken
@@ -725,6 +773,7 @@ export const planEvent = async (req: Request, res: Response) => {
         similar_incidents: mlResult.similar_events.slice(0, 5),
         fingerprint_summary: { aggregated: mlResult.aggregated, meta: mlResult.fingerprint_meta },
         propagation_forecast: propagationForecast,
+        intervention_impact: interventionImpact,
         prestaging_timeline: prestagingTimeline,
         anomaly_detection: anomalyResult,
       },

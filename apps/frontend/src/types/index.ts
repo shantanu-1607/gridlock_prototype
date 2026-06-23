@@ -255,6 +255,12 @@ export interface PipelineResult {
   similar_incidents: SimilarEvent[]
   fingerprint_summary?: FingerprintSummary
   propagation_forecast: Record<string, unknown>
+  intervention_impact?: {
+    without_junctions: number
+    with_junctions: number
+    junctions_prevented: number
+    reduction_pct: number
+  } | null
   prestaging_timeline: TimelineStep[]
   anomaly_detection: AnomalyResult
 }

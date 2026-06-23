@@ -14,8 +14,11 @@ import { useOutletContext } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import InfoHint from '@/components/ui/info-hint'
 
+import CommandBriefCard from '../../analysis/CommandBriefCard'
+import InterventionImpactCard from '../../analysis/InterventionImpactCard'
 import RiskGauge from '../../analysis/RiskGauge'
 import SpatioTemporalContextCard from '../../analysis/SpatioTemporalContextCard'
+import UncertaintyActionCard from '../../analysis/UncertaintyActionCard'
 import PropagationForecastChart from '../../charts/PropagationForecastChart'
 import SimilarIncidentSeverityChart from '../../charts/SimilarIncidentSeverityChart'
 import type { DashboardOutletContext } from '../AppLayout'
@@ -54,7 +57,7 @@ export default function OverviewPage() {
 
   const activeNodesArray = lastTick?.activeNodes ? Object.values(lastTick.activeNodes) : []
   const maxNodeIntensity = activeNodesArray.length
-    ? Math.max(...activeNodesArray.map((n: any) => n.intensity))
+    ? Math.max(...activeNodesArray.map((n: { intensity: number }) => n.intensity))
     : 0
 
   const isRecovered = selectedEvent?.status === 'resolved' || selectedEvent?.status === 'closed'
@@ -103,6 +106,8 @@ export default function OverviewPage() {
 
       {pipelineResult ? (
         <div className="flex flex-col gap-6">
+          <CommandBriefCard pipelineResult={pipelineResult} event={selectedEvent} />
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardContent className="flex items-center gap-3">
@@ -213,6 +218,10 @@ export default function OverviewPage() {
               </CardContent>
             </Card>
           </div>
+
+          <UncertaintyActionCard pipelineResult={pipelineResult} />
+
+          <InterventionImpactCard pipelineResult={pipelineResult} />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Card className="col-span-1">

@@ -57,22 +57,31 @@ export default function EventHistoryPage() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="font-medium text-foreground capitalize">
-                          {Array.isArray((event as any).affected_corridors)
-                            ? (event as any).affected_corridors.join(', ')
-                            : (event as any).corridor || 'Unknown Corridor'}
+                          {Array.isArray(
+                            (event as { affected_corridors?: string[] }).affected_corridors,
+                          )
+                            ? (event as { affected_corridors?: string[] }).affected_corridors!.join(
+                                ', ',
+                              )
+                            : (event as { corridor?: string }).corridor || 'Unknown Corridor'}
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5 font-mono">
                           {event.lat?.toFixed(5) || 'N/A'}, {event.lon?.toFixed(5) || 'N/A'}
                         </div>
                       </td>
                       <td className="py-3 px-4 capitalize">{event.category}</td>
-                      <td className="py-3 px-4 capitalize">{(event as any).priority || 'N/A'}</td>
+                      <td className="py-3 px-4 capitalize">
+                        {(event as { priority?: string }).priority || 'N/A'}
+                      </td>
                       <td className="py-3 px-4">
                         <span className="font-mono">{Number(event.severity_score).toFixed(2)}</span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="font-mono">
-                          {event.predicted_duration_mins || (event as any).duration_mins || 0} min
+                          {event.predicted_duration_mins ||
+                            (event as { duration_mins?: number }).duration_mins ||
+                            0}{' '}
+                          min
                         </span>
                       </td>
                       <td className="py-3 px-4 capitalize">
@@ -89,6 +98,14 @@ export default function EventHistoryPage() {
                         >
                           {event.status}
                         </span>
+                        {event.counterfactual && (
+                          <span
+                            className="ml-2 rounded bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary"
+                            title="Post-event analysis available — open this event in Reports"
+                          >
+                            Analysis ✓
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))
