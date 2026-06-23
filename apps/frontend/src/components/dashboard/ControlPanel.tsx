@@ -1,11 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { FileText } from 'lucide-react'
+import { FileText, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
 
 import type { PlanEventPayload, PlannedEvent } from '../../types'
 import EventList from '../events/EventList'
@@ -19,6 +20,8 @@ interface ControlPanelProps {
   onPlanSubmit: (payload: PlanEventPayload) => Promise<boolean>
   onEventSelect: (ev: PlannedEvent) => void
   onCloseEvent: (id: string) => void
+  isOpen?: boolean
+  onClose?: () => void
 }
 
 export default function ControlPanel({
@@ -29,6 +32,8 @@ export default function ControlPanel({
   onPlanSubmit,
   onEventSelect,
   onCloseEvent,
+  isOpen,
+  onClose,
 }: ControlPanelProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -50,13 +55,26 @@ export default function ControlPanel({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4, ease: [0.25, 0.4, 0.25, 1], delay: 0.15 }}
-      className="flex h-full w-[360px] shrink-0 flex-col overflow-hidden border-l border-border bg-card/50 backdrop-blur-sm"
+      className={cn(
+        'absolute md:relative right-0 top-0 h-full w-full md:w-[360px] z-40 flex shrink-0 flex-col overflow-hidden border-l border-border bg-background/95 md:bg-card/50 backdrop-blur-md transition-transform duration-300',
+        isOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0',
+      )}
     >
-      <div className="shrink-0 border-b border-border px-5 py-3.5">
-        <h2 className="text-sm font-bold tracking-tight text-foreground">
-          {t('controlPanel.title')}
-        </h2>
-        <p className="text-[11px] text-muted-foreground mt-0.5">{t('controlPanel.subtitle')}</p>
+      <div className="shrink-0 flex items-center justify-between border-b border-border px-5 py-3.5">
+        <div>
+          <h2 className="text-sm font-bold tracking-tight text-foreground">
+            {t('controlPanel.title')}
+          </h2>
+          <p className="text-[11px] text-muted-foreground mt-0.5">{t('controlPanel.subtitle')}</p>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="h-8 w-8 md:hidden text-muted-foreground hover:text-foreground"
+        >
+          <X size={16} />
+        </Button>
       </div>
 
       <ScrollArea className="flex-1 h-full">
@@ -107,7 +125,7 @@ export default function ControlPanel({
               </Button>
             </div>
             <EventList
-              events={events.slice(0, 10)}
+              events={events.filter((e) => e.status !== 'closed').slice(0, 10)}
               selectedId={selectedEvent?.id || null}
               onSelect={handleEventSelect}
               onClose={onCloseEvent}

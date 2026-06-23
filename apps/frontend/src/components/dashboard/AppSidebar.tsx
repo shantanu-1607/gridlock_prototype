@@ -52,7 +52,7 @@ export default function AppSidebar({ chatOpen, onChatToggle }: AppSidebarProps) 
       initial="hidden"
       animate="visible"
       variants={sidebarVariants}
-      className="flex h-full w-[200px] shrink-0 flex-col border-r border-border bg-card/50 backdrop-blur-sm px-3 py-4"
+      className="hidden h-full w-[200px] shrink-0 flex-col border-r border-border bg-card/50 backdrop-blur-sm px-3 py-4 md:flex"
     >
       <motion.span
         variants={itemVariants}

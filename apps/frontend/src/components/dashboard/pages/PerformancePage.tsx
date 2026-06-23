@@ -1,4 +1,5 @@
 import { Construction, GitBranch, Users } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useOutletContext } from 'react-router-dom'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,15 +12,14 @@ import type { DashboardOutletContext } from '../AppLayout'
 
 export default function PerformancePage() {
   const { pipelineResult, selectedEventAssignments } = useOutletContext<DashboardOutletContext>()
+  const { t } = useTranslation()
 
   if (!pipelineResult) {
     return (
-      <div className="h-full overflow-y-auto p-8">
+      <div className="h-full overflow-y-auto p-4 md:p-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-extrabold tracking-tight">Performance Metrics</h1>
-          <p className="text-base text-muted-foreground mt-1">
-            Resource deployment and signal gating impact
-          </p>
+          <h1 className="text-3xl font-extrabold tracking-tight">{t('performancePage.title')}</h1>
+          <p className="text-base text-muted-foreground mt-1">{t('performancePage.subtitle')}</p>
         </div>
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-2 py-16 text-center text-muted-foreground">
@@ -87,19 +87,17 @@ export default function PerformancePage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-8">
+    <div className="h-full overflow-y-auto p-4 md:p-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-extrabold tracking-tight">Performance Metrics</h1>
-        <p className="text-base text-muted-foreground mt-1">
-          Resource deployment and signal gating impact
-        </p>
+        <h1 className="text-3xl font-extrabold tracking-tight">{t('performancePage.title')}</h1>
+        <p className="text-base text-muted-foreground mt-1">{t('performancePage.subtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Users size={20} /> Deployment by Junction
+              <Users size={20} /> {t('performancePage.deploymentByJunction')}
               <InfoHint
                 title="Deployment by Junction"
                 what="How many officers and barricades are recommended at each junction."
@@ -121,7 +119,7 @@ export default function PerformancePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Users size={20} /> Fleet Deployment Detail
+              <Users size={20} /> {t('performancePage.fleetDeploymentDetail')}
               <InfoHint
                 title="Fleet Deployment Detail"
                 what="Which officers are being sent where, and the reasoning behind it."
@@ -134,10 +132,10 @@ export default function PerformancePage() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-2">
+        <Card className="col-span-1 md:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Construction size={20} /> Barricade Plan
+              <Construction size={20} /> {t('performancePage.barricadePlan')}
               <InfoHint
                 title="Barricade Plan"
                 what="Where to place barricades or road closures for this incident."
@@ -151,10 +149,10 @@ export default function PerformancePage() {
         </Card>
 
         {gating_plan.recommendations?.length ? (
-          <Card className="col-span-2">
+          <Card className="col-span-1 md:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <GitBranch size={20} /> Signal Gating Recommendations
+                <GitBranch size={20} /> {t('performancePage.signalGatingRecommendations')}
                 <InfoHint
                   title="Signal Gating Recommendations"
                   what="Suggested cuts to traffic-signal green time at junctions upstream of the incident."

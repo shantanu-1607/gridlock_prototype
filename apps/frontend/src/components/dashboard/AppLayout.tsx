@@ -16,6 +16,7 @@ import AppSidebar from './AppSidebar'
 import { ChatAssistant } from './ChatAssistant'
 import ControlPanel from './ControlPanel'
 import Header from './Header'
+import MobileNav from './MobileNav'
 
 export interface DashboardOutletContext {
   pipelineResult: PipelineResult | null
@@ -40,6 +41,7 @@ export default function AppLayout() {
   const [error, setError] = useState<string | null>(null)
   const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(null)
   const [chatOpen, setChatOpen] = useState(false)
+  const [isControlPanelOpen, setIsControlPanelOpen] = useState(false)
   const [events, setEvents] = useState<PlannedEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<PlannedEvent | null>(null)
   const [eventLat, setEventLat] = useState<number | undefined>()
@@ -298,7 +300,13 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen flex-col bg-transparent">
-      <Header wsConnected={connected} activeEvents={activeEvents.length} />
+      <Header
+        wsConnected={connected}
+        activeEvents={activeEvents}
+        onEventSelect={handleEventSelect}
+        isControlPanelOpen={isControlPanelOpen}
+        onControlPanelToggle={() => setIsControlPanelOpen(!isControlPanelOpen)}
+      />
 
       <motion.div
         initial={{ opacity: 0 }}
@@ -308,7 +316,7 @@ export default function AppLayout() {
       >
         <AppSidebar chatOpen={chatOpen} onChatToggle={() => setChatOpen((prev) => !prev)} />
 
-        <main className="relative flex-1 overflow-hidden">
+        <main className="relative flex-1 overflow-hidden pb-16 md:pb-0">
           <Outlet context={outletContext} />
           <ChatAssistant isOpen={chatOpen} setIsOpen={setChatOpen} />
         </main>
@@ -321,7 +329,10 @@ export default function AppLayout() {
           onPlanSubmit={handlePlanSubmit}
           onEventSelect={handleEventSelect}
           onCloseEvent={handleCloseEvent}
+          isOpen={isControlPanelOpen}
+          onClose={() => setIsControlPanelOpen(false)}
         />
+        <MobileNav chatOpen={chatOpen} onChatToggle={() => setChatOpen((prev) => !prev)} />
       </motion.div>
     </div>
   )

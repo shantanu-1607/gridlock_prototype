@@ -8,6 +8,7 @@ import {
   Waypoints,
   Zap,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useOutletContext } from 'react-router-dom'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -48,13 +49,44 @@ const STAGE_BORDER: Record<string, string> = {
 }
 
 export default function OverviewPage() {
-  const { pipelineResult, selectedEvent } = useOutletContext<DashboardOutletContext>()
+  const { pipelineResult, selectedEvent, lastTick } = useOutletContext<DashboardOutletContext>()
+  const { t } = useTranslation()
+
+  const activeNodesArray = lastTick?.activeNodes ? Object.values(lastTick.activeNodes) : []
+  const maxNodeIntensity = activeNodesArray.length
+    ? Math.max(...activeNodesArray.map((n: any) => n.intensity))
+    : 0
+
+  const isRecovered = selectedEvent?.status === 'resolved' || selectedEvent?.status === 'closed'
+  const currentSeverity = isRecovered
+    ? 0
+    : lastTick
+      ? maxNodeIntensity
+      : pipelineResult?.prediction.severity_score || 0
+
+  const currentSeverityLabel =
+    currentSeverity >= 0.85
+      ? 'Critical'
+      : currentSeverity >= 0.6
+        ? 'High'
+        : currentSeverity >= 0.3
+          ? 'Medium'
+          : 'Low'
+
+  const currentSeverityColor = SEVERITY_COLOR[currentSeverityLabel.toLowerCase()] || 'text-primary'
+
+  const getConfidenceLabel = (conf: number | null | undefined) => {
+    if (typeof conf !== 'number') return '—'
+    if (conf < 0.41) return 'Low'
+    if (conf < 0.52) return 'Medium'
+    return 'High'
+  }
 
   return (
-    <div className="h-full overflow-y-auto p-8">
+    <div className="h-full overflow-y-auto p-4 md:p-8">
       <div className="mb-6">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('overviewPage.title')}</h1>
           {pipelineResult?.degraded && (
             <span className="rounded border border-orange/40 bg-orange/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orange">
               ML offline · estimated
@@ -66,14 +98,12 @@ export default function OverviewPage() {
             </span>
           )}
         </div>
-        <p className="text-sm text-muted-foreground mt-1">
-          Live snapshot of the most recently planned or selected event
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">{t('overviewPage.subtitle')}</p>
       </div>
 
       {pipelineResult ? (
         <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardContent className="flex items-center gap-3">
                 <Clock size={20} className="shrink-0 text-primary" />
@@ -82,7 +112,7 @@ export default function OverviewPage() {
                     {Math.round(pipelineResult.prediction.duration_mins)}
                   </span>
                   <span className="flex items-center gap-1 text-[11px] tracking-wider text-muted-foreground uppercase">
-                    Predicted Minutes
+                    {t('overviewPage.predictedMinutes')}
                     <InfoHint
                       title="Predicted Minutes"
                       what="How long this incident is expected to keep the road blocked, in minutes."
@@ -110,23 +140,25 @@ export default function OverviewPage() {
 
             <Card>
               <CardContent className="flex items-center gap-3">
-                <AlertTriangle
-                  size={20}
-                  className={`shrink-0 ${SEVERITY_COLOR[pipelineResult.prediction.severity_label.toLowerCase()] || 'text-primary'}`}
-                />
+                <AlertTriangle size={20} className={`shrink-0 ${currentSeverityColor}`} />
                 <div>
                   <span
-                    className={`block text-xl font-bold leading-tight ${SEVERITY_COLOR[pipelineResult.prediction.severity_label.toLowerCase()] || ''}`}
+                    className={`block font-mono text-xl font-bold leading-tight ${currentSeverityColor}`}
                   >
-                    {pipelineResult.prediction.severity_label}
+                    {(currentSeverity * 10).toFixed(1)}{' '}
+                    <span className="text-sm opacity-80">/ 10</span>
                   </span>
                   <span className="flex items-center gap-1 text-[11px] tracking-wider text-muted-foreground uppercase">
-                    Severity
+                    {t('overviewPage.severity')}
                     <InfoHint
                       title="Severity"
                       what="How serious this incident is for traffic — Low, Medium, High or Critical."
                       why="Higher severity means more officers and faster action are needed."
                     />
+                  </span>
+                  <span className="block font-mono text-[10px] text-muted-foreground mt-0.5">
+                    Initial severity: {(pipelineResult.prediction.severity_score * 10).toFixed(1)} /
+                    10
                   </span>
                 </div>
               </CardContent>
@@ -136,13 +168,11 @@ export default function OverviewPage() {
               <CardContent className="flex items-center gap-3">
                 <BarChart3 size={20} className="shrink-0 text-primary" />
                 <div>
-                  <span className="block font-mono text-xl font-bold leading-tight">
-                    {typeof pipelineResult.prediction.confidence === 'number'
-                      ? `${(pipelineResult.prediction.confidence * 100).toFixed(0)}%`
-                      : '—'}
+                  <span className="block text-xl font-bold leading-tight">
+                    {getConfidenceLabel(pipelineResult.prediction.confidence)}
                   </span>
                   <span className="flex items-center gap-1 text-[11px] tracking-wider text-muted-foreground uppercase">
-                    Confidence
+                    {t('overviewPage.confidence')}
                     <InfoHint
                       title="Confidence"
                       what="How sure the model is about this prediction, as a percentage."
@@ -172,7 +202,7 @@ export default function OverviewPage() {
                     {pipelineResult.anomaly_detection.anomaly_label.replace('_', ' ')}
                   </span>
                   <span className="flex items-center gap-1 text-[11px] tracking-wider text-muted-foreground uppercase">
-                    Anomaly
+                    {t('overviewPage.anomaly')}
                     <InfoHint
                       title="Anomaly"
                       what="Whether this incident's predicted duration is normal or unusual for this road at this time of day."
@@ -184,11 +214,11 @@ export default function OverviewPage() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Card className="col-span-1">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
-                  <Shield size={16} /> Congestion Risk
+                  <Shield size={16} /> {t('overviewPage.congestionRisk')}
                   <InfoHint
                     title="Congestion Risk"
                     what="The chance this incident causes a serious traffic jam, shown as a risk level from green (low) to critical."
@@ -209,7 +239,7 @@ export default function OverviewPage() {
             <Card className="col-span-1">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
-                  <BarChart3 size={16} /> Similar Incidents
+                  <BarChart3 size={16} /> {t('overviewPage.similarIncidents')}
                   <InfoHint
                     title="Similar Incidents"
                     what="How serious the most similar past incidents turned out to be, grouped by severity."
@@ -225,7 +255,7 @@ export default function OverviewPage() {
             <Card className="col-span-1">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
-                  <Share2 size={16} /> Congestion Spread
+                  <Share2 size={16} /> {t('overviewPage.congestionSpread')}
                   <InfoHint
                     title="Congestion Spread"
                     what="How many junctions are predicted to be congested as this incident's backup spreads outward, at 5, 15 and 30 minutes."
@@ -245,7 +275,7 @@ export default function OverviewPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
-                  <Waypoints size={16} /> Tandem Corridor Spillback
+                  <Waypoints size={16} /> {t('overviewPage.tandemCorridorSpillback')}
                   <InfoHint
                     title="Tandem Corridor Spillback"
                     what="Shows how a backup on a long corridor spills back through connected road segments, one after another."
@@ -260,7 +290,8 @@ export default function OverviewPage() {
               </CardHeader>
               <CardContent>
                 <p className="mb-3 text-[11px] text-muted-foreground">
-                  {pipelineResult.queue_analysis.tandem.n_segments} staged sub-segments · spillback{' '}
+                  {pipelineResult.queue_analysis.tandem.n_segments}{' '}
+                  {t('overviewPage.stagedSubSegments')} · spillback{' '}
                   {pipelineResult.queue_analysis.tandem.spillback_rate_veh_per_min} veh/min ·{' '}
                   {pipelineResult.queue_analysis.tandem.total_queued_vehicles} vehicles queued
                 </p>
@@ -271,7 +302,9 @@ export default function OverviewPage() {
                       className={`flex min-w-[120px] flex-1 flex-col gap-0.5 rounded-md border p-2.5 text-xs ${STAGE_BORDER[s.status] || 'border-border'}`}
                     >
                       <span className="font-semibold capitalize text-foreground">
-                        {s.role === 'incident' ? 'Incident segment' : `Upstream stage ${s.stage}`}
+                        {s.role === 'incident'
+                          ? t('overviewPage.incidentSegment')
+                          : `${t('overviewPage.upstreamStage1').replace(' 1', '')} ${s.stage}`}
                       </span>
                       <span
                         className={`text-[10px] font-bold uppercase ${STAGE_TEXT[s.status] || 'text-muted-foreground'}`}
