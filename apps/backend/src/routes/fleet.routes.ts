@@ -1,6 +1,7 @@
 import { Router } from 'express'
 
 import {
+  acceptOrderViaToken,
   assignFleetMember,
   getAvailableFleet,
   getMyAssignments,
@@ -9,6 +10,10 @@ import {
 import { authenticateToken } from '../middleware/auth.middleware'
 
 const router = Router()
+
+// ─── Public route: WhatsApp deep-link accept handler ──────────────────────────
+// No auth middleware — the signed JWT in the query param IS the auth.
+router.get('/accept-order', acceptOrderViaToken)
 
 // Controller-facing routes
 router.get('/available', authenticateToken, getAvailableFleet)
