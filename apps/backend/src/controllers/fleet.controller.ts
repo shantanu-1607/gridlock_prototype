@@ -1,7 +1,9 @@
+import type { Request } from 'express'
 import { Response } from 'express'
 
 import { AuthRequest } from '../middleware/auth.middleware'
 import { publishWsEvent } from '../services/queue.service'
+import { sendDispatchAlert, verifyAcceptToken } from '../services/whatsapp.service'
 import { query } from '../utils/db'
 
 export const getAvailableFleet = async (req: AuthRequest, res: Response) => {
@@ -41,9 +43,10 @@ export const assignFleetMember = async (req: AuthRequest, res: Response) => {
     // Update user status to dispatched
     await query(`UPDATE users SET status = 'dispatched' WHERE id = $1`, [userId])
 
-    // Fetch user details for WS event
-    const userResult = await query(`SELECT name FROM users WHERE id = $1`, [userId])
+    // Fetch user details (name + phone) for WS event and WhatsApp alert
+    const userResult = await query(`SELECT name, phone FROM users WHERE id = $1`, [userId])
     const userName = userResult.rows[0]?.name
+    const userPhone = userResult.rows[0]?.phone
 
     await publishWsEvent('fleet:dispatched', {
       eventId,
@@ -55,6 +58,27 @@ export const assignFleetMember = async (req: AuthRequest, res: Response) => {
       deploy_by_time: deployByTime.toISOString(),
       assignment_id: assignment.id,
     })
+
+    // Fetch event name for the WhatsApp message
+    const eventResult = await query(`SELECT name FROM events WHERE id = $1`, [eventId])
+    const eventName = eventResult.rows[0]?.name || 'Active Incident'
+
+    // Send WhatsApp dispatch alert (non-blocking — errors are logged, not thrown)
+    if (userPhone) {
+      sendDispatchAlert({
+        phone: userPhone,
+        officerName: userName || 'Officer',
+        assignmentId: assignment.id,
+        userId,
+        junctionName,
+        role,
+        priority,
+        eventName,
+        deployByTime: deployByTime.toISOString(),
+      }).catch((err) => console.error('[WhatsApp] Alert failed silently:', err))
+    } else {
+      console.warn(`[WhatsApp] No phone number for user ${userId} — skipping alert`)
+    }
 
     return res.status(201).json({ message: 'Fleet assigned successfully', assignment })
   } catch (error) {
@@ -132,5 +156,78 @@ export const updateMyAssignmentStatus = async (req: AuthRequest, res: Response) 
   } catch (error) {
     console.error('Error updating assignment status:', error)
     return res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+/**
+ * GET /api/fleet/accept-order?token=<signed-jwt>
+ *
+ * Public endpoint (no auth middleware) embedded in the WhatsApp deep-link.
+ * Verifies the JWT, advances the assignment to `en_route`, then redirects
+ * the officer's browser to /fleet?accepted=<assignmentId> so they land
+ * directly on their My Assignments page with the mission highlighted.
+ */
+export const acceptOrderViaToken = async (req: Request, res: Response) => {
+  try {
+    const { token } = req.query as { token?: string }
+
+    if (!token) {
+      return res.status(400).send('Missing token')
+    }
+
+    let assignmentId: string
+    let userId: string
+
+    try {
+      const payload = verifyAcceptToken(token)
+      assignmentId = payload.assignmentId
+      userId = payload.userId
+    } catch {
+      return res.status(401).send('Invalid or expired link. Please contact your controller.')
+    }
+
+    // Verify the assignment belongs to this user and is still pending
+    const assignmentResult = await query(
+      `SELECT fa.*, e.name as event_name
+       FROM fleet_assignments fa
+       JOIN events e ON fa.event_id = e.id
+       WHERE fa.id = $1 AND fa.user_id = $2`,
+      [assignmentId, userId],
+    )
+
+    if (assignmentResult.rows.length === 0) {
+      return res.status(404).send('Assignment not found.')
+    }
+
+    const assignment = assignmentResult.rows[0]
+
+    // Only advance from pending → en_route; already-accepted orders are fine
+    if (assignment.status === 'pending') {
+      await query(
+        `UPDATE fleet_assignments SET status = 'en_route', updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+        [assignmentId],
+      )
+      await query(`UPDATE users SET status = 'dispatched' WHERE id = $1`, [userId])
+
+      const userResult = await query(`SELECT name FROM users WHERE id = $1`, [userId])
+      const userName = userResult.rows[0]?.name || 'Officer'
+
+      await publishWsEvent('fleet:status_updated', {
+        assignment_id: assignmentId,
+        user_id: userId,
+        user_name: userName,
+        junctionName: assignment.junction_name,
+        status: 'en_route',
+      })
+
+      console.log(`[WhatsApp] Officer ${userName} accepted assignment ${assignmentId} via link`)
+    }
+
+    // Redirect to the fleet web app — the ?accepted param highlights the card
+    const APP_BASE_URL = process.env.APP_BASE_URL || 'https://alphaq.duckdns.org'
+    return res.redirect(`${APP_BASE_URL}/fleet?accepted=${assignmentId}`)
+  } catch (error) {
+    console.error('Error in acceptOrderViaToken:', error)
+    return res.status(500).send('Something went wrong. Please try again.')
   }
 }

@@ -393,7 +393,6 @@ export default function MapplsMap({
       if (!ev.lat || !ev.lon) return
 
       const isRecovered = ev.status === 'resolved' || ev.status === 'closed'
-      const isMissionAccomplished = assignments?.some((a) => a.status === 'completed')
       const isSelected = selectedEvent?.id === ev.id
       const evColor = isRecovered ? '#6b7280' : getEventColor(ev)
       const categoryIcon = getCategoryIconSvg(ev.category || '')
@@ -495,7 +494,7 @@ export default function MapplsMap({
         ;(map.getSource(sourceId) as any).setData({ type: 'FeatureCollection', features: [] })
       }
     } else {
-      const severityMultiplier = 0.5 + currentSeverity * 1.5
+      const severityMultiplier = Math.max(0.15, currentSeverity * 1.5)
 
       let pointData: any = {
         type: 'FeatureCollection',
@@ -597,9 +596,11 @@ export default function MapplsMap({
       }
 
       // Dynamically calculate radius at zoom 11 based on forecast and severity
-      const rInner = 15 * forecast.scale * severityMultiplier
-      const rMiddle = 35 * forecast.scale * severityMultiplier
-      const rOuter = 75 * forecast.scale * severityMultiplier
+      // Base radii are kept small so that even at critical severity (multiplier 1.5),
+      // a single node's impact is roughly 1.5-2km in radius, not 8+ km.
+      const rInner = 4 * forecast.scale * severityMultiplier
+      const rMiddle = 10 * forecast.scale * severityMultiplier
+      const rOuter = 22 * forecast.scale * severityMultiplier
 
       const getRadiusExpression = (baseRadius: number) => [
         'interpolate',
@@ -774,6 +775,7 @@ export default function MapplsMap({
       dispatchOverlaysRef.current.forEach(removeLayer)
       dispatchOverlaysRef.current = []
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isLoaded,
     map,
