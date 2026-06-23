@@ -25,6 +25,7 @@ import {
   Zap,
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
@@ -557,76 +558,83 @@ export default function LandingPage() {
                   })}
                 </motion.div>
 
-                <AnimatePresence>
-                  {expandedFeature && (
-                    <motion.div
-                      key="backdrop"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-40 bg-background/60 backdrop-blur-md"
-                      onClick={() => setExpandedFeature(null)}
-                    />
-                  )}
-
-                  {features.map((f) =>
-                    f.id === expandedFeature ? (
-                      <motion.div
-                        layoutId={`feature-${f.id}`}
-                        key={`expanded-${f.id}`}
-                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-2xl max-h-[85vh] bg-card p-6 md:p-12 flex flex-col gap-4 md:gap-6 rounded-3xl border border-primary/50 shadow-2xl overflow-y-auto pointer-events-auto"
-                      >
-                        <motion.button
+                {typeof document !== 'undefined' &&
+                  createPortal(
+                    <AnimatePresence>
+                      {expandedFeature && (
+                        <motion.div
+                          key="backdrop"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
+                          className="fixed inset-0 z-[100] bg-background/60 backdrop-blur-md"
                           onClick={() => setExpandedFeature(null)}
-                          className="absolute top-6 right-6 p-2 rounded-full hover:bg-muted transition-colors z-20"
-                        >
-                          <X size={20} className="text-muted-foreground hover:text-foreground" />
-                        </motion.button>
+                        />
+                      )}
 
-                        <motion.div
-                          layoutId={`feature-icon-${f.id}`}
-                          className="h-16 w-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center relative z-10 shrink-0"
-                        >
-                          <f.icon size={32} strokeWidth={2} />
-                        </motion.div>
+                      {features.map((f) =>
+                        f.id === expandedFeature ? (
+                          <motion.div
+                            layoutId={`feature-${f.id}`}
+                            key={`expanded-${f.id}`}
+                            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] w-[90%] max-w-2xl max-h-[85vh] bg-card p-6 md:p-12 flex flex-col gap-4 md:gap-6 rounded-3xl border border-primary/50 shadow-2xl overflow-y-auto pointer-events-auto"
+                          >
+                            <motion.button
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              onClick={() => setExpandedFeature(null)}
+                              className="absolute top-6 right-6 p-2 rounded-full hover:bg-muted transition-colors z-20"
+                            >
+                              <X
+                                size={20}
+                                className="text-muted-foreground hover:text-foreground"
+                              />
+                            </motion.button>
 
-                        <motion.h3
-                          layoutId={`feature-title-${f.id}`}
-                          className="text-3xl font-bold text-foreground relative z-10"
-                        >
-                          {t(f.titleKey)}
-                        </motion.h3>
+                            <motion.div
+                              layoutId={`feature-icon-${f.id}`}
+                              className="h-16 w-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center relative z-10 shrink-0"
+                            >
+                              <f.icon size={32} strokeWidth={2} />
+                            </motion.div>
 
-                        <motion.p
-                          layoutId={`feature-desc-${f.id}`}
-                          className="text-lg font-medium text-primary/90 relative z-10"
-                        >
-                          {t(f.descKey)}
-                        </motion.p>
+                            <motion.h3
+                              layoutId={`feature-title-${f.id}`}
+                              className="text-3xl font-bold text-foreground relative z-10"
+                            >
+                              {t(f.titleKey)}
+                            </motion.h3>
 
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          transition={{ duration: 0.2 }}
-                          className="text-base text-muted-foreground leading-relaxed relative z-10 mt-2"
-                        >
-                          {t(f.detailsKey)}
-                        </motion.div>
+                            <motion.p
+                              layoutId={`feature-desc-${f.id}`}
+                              className="text-lg font-medium text-primary/90 relative z-10"
+                            >
+                              {t(f.descKey)}
+                            </motion.p>
 
-                        <motion.span
-                          layoutId={`feature-learn-${f.id}`}
-                          className="block opacity-0 h-0 overflow-hidden"
-                        >
-                          Hidden learn more
-                        </motion.span>
-                      </motion.div>
-                    ) : null,
+                            <motion.div
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 10 }}
+                              transition={{ duration: 0.2 }}
+                              className="text-base text-muted-foreground leading-relaxed relative z-10 mt-2"
+                            >
+                              {t(f.detailsKey)}
+                            </motion.div>
+
+                            <motion.span
+                              layoutId={`feature-learn-${f.id}`}
+                              className="block opacity-0 h-0 overflow-hidden"
+                            >
+                              Hidden learn more
+                            </motion.span>
+                          </motion.div>
+                        ) : null,
+                      )}
+                    </AnimatePresence>,
+                    document.body,
                   )}
-                </AnimatePresence>
               </div>
             </div>
           </section>
