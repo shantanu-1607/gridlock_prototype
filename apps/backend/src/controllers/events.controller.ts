@@ -18,6 +18,7 @@ import {
   getHistoricalPrecedents,
 } from '../services/recommendation.service'
 import { simulationService } from '../services/simulation.service'
+import { sendDispatchAlert } from '../services/whatsapp.service'
 import { query } from '../utils/db'
 
 const ML_BASE = process.env.ML_SERVICE_URL || 'http://localhost:8000'
@@ -1292,7 +1293,7 @@ export const confirmBarricade = async (req: Request, res: Response) => {
 
     // 3. Auto-assign the nearest available fleet member to the barricade
     const fleetResult = await query(
-      `SELECT id, name, current_lat, current_lon FROM users WHERE status = 'available' AND role = 'fleet'`,
+      `SELECT id, name, current_lat, current_lon, phone FROM users WHERE status = 'available' AND role = 'fleet'`,
     )
     const assigned = assignNearestFleet(barricade.lat, barricade.lon, 1, fleetResult.rows)
 
@@ -1302,11 +1303,13 @@ export const confirmBarricade = async (req: Request, res: Response) => {
       assignedFleet = member
       const deployByTime = new Date()
 
-      await query(
+      const insertResult = await query(
         `INSERT INTO fleet_assignments (event_id, user_id, junction_name, role, deploy_by_time, priority, status)
-         VALUES ($1, $2, $3, 'barricade_management', $4, 'High', 'pending')`,
+         VALUES ($1, $2, $3, 'barricade_management', $4, 'High', 'pending') RETURNING id`,
         [eventId, member.user_id, barricade.location_name, deployByTime],
       )
+      const newAssignmentId = insertResult.rows[0]?.id
+
       await query(`UPDATE users SET status = 'dispatched' WHERE id = $1`, [member.user_id])
       await query(`UPDATE barricades SET assigned_user_id = $1 WHERE id = $2`, [
         member.user_id,
@@ -1322,6 +1325,28 @@ export const confirmBarricade = async (req: Request, res: Response) => {
         priority: 'High',
         deploy_by_time: deployByTime.toISOString(),
       })
+
+      // Send WhatsApp dispatch alert to the auto-assigned fleet member
+      const memberPhone = fleetResult.rows.find((r: any) => r.id === member.user_id)?.phone
+      if (memberPhone && newAssignmentId) {
+        const eventInfoResult = await query(`SELECT name FROM events WHERE id = $1`, [eventId])
+        const eventName = eventInfoResult.rows[0]?.name || 'Active Incident'
+        sendDispatchAlert({
+          phone: memberPhone,
+          officerName: member.user_name || 'Officer',
+          assignmentId: newAssignmentId,
+          userId: member.user_id,
+          junctionName: barricade.location_name,
+          role: 'barricade_management',
+          priority: 'High',
+          eventName,
+          deployByTime: deployByTime.toISOString(),
+        }).catch((err) => console.error('[WhatsApp] Barricade alert failed silently:', err))
+      } else {
+        console.warn(
+          `[WhatsApp] No phone for auto-assigned fleet ${member.user_id} — skipping alert`,
+        )
+      }
     } else {
       console.warn(`[Barricade] No available fleet to assign to barricade ${barricadeId}`)
     }

@@ -103,6 +103,18 @@ export const routes: RouteObject[] = [
     ),
   },
   {
+    // WhatsApp deep-link landing: /fleet/accept?accepted=<id>
+    // After JWT verification, the backend redirects here.
+    // The ProtectedRoute ensures the officer logs in first if not already
+    // authenticated, then lands on FleetDashboard which reads ?accepted=.
+    path: '/fleet/accept',
+    element: (
+      <ProtectedRoute requiredRole="fleet">
+        <FleetDashboard />
+      </ProtectedRoute>
+    ),
+  },
+  {
     path: '*',
     element: <Navigate to="/" replace />,
   },

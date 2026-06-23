@@ -14,7 +14,8 @@ import {
   Shield,
   Waypoints,
 } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -58,6 +59,7 @@ const staggerContainer: Variants = {
 export default function FleetDashboard() {
   const { user, logout } = useAuth()
   const { connected, sendMessage } = useWebSocket()
+  const [searchParams] = useSearchParams()
   const [assignments, setAssignments] = useState<FleetAssignment[]>([])
   const [selectedAssignment, setSelectedAssignment] = useState<FleetAssignment | null>(null)
   const [showReport, setShowReport] = useState(false)
@@ -70,6 +72,7 @@ export default function FleetDashboard() {
   const [isRecordingVoice, setIsRecordingVoice] = useState(false)
   const [liveLocation, setLiveLocation] = useState<{ lat: number; lon: number } | null>(null)
   const [routePath, setRoutePath] = useState<[number, number][] | null>(null)
+  const acceptHandledRef = useRef(false)
 
   const handleSubmitReport = async () => {
     const reportLat = liveLocationRef.current?.lat || liveLocation?.lat || 12.9716
@@ -99,6 +102,7 @@ export default function FleetDashboard() {
         setRequiresBackup(false)
       }, 1500)
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error(err)
       toast.error('Failed to report incident.')
       setIsSubmitting(false)
@@ -115,6 +119,7 @@ export default function FleetDashboard() {
         return updated || prev
       })
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error(err)
     }
   }
@@ -125,6 +130,35 @@ export default function FleetDashboard() {
     const interval = setInterval(fetchAssignments, 15000)
     return () => clearInterval(interval)
   }, [])
+
+  // ── WhatsApp deep-link accept handler ─────────────────────────────────────
+  // When the officer taps "Accept Order" in WhatsApp, the backend redirects
+  // them here with ?accepted=<assignmentId>. We auto-select the card and,
+  // if it's still pending, advance it to en_route.
+  useEffect(() => {
+    const acceptedId = searchParams.get('accepted')
+    if (!acceptedId || acceptHandledRef.current || assignments.length === 0) return
+    acceptHandledRef.current = true
+
+    const target = assignments.find((a) => a.id === acceptedId)
+    if (!target) return
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedAssignment(target)
+
+    if (target.status === 'pending') {
+      updateMyAssignmentStatus(acceptedId, 'en_route')
+        .then(() => {
+          fetchAssignments()
+          toast.success('✅ Mission accepted! You are now En Route.', { duration: 5000 })
+        })
+        .catch(() => {
+          toast.error('Could not update status — please tap Accept Orders manually.')
+        })
+    } else {
+      toast.success(`📋 Assignment loaded: ${target.junction_name}`, { duration: 4000 })
+    }
+  }, [assignments, searchParams])
 
   const getDistanceFromLatLonInM = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3
@@ -182,6 +216,7 @@ export default function FleetDashboard() {
 
       if (connected) {
         sendMessage('fleet:location_update', {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           userId: (user as any).id || '',
           userName: user.name || user.email,
           role: activeAssignment.role,
@@ -200,6 +235,7 @@ export default function FleetDashboard() {
     }, 2000)
 
     return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignments, user, connected, sendMessage])
 
   const updateStatus = async (id: string, e: React.MouseEvent) => {
@@ -213,6 +249,7 @@ export default function FleetDashboard() {
         await updateMyAssignmentStatus(id, nextStatus)
         fetchAssignments()
       } catch (err) {
+        // eslint-disable-next-line no-console
         console.error(err)
       }
     }
@@ -333,16 +370,20 @@ export default function FleetDashboard() {
                     category: 'Accident',
                     severity_score: selectedAssignment.priority === 'Critical' ? 0.9 : 0.5,
                     status: 'active',
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   } as any)
                 : null
             }
             assignments={
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               selectedAssignment ? [{ ...selectedAssignment, user_id: (user as any).id || '' }] : []
             }
             liveFleetLocations={
               liveLocation
                 ? {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     [(user as any).id || '']: {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       userId: (user as any).id || '',
                       lat: liveLocation.lat,
                       lon: liveLocation.lon,
