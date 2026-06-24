@@ -2,7 +2,7 @@
 
 > GridLock turns event-driven congestion from a reactive crisis into a managed operation — built specifically for Bengaluru's traffic challenges, powered by Mappls and ASTraM data.
 
-🔴 **[Live Demo](https://alphaq.duckdns.org)** &nbsp;|&nbsp; 📹 **[Video Demo](https://your-loom-link.com)**
+🔴 **[Live Demo](https://alphaq.duckdns.org)** &nbsp;|&nbsp; 📹 **[Video Demo](https://drive.google.com/file/d/15tGpHRXS2tbZfQxpQ-4jcSlh_JJCrk8D/view?usp=sharing)**
 
 ---
 <!--
